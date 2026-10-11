@@ -1,6 +1,6 @@
 # What George understands
 
-Hold **SPACE**, speak, release. The phrases below are handled instantly. Anything else goes to the
+Hold **SPACE** or your **PTT button** on the throttle (`JOY_BUTTON` in config.py), speak, release. The phrases below are handled instantly. Anything else goes to the
 LLM (2–5 s), which handles free-form requests and settings you name in your own words.
 "George", "please" and "okay" are ignored, and so is a leading "and" or "so".
 

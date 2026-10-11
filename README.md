@@ -10,7 +10,15 @@ Target List are read back from DCS, so he confirms what he actually did.
 
 1. Start Ollama (`ollama serve`, model `qwen2.5:7b`).
 2. Start DCS and a mission in the Apache pilot seat.
-3. `python main.py`, then hold SPACE to talk. See **COMMANDS.md** for what George understands.
+3. `python main.py`, then hold SPACE or your throttle PTT button to talk. See **COMMANDS.md** for
+   what George understands.
+
+### Push-to-talk on a joystick button
+
+In `config.py`: `PTT_MODE` (`"keyboard"`, `"joystick"` or `"both"`), `JOY_NAME_CONTAINS`,
+`JOY_DEVICE_INDEX`, `JOY_BUTTON`. Run `python joy_probe.py` to list your devices and see which
+button number you press. For best results `pip install pygame-ce`; without it, Windows' built-in
+joystick API is used (first 32 buttons only).
 
 Console output is also saved to `logs\george_<date>_<time>.log` (newest 20 kept).
 
@@ -28,6 +36,8 @@ Console output is also saved to `logs\george_<date>_<time>.log` (newest 20 kept)
 | `core/telemetry_listener.py` | Export.lua flight data, stores, nearby units (UDP 5005) |
 | `core/focus.py` | Refuses to send keys unless DCS is the window in front |
 | `core/console_log.py` | Mirrors the console to `logs/` |
+| `core/joystick_ptt.py` | Push-to-talk on a joystick / throttle button |
+| `joy_probe.py` | Lists joysticks and shows which button you press |
 | `intelligence/fast_path.py` | Instant, deterministic phrase matching |
 | `intelligence/llm_client.py` | Qwen prompt, output validation, background annunciator |
 | `intelligence/engagement_monitor.py` | Missile away / target destroyed / shoot list callouts |

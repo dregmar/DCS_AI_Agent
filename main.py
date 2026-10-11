@@ -10,6 +10,7 @@ from faster_whisper import WhisperModel
 
 # --- CONFIG & MODULE IMPORTS ---
 from config import WPN_PAGE_FRESH_SEC, WAS_READBACK_SEC
+from config import PTT_MODE, JOY_NAME_CONTAINS, JOY_DEVICE_INDEX, JOY_BUTTON, JOY_BACKEND
 from config import (PTT_KEY, SAMPLE_RATE, KEY_DELAY, MIC_DEVICE, MIN_UTTERANCE_SEC,
                     TRAILING_CAPTURE_SEC, WHISPER_MODEL, WHISPER_CPU_THREADS, STT_PROMPT,
                     READBACK_TIMEOUT_SEC, TELEMETRY_STALE_SEC, UTTERANCE_MAX_AGE_SEC)
@@ -20,6 +21,7 @@ from core.george_interface import GeorgeInterface, TOGGLE_VK
 from core.george_ui import start_george_ui_thread
 from core.console_log import start_console_log
 from core.wpn_page_listener import start_wpn_page_thread
+from core.joystick_ptt import JoystickPTT
 from intelligence.llm_client import (query_qwen, sanitize_result, warmup_llm, remember_turn,
                                      AutonomousAnnunciator)
 from intelligence.threat_engine import evaluate_tactical_environment
@@ -285,8 +287,9 @@ utterances: "queue.Queue[tuple[float, np.ndarray]]" = queue.Queue()
 rec_lock = threading.Lock()
 audio_frames = []
 is_recording = False
-key_down = False       # filters Windows key auto-repeat
 session = 0            # lets a quick re-press cancel the previous release's trailing capture
+_ptt_sources = set()   # PTT inputs currently held ("keyboard", "joystick"); guarded by rec_lock
+                       # (also filters Windows key auto-repeat: a held key is already in the set)
 
 def record_callback(indata, frames, time_info, status):
     if is_recording:
@@ -307,18 +310,44 @@ def _track_wheel_toggle(key, pressed: bool) -> None:
             george.note_user_toggle()
         _v_down = pressed
 
-def on_press(key):
-    global is_recording, key_down, session, audio_frames
-    _track_wheel_toggle(key, True)
-    if key != PTT_KEY or key_down:
-        return
-    key_down = True
+def ptt_press(source: str) -> None:
+    """A PTT input went down. The first one held starts a transmission; a second one held at
+    the same time (SPACE and the stick button) just joins it. Safe from any thread."""
+    global is_recording, session, audio_frames
     with rec_lock:
+        if source in _ptt_sources:
+            return
+        first = not _ptt_sources
+        _ptt_sources.add(source)
+        if not first:
+            return
         session += 1
         audio_frames = []
         is_recording = True
         ptt_active.set()          # inside the lock: ordered against the finalizer's clear()
-    print("\n[PTT] Listening...")
+    print(f"\n[PTT] Listening... ({source})")
+
+
+def ptt_release(source: str) -> None:
+    """A PTT input came up. The transmission ends when the LAST held input is released."""
+    with rec_lock:
+        if source not in _ptt_sources:
+            return
+        _ptt_sources.discard(source)
+        if _ptt_sources:
+            return
+        my_session = session
+    print("[PTT] Analyzing input...")
+    threading.Thread(target=_finalize_recording, args=(my_session,), daemon=True).start()
+
+
+_KEYBOARD_PTT = PTT_MODE in ("keyboard", "both")
+
+
+def on_press(key):
+    _track_wheel_toggle(key, True)
+    if _KEYBOARD_PTT and key == PTT_KEY:
+        ptt_press("keyboard")
 
 def _finalize_recording(my_session: int) -> None:
     global is_recording, audio_frames
@@ -338,13 +367,28 @@ def _finalize_recording(my_session: int) -> None:
     utterances.put((time.monotonic(), audio))
 
 def on_release(key):
-    global key_down
     _track_wheel_toggle(key, False)
-    if key != PTT_KEY or not key_down:
-        return
-    key_down = False
-    print("[PTT] Analyzing input...")
-    threading.Thread(target=_finalize_recording, args=(session,), daemon=True).start()
+    if _KEYBOARD_PTT and key == PTT_KEY:
+        ptt_release("keyboard")
+
+
+def start_joystick_ptt():
+    """Starts the stick-button PTT thread if PTT_MODE asks for it. In "joystick" mode, falls
+    back to SPACE when no joystick can be read at all, so you're never left without PTT."""
+    global _KEYBOARD_PTT
+    if PTT_MODE not in ("joystick", "both"):
+        return None
+    joy = JoystickPTT(lambda: ptt_press("joystick"), lambda: ptt_release("joystick"),
+                      name_contains=JOY_NAME_CONTAINS, index=JOY_DEVICE_INDEX, button=JOY_BUTTON,
+                      backend=JOY_BACKEND).start()
+    if PTT_MODE == "joystick":
+        wait_until = time.monotonic() + 2.0
+        while joy.ok is None and time.monotonic() < wait_until:
+            time.sleep(0.05)
+        if joy.ok is False and not joy.device:
+            _KEYBOARD_PTT = True
+            print("[PTT] Joystick PTT not available yet - SPACE works as push-to-talk meanwhile.")
+    return joy
 
 
 # --- VOICE WORKER: STT -> LLM -> ACTION -> SPEECH ---
@@ -439,8 +483,12 @@ if __name__ == "__main__":
 
     threading.Thread(target=voice_worker, args=(stt_model,), daemon=True, name="george-voice").start()
 
+    joystick_ptt = start_joystick_ptt()
+
     print("\n>>> ALL SYSTEMS ONLINE <<<")
-    print("Hold [SPACEBAR] to talk to George. Press Ctrl+C to exit.\n")
+    ptt_how = {"keyboard": "[SPACEBAR]", "joystick": f"joystick button {JOY_BUTTON}",
+               "both": f"[SPACEBAR] or joystick button {JOY_BUTTON}"}.get(PTT_MODE, "[SPACEBAR]")
+    print(f"Hold {ptt_how} to talk to George. Press Ctrl+C to exit.\n")
 
     try:
         with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, device=MIC_DEVICE,

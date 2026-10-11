@@ -12,6 +12,11 @@ SAMPLE_RATE = 16000
 
 # Push-To-Talk & Input Settings
 PTT_KEY = Key.space
+PTT_MODE = "both"                         # "joystick", "keyboard" or "both"
+JOY_NAME_CONTAINS = "TECS MODERN THROTTLE"  # part of the device name, e.g. "Warthog", "VKB" ("" = use the index)
+JOY_DEVICE_INDEX = 5                      # fallback: the [index] joy_probe.py prints (None = name only)
+JOY_BUTTON = 17                           # 1-based button number joy_probe.py prints
+JOY_BACKEND = "auto"                      # "auto" (pygame if installed, else Windows winmm), "pygame", "winmm"
 KEY_DELAY = 0.08
 MIN_UTTERANCE_SEC = 0.3      # ignore PTT taps shorter than this
 TRAILING_CAPTURE_SEC = 0.2   # keep recording briefly after release so the last word isn't clipped
