@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Session logs (logs/george_*.log) - large, and different every run
+logs/
+
+# Piper voice model (63 MB). Keep it next to main.py; see README.md.
+*.onnx
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
