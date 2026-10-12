@@ -8,7 +8,7 @@ setlocal
 cd /d "%~dp0"
 set "DCS_SCRIPTS=%USERPROFILE%\Saved Games\DCS\Scripts"
 if not exist "dcs_scripts" mkdir "dcs_scripts"
-for %%F in (Export.lua george_export.lua george_ai_export.lua) do (
+for %%F in (Export.lua george_export.lua george_ai_export.lua george_huey_export.lua) do (
   if exist "%DCS_SCRIPTS%\%%F" copy /y "%DCS_SCRIPTS%\%%F" "dcs_scripts\%%F" >nul
 )
 set "MSG=%~1"

@@ -226,6 +226,20 @@ def query_qwen(transcript_text: str, george_state: str = "unknown"
     return result, raw_snapshot
 
 
+def chat_json(system_prompt: str, history, transcript_text: str) -> Dict[str, Any]:
+    """One JSON-mode LLM call for another aircraft profile (e.g. huey/profile.py).
+    history: iterable of earlier {"role", "content"} messages."""
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history)
+    messages.append({"role": "user", "content": transcript_text})
+    response = ollama_client.chat.completions.create(
+        model=LLM_MODEL, messages=messages, temperature=0.1, max_tokens=LLM_MAX_TOKENS,
+        response_format={"type": "json_object"},
+    )
+    result = json.loads(response.choices[0].message.content)
+    return result if isinstance(result, dict) else {}
+
+
 def remember_turn(transcript_text: str, action: str, target_index: Optional[int], speech: str,
                   setting: Optional[str] = None, value: Optional[str] = None) -> None:
     """Records what George ACTUALLY did (post-sanitize), so a rejected action is never
@@ -294,7 +308,8 @@ class AutonomousAnnunciator:
         raw_snapshot = state_store.snapshot()
 
         # No live flight data (DCS closed, paused, or not yet connected): stay quiet.
-        if raw_snapshot["telemetry_age"] > TELEMETRY_STALE_SEC:
+        # In the Huey the crew chief (huey/crew_chief.py) does the callouts.
+        if raw_snapshot["telemetry_age"] > TELEMETRY_STALE_SEC or state_store.profile() != "apache":
             return
 
         eval_targets, highest_threat, constraints = evaluate_tactical_environment(raw_snapshot)

@@ -7,7 +7,8 @@ Run from the project folder (DCS does not need to be running):
 (-b hides the driver's console output for tests that pass; add -v to list each test.)
 
 Nothing here presses real keys, sends to DCS-BIOS or calls the LLM:
-`tests/fakes.py` provides a simulated George (FakeGeorge) and keyboard, and the pipeline test
+`tests/fakes.py` provides a simulated George (FakeGeorge) and keyboard, `tests/huey_fakes.py` a
+simulated Huey crew and cockpit (FakeHuey), and the pipeline test
 shuts down main.py's real driver before using its own. `tests/fixtures/` holds text captured
 from DCS (George's wheel, his Target List, a WPN page) so the parsers are tested on real data.
 

@@ -9,6 +9,7 @@ from pynput.keyboard import Controller, Key, Listener
 from faster_whisper import WhisperModel
 
 # --- CONFIG & MODULE IMPORTS ---
+import config
 from config import WPN_PAGE_FRESH_SEC, WAS_READBACK_SEC
 from config import PTT_MODE, JOY_NAME_CONTAINS, JOY_DEVICE_INDEX, JOY_BUTTON, JOY_BACKEND
 from config import (PTT_KEY, SAMPLE_RATE, KEY_DELAY, MIC_DEVICE, MIN_UTTERANCE_SEC,
@@ -23,7 +24,10 @@ from core.console_log import start_console_log
 from core.wpn_page_listener import start_wpn_page_thread
 from core.joystick_ptt import JoystickPTT
 from intelligence.llm_client import (query_qwen, sanitize_result, warmup_llm, remember_turn,
-                                     AutonomousAnnunciator)
+                                     AutonomousAnnunciator, chat_json)
+from huey.link import start_huey_link_thread
+from huey.profile import HueyProfile
+from huey.crew_chief import CrewChief
 from intelligence.threat_engine import evaluate_tactical_environment
 from intelligence.engagement_monitor import EngagementMonitor
 from intelligence.fast_path import match_fast
@@ -62,6 +66,11 @@ def _george_event(event: str, data: dict) -> None:
 george = GeorgeInterface(keyboard, on_event=_george_event,
                          ui_source=state_store.george_ui_snapshot,
                          list_sink=state_store.set_george_list)
+
+
+# --- UH-1H HUEY CREW (huey/). Used automatically while you fly the UH-1H. ---
+huey = HueyProfile(speak=lambda text: speak_george_radio(text, priority=PRIORITY_PILOT),
+                   state=state_store, bios_sender=cmd_sender, llm=chat_json)
 
 
 # --- ACTION EXECUTION ---
@@ -209,6 +218,9 @@ FIRE_MAX_AGE_SEC = 3.0
 
 
 def handle_command(text: str, captured: float = None) -> None:
+    if state_store.profile() == "huey":
+        huey.handle(text, captured)
+        return
     t0 = time.perf_counter()
 
     # Fast path: simple unambiguous commands skip the LLM entirely (milliseconds, not seconds).
@@ -405,9 +417,10 @@ def voice_worker(stt_model: WhisperModel) -> None:
             continue
         try:
             t0 = time.perf_counter()
+            prompt = config.HUEY_STT_PROMPT if state_store.profile() == "huey" else STT_PROMPT
             segments, _ = stt_model.transcribe(
                 audio, beam_size=1, vad_filter=True,
-                initial_prompt=STT_PROMPT, condition_on_previous_text=False,
+                initial_prompt=prompt, condition_on_previous_text=False,
             )
             text = " ".join(s.text for s in segments).strip()
             t_stt = time.perf_counter() - t0
@@ -440,11 +453,23 @@ def speak_alert(text: str) -> None:
     speak_george_radio(text, priority=PRIORITY_ALERT, max_age=5.0)
 
 
+def watch_profile() -> None:
+    """Logs which aircraft profile is in use whenever it changes."""
+    last = None
+    while True:
+        p = state_store.profile()
+        if p != last:
+            if last is not None or p == "huey":
+                print(f"[PROFILE] {'UH-1H: Huey crew (gunners, crew chief, checklists)' if p == 'huey' else 'AH-64D: George CPG'} active.")
+            last = p
+        time.sleep(1.0)
+
+
 # --- MAIN ---
 if __name__ == "__main__":
     start_console_log()             # mirror the console to logs/george_*.log
     print("\n=======================================================")
-    print("      DCS AH-64D GEORGE AI CO-PILOT MIDDLEWARE         ")
+    print("    DCS GEORGE AI CREW MIDDLEWARE  (AH-64D / UH-1H)    ")
     print("=======================================================\n")
 
     lower_process_priority()
@@ -456,6 +481,8 @@ if __name__ == "__main__":
     start_dcs_bios_thread()
     start_george_ui_thread()      # George's wheel / Target List from george_ai_export.lua
     start_wpn_page_thread()       # your actioned weapon / sight from the WPN page (george_export.lua)
+    start_huey_link_thread()      # UH-1H gauges, lamps, Crew Status panel (george_huey_export.lua)
+    threading.Thread(target=watch_profile, daemon=True, name="profile-watch").start()
 
     print("[3/5] Loading Faster-Whisper Speech Recognition Model...")
     try:    # use the cached model without contacting huggingface.co (fully local)
@@ -475,6 +502,11 @@ if __name__ == "__main__":
     annunciator.start()
     engagement_monitor = EngagementMonitor(speak_alert)   # missile away / target destroyed callouts
     engagement_monitor.start()
+    crew_chief = None
+    if config.HUEY_CALLOUTS:
+        crew_chief = CrewChief(speak_alert, state_store.snapshot,
+                               active=lambda: state_store.profile() == "huey",
+                               contact_range_m=config.HUEY_CONTACT_CALLOUT_M).start()
     print("[WHEEL] Assuming the George wheel is HIDDEN. If it's open, press Ctrl+V once or say 'toggle wheel'.")
     print("[WHEEL] Assuming George starts on NO WEAPON, WEAPONS HOLD, TADS fixed forward "
           "(corrected automatically once the wheel is shown and george_ai_export.lua is running).")

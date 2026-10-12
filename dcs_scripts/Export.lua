@@ -123,15 +123,28 @@ local function george_send_telemetry()
     local rad = 180 / math.pi
     -- True heading in degrees (0 = north, clockwise), for clock positions of targets.
     local hdg = -1
+    local ac = ""
     if LoGetSelfData then
         local ok, me = pcall(LoGetSelfData)
-        if ok and type(me) == "table" and type(me.Heading) == "number" then
-            hdg = (me.Heading * rad) % 360
+        if ok and type(me) == "table" then
+            if type(me.Heading) == "number" then hdg = (me.Heading * rad) % 360 end
+            ac = george_json_str(me.Name or "")
         end
     end
+    -- Height above ground (radar-altimeter style) and vertical speed, for crew callouts.
+    local agl = -1
+    if LoGetAltitudeAboveGroundLevel then
+        local ok, v = pcall(LoGetAltitudeAboveGroundLevel)
+        if ok and type(v) == "number" then agl = v * 3.28084 end
+    end
+    local vs = 0
+    if LoGetVerticalVelocity then
+        local ok, v = pcall(LoGetVerticalVelocity)
+        if ok and type(v) == "number" then vs = v * 196.85 end
+    end
     local payload = string.format(
-        '{"alt_ft":%.0f,"speed_kts":%.0f,"pitch":%.1f,"roll":%.1f,"yaw":%.1f,"hdg":%.1f,"ammo":[%d,%d,%d],"contacts":[%s]}',
-        alt * 3.28084, ias * 1.94384,
+        '{"ac":"%s","alt_ft":%.0f,"agl_ft":%.0f,"vs_fpm":%.0f,"speed_kts":%.0f,"pitch":%.1f,"roll":%.1f,"yaw":%.1f,"hdg":%.1f,"ammo":[%d,%d,%d],"contacts":[%s]}',
+        ac, alt * 3.28084, agl, vs, ias * 1.94384,
         (pitch or 0) * rad, (roll or 0) * rad, (yaw or 0) * rad, hdg, msl, rkt, gun,
         table.concat(items, ","))
 
@@ -176,3 +189,4 @@ end
 dofile(lfs.writedir() .. [[Scripts\DCS-BIOS\BIOS.lua]])
 dofile(lfs.writedir()..[[Scripts\george_export.lua]])
 dofile(lfs.writedir()..[[Scripts\george_ai_export.lua]])
+pcall(dofile, lfs.writedir()..[[Scripts\george_huey_export.lua]])   -- UH-1H crew link (optional)

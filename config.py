@@ -27,6 +27,10 @@ WHISPER_CPU_THREADS = 4      # leave cores free for DCS
 STT_PROMPT = ("Apache CPG commands: TADS, Hellfire, rockets, gun, master arm, "
               "arm, disarm, slave, Shilka, ZSU-23, lock target, search")
 
+HUEY_STT_PROMPT = ("Huey crew commands: door gunners, left gunner, right gunner, co-pilot, weapons free, "
+                   "hold fire, return fire, short bursts, long bursts, flares, UHF, VHF, FM, decimal, "
+                   "checklist, check, autopilot, attitude hold, master arm, rockets")
+
 # --- LLM ---
 LLM_MODEL = "qwen2.5:7b"
 LLM_TIMEOUT_SEC = 8
@@ -36,6 +40,14 @@ UTTERANCE_MAX_AGE_SEC = 8.0  # PTT utterances queued longer than this are droppe
 # --- SAFETY / CONFIRMATION ---
 READBACK_TIMEOUT_SEC = 0.5   # how long to wait for a DCS-BIOS switch to report the commanded state
 TELEMETRY_STALE_SEC = 3.0    # telemetry older than this is treated as "no data"
+
+# --- UH-1H HUEY (huey/) ---
+HUEY_DATA_PORT = 5008               # in:  gauges, lamps, Crew Status panel (Scripts/george_huey_export.lua)
+HUEY_CMD_PORT = 5009                # out: gunner ROE / burst, crew panel, autopilot (same script)
+HUEY_CALLOUTS = True                # crew-chief callouts (limits, cautions, sink rate, gunners)
+HUEY_CONTACT_CALLOUT_M = 1500       # call out enemy units closer than this (0 = never)
+HUEY_AUTO_ARM_FLARES = True         # "flares!" arms the dispenser first if it's on SAFE
+HUEY_FUEL_BURN_LBS_HR = 555         # for "about N minutes" (the 20-minute light is ~185 lbs)
 
 # --- NETWORKING & PORTS ---
 UDP_TELEMETRY_PORT = 5005   # Incoming Export.lua telemetry

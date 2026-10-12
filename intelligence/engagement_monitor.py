@@ -57,7 +57,7 @@ class EngagementMonitor:
     def check(self) -> None:
         snap = state_store.snapshot()
         now = self._clock()
-        if snap["telemetry_age"] > TELEMETRY_STALE_SEC:
+        if snap["telemetry_age"] > TELEMETRY_STALE_SEC or state_store.profile() != "apache":
             self._prev_ammo = None                    # mission paused/ended: start fresh
             return
         self._check_ammo(snap["ammo"], now)

@@ -15,7 +15,15 @@ _GENERIC_NAMES = {"GROUND", "ARMORED", "AAA", "AIR", "HELICOPTER", "NAVAL", "UNK
 # DCS-BIOS memory addresses we actually care about. The parser only calls into the
 # state store for these, which avoids taking the lock for every word in the stream.
 from config import BIOS_OUTPUTS, MASTER_ARM_ARMED_VALUE
-WATCHED_ADDRESSES = {addr for addr, _, _ in BIOS_OUTPUTS.values()}
+from huey.bios_map import watched_addresses as _huey_addresses
+_APACHE_ADDRESSES = {addr for addr, _, _ in BIOS_OUTPUTS.values()}
+_HUEY_ADDRESSES = _huey_addresses()
+WATCHED_ADDRESSES = _APACHE_ADDRESSES | _HUEY_ADDRESSES
+
+# The Huey link (george_huey_export.lua) only sends while you fly the UH-1H, so a live link
+# means the Huey profile; otherwise the aircraft name from Export.lua decides.
+HUEY_LINK_FRESH_SEC = 3.0
+HUEY_NAMES = {"UH-1H"}
 
 
 def clock_position(brg_deg, hdg_deg):
@@ -45,6 +53,15 @@ class ApacheStateStore:
         self.roll_deg: float = 0.0
         self.yaw_deg: float = 0.0
         self.hdg_deg: float = -1.0          # true heading from Export.lua; -1 = unknown
+        self.agl_ft: float = -1.0           # height above ground; -1 = unknown
+        self.vs_fpm: float = 0.0            # vertical speed, ft/min (+ = climbing)
+        self.aircraft: str = ""             # LoGetSelfData().Name, e.g. "AH-64D_BLK_II", "UH-1H"
+
+        # UH-1H crew link (huey/link.py): gauges, lamps, Crew Status panel, flares
+        self.huey: Dict[str, Any] = {}
+        self.huey_rx = 0.0
+        # Raw DCS-BIOS words for the Huey addresses (huey/bios_map.py decodes them)
+        self.bios_words: Dict[int, int] = {}
 
         # Cockpit Switch States (DCS-BIOS)
         self.master_arm: str = "DISARMED"  # DISARMED / ARMED
@@ -94,6 +111,11 @@ class ApacheStateStore:
             self.roll_deg = _f(telemetry_data, "roll", self.roll_deg)
             self.yaw_deg = _f(telemetry_data, "yaw", self.yaw_deg)
             self.hdg_deg = _f(telemetry_data, "hdg", self.hdg_deg)
+            self.agl_ft = _f(telemetry_data, "agl_ft", self.agl_ft)
+            self.vs_fpm = _f(telemetry_data, "vs_fpm", self.vs_fpm)
+            ac = telemetry_data.get("ac")
+            if isinstance(ac, str) and ac:
+                self.aircraft = ac
             self.telemetry_last_rx = now
 
             # Targets now come from George's own Target List (set_george_list); the telemetry
@@ -181,9 +203,37 @@ class ApacheStateStore:
         with self._lock:
             self.bios_last_rx = time.monotonic()
 
-    def update_cockpit_switches(self, address: int, value: int):
-        """Decodes DCS-BIOS words using the (address, mask, shift) table in config.BIOS_OUTPUTS."""
+    def update_huey(self, data: Dict[str, Any]):
+        """Latest packet from the Huey link (huey/link.py)."""
         with self._lock:
+            self.huey = data
+            self.huey_rx = time.monotonic()
+
+    def huey_snapshot(self):
+        """(huey dict, receive time; 0.0 = never). Cheaper than snapshot() for polling loops."""
+        with self._lock:
+            return dict(self.huey), self.huey_rx
+
+    def bios_words_snapshot(self) -> Dict[int, int]:
+        with self._lock:
+            return dict(self.bios_words)
+
+    def profile(self) -> str:
+        """'huey' while flying the UH-1H, otherwise 'apache' (the default)."""
+        now = time.monotonic()
+        with self._lock:
+            if self.huey_rx and now - self.huey_rx <= HUEY_LINK_FRESH_SEC:
+                return "huey"
+            return "huey" if self.aircraft in HUEY_NAMES else "apache"
+
+    def update_cockpit_switches(self, address: int, value: int):
+        """Decodes DCS-BIOS words using the (address, mask, shift) table in config.BIOS_OUTPUTS.
+        Huey words are kept raw in bios_words (decoded on demand by huey/bios_map.py)."""
+        with self._lock:
+            if address in _HUEY_ADDRESSES:
+                self.bios_words[address] = value
+                if address not in _APACHE_ADDRESSES:
+                    return
             for name, (addr, mask, shift) in BIOS_OUTPUTS.items():
                 if addr != address:
                     continue
@@ -224,6 +274,11 @@ class ApacheStateStore:
                 "roll": self.roll_deg,
                 "yaw": self.yaw_deg,
                 "hdg": self.hdg_deg,
+                "agl_ft": self.agl_ft,
+                "vs_fpm": self.vs_fpm,
+                "aircraft": self.aircraft,
+                "huey": dict(self.huey),
+                "huey_age": self._age(self.huey_rx, now),
                 "master_arm": self.master_arm,
                 "sight_select": self.sight_select,
                 "was_state": self.was_state,
