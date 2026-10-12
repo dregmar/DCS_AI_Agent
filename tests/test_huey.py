@@ -104,6 +104,12 @@ class TestCommands(unittest.TestCase):
         self.assertIsNone(self.m("check"))                       # no checklist running
         self.assertEqual(self.m("stop checklist", active=True)["value"], "STOP")
 
+    def test_flight_test_phrases(self):
+        self.assertEqual(self.m("okay let's start engines"), {"action": "CHECKLIST_START", "value": "start"})
+        self.assertEqual(self.m("walk me through the start of sequence."), {"action": "CHECKLIST_START", "value": "start"})
+        self.assertEqual(self.m("fuel estate")["action"], "FUEL")
+        self.assertEqual(self.m("engine stop us")["action"], "ENGINE")
+
     def test_queries(self):
         for text, action in (("status", "STATUS"), ("fuel state", "FUEL"), ("how much fuel", "FUEL"),
                              ("engine check", "ENGINE"), ("any contacts", "CONTACTS"),
@@ -296,6 +302,24 @@ class TestCrewChief(HueyCase):
         self.chief.check(now=109)
         self.assertEqual(len(self.said), n)
 
+    def test_flight_test_fixes(self):
+        # torque sitting on 50 in fast cruise: one callout per minute, not one per wobble
+        send_telemetry()
+        state_store.update_telemetry({"agl_ft": 300, "speed_kts": 120, "vs_fpm": 0})
+        self.gauges(rotor_rpm=324, engine_rpm=6600, n1_pct=100, egt_c=590, torque_psi=49)
+        self.chief.check(now=100)
+        self.chief.check(now=106)
+        for t, tq in ((107, 51), (110, 44), (115, 51), (120, 44), (125, 51), (170, 44), (171, 51)):
+            self.gauges(torque_psi=tq)
+            self.chief.check(now=t)
+        self.assertEqual(self.said.count("Torque fifty, over limit."), 2)
+        # EGT over 625 during a start (engine not yet running) is not called
+        self.said.clear()
+        state_store.update_telemetry({"agl_ft": 0, "speed_kts": 0})
+        self.gauges(engine_rpm=3000, n1_pct=45, egt_c=664, torque_psi=5)
+        self.chief.check(now=200)
+        self.assertEqual(self.said, [])
+
     def test_start_call_and_contacts(self):
         send_telemetry(contacts=[{"id": 7, "type": "ZU-23", "dist_m": 900, "brg": 90}], hdg=0)
         state_store.update_telemetry({"agl_ft": 0, "speed_kts": 0})
@@ -305,7 +329,7 @@ class TestCrewChief(HueyCase):
         self.chief.check(now=2)
         self.gauges(n1_pct=41)
         self.chief.check(now=3)
-        self.assertIn("Fifteen percent, rotor's turning.", self.said)
+        self.assertIn("Rotor's turning.", self.said)
         self.assertIn("Forty percent. Release the starter.", self.said)
         self.assertIn("Contact, ZU-23, 3 o'clock, 900 meters.", self.said)
 
@@ -323,6 +347,9 @@ class TestProfile(HueyCase):
         self.assertEqual(said[1], "Master arm armed.")
         state_store.update_telemetry({"agl_ft": 300, "speed_kts": 90})
         self.assertIn("not in flight", p.execute({"action": "SWITCH", "key": "main_fuel", "value": "OFF"}))
+        st = p.status_report()
+        self.assertIn("Gunners free fire.", st)
+        self.assertLess(len(st), 160, st)
         p.handle("something the fast path does not know")
         self.assertTrue(wait_until(lambda: len(said) > 2, 2))
         self.assertEqual(said[2], "Say again.")

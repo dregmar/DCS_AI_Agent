@@ -58,7 +58,8 @@ emergency, starter-generator to start, main generator off.
 ## Checklists (DCS UH-1H manual, section 9)
 
 **before start checklist** · **start checklist** · **run up checklist** ·
-**before takeoff checklist** · **shutdown checklist**
+**before takeoff checklist** · **shutdown checklist** ("let's start engines" or "walk me through
+the start" also starts the engine start checklist)
 
 George reads each item. Switches he can see on DCS-BIOS and gauges he can read ("RPM 6600",
 "AC 112 to 118 volts", "no cautions") he checks himself and moves on. For the rest he waits:
@@ -75,7 +76,7 @@ George reads each item. Switches he can see on DCS-BIOS and gauges he can read (
 
 | Say | George |
 |---|---|
-| **status** | Height, speed, engine, fuel, cautions, master arm, gunners |
+| **status** | Short: height, speed, torque, EGT, fuel, cautions, master arm, gunners in one line |
 | **engine check** · **gauges** | Rotor, engine RPM, N1, torque, EGT |
 | **fuel state** · **how much fuel** | Pounds and roughly how long |
 | **caution lights** | Which caution lights are on |
@@ -83,10 +84,10 @@ George reads each item. Switches he can see on DCS-BIOS and gauges he can read (
 
 ## What the crew chief calls out on his own
 
-- Engine start: "Fifteen percent, rotor's turning." (or "no rotor, abort the start!"),
+- Engine start (at 25 % N1): "Rotor's turning." (or "No rotor turning. Abort the start!"),
   "Forty percent. Release the starter."
 - Limits: rotor RPM low (under 300 in flight), rotor overspeed (over 339), engine RPM low
-  (under 6100 in flight), EGT over 625 and over 760, torque over 50, N1 over 101.5.
+  (under 6100 in flight), EGT over 625 (engine running) and over 760, torque over 50 (at most once a minute), N1 over 101.5.
 - "Sink rate! You're settling." when slow (under 30 kt) and sinking faster than 800 ft/min.
 - New caution lights once the engine runs: "Caution, hydraulic pressure", "Twenty minutes of
   fuel", "Fire light! Engine fire!" (a lamp test is ignored).

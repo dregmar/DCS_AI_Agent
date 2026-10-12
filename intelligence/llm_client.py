@@ -252,25 +252,60 @@ def remember_turn(transcript_text: str, action: str, target_index: Optional[int]
     })
 
 
+OLLAMA_NATIVE = "http://localhost:11434/api"
+KEEP_WARM_CHECK_SEC = 60
+
+
+def _ollama(path: str, body: Optional[dict] = None, timeout: float = 5.0) -> dict:
+    """Ollama's native API (the OpenAI-compatible one can't set keep_alive)."""
+    import urllib.request
+    data = None if body is None else json.dumps(body).encode()
+    req = urllib.request.Request(f"{OLLAMA_NATIVE}/{path}", data=data,
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode() or "{}")
+
+
+def _model_loaded() -> bool:
+    models = _ollama("ps").get("models") or []
+    want = LLM_MODEL if ":" in LLM_MODEL else LLM_MODEL + ":latest"
+    return any(m.get("name") == want or m.get("model") == want for m in models)
+
+
+def _load_model() -> float:
+    """Loads the model into VRAM and tells Ollama to keep it there for good (keep_alive -1).
+    Loading with DCS running can take far longer than a command's timeout, hence 120 s."""
+    t0 = time.perf_counter()
+    _ollama("generate", {"model": LLM_MODEL, "keep_alive": -1}, timeout=120)
+    return time.perf_counter() - t0
+
+
 def warmup_llm() -> None:
-    """Loads the model into VRAM so the first real command isn't slow.
-    (Also set the OLLAMA_KEEP_ALIVE=-1 environment variable so it never unloads.)"""
-    # Loading a model into VRAM can take far longer than one command's timeout, especially
-    # with DCS already using the GPU, so the warm-up gets its own generous timeout.
-    warm_client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama",
-                         timeout=120, max_retries=0)
+    """Loads the model, then keeps it loaded for as long as the program runs.
+
+    Ollama unloads an idle model after 5 minutes by default. Reloading it then takes longer than
+    a command's timeout, and a command that times out cancels the reload, so every LLM command
+    failed after a few quiet minutes (seen in the Huey test flight). keep_alive -1 prevents the
+    unload; the check every minute reloads it if Ollama dropped it anyway (restart, VRAM)."""
+    t0 = time.perf_counter()
     try:
-        t0 = time.perf_counter()
-        warm_client.chat.completions.create(
-            model=LLM_MODEL,
-            messages=[{"role": "user", "content": "ready"}],
-            max_tokens=1,
-        )
-        print(f"[LLM] Model warm ({time.perf_counter() - t0:.1f}s).")
+        print(f"[LLM] Model warm ({_load_model():.1f}s), kept loaded.")
     except Exception as e:
         print(f"[LLM WARNING] Warm-up failed after {time.perf_counter() - t0:.0f}s ({e}). "
               f"Check that Ollama is running and '{LLM_MODEL}' is pulled: run 'ollama ps' and "
               f"'ollama list'. Simple commands still work through the fast path.")
+    warned = False
+    while True:
+        time.sleep(KEEP_WARM_CHECK_SEC)
+        try:
+            if not _model_loaded():
+                print("[LLM] Model was unloaded; reloading it in the background...")
+                print(f"[LLM] Model reloaded ({_load_model():.1f}s).")
+            warned = False
+        except Exception as e:
+            if not warned:
+                print(f"[LLM WARNING] Can't reach Ollama to keep the model loaded ({e}).")
+                warned = True
 
 
 # --- 2. AUTONOMOUS BACKGROUND ANNUNCIATOR ENGINE ---

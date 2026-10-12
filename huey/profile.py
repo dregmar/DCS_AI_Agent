@@ -223,28 +223,39 @@ class HueyProfile:
         return (", ".join(parts) + ".") if parts else "No radio data."
 
     def status_report(self) -> str:
+        """Short on purpose: the first test flight's full report took ~15 s to say. Details are
+        one question away ("engine check", "crew status", "fuel state")."""
         snap = self.state.snapshot()
         parts = []
         if snap["telemetry_age"] > TELEMETRY_FRESH_SEC:
             parts.append("No flight data.")
         else:
             agl = snap.get("agl_ft", -1)
-            alt = f"{agl:.0f} feet above ground" if agl >= 0 else f"altitude {snap['alt_ft']:.0f} feet"
+            alt = f"{agl:.0f} feet" if agl >= 0 else f"altitude {snap['alt_ft']:.0f}"
             parts.append(f"{alt[0].upper()}{alt[1:]}, {snap['speed_kts']:.0f} knots.")
         h = self._huey()
         if h:
-            parts.append(self.engine_report())
+            eng = []
+            rotor = h.get("rotor_rpm")
+            if rotor is not None and not 314 <= rotor <= 339:
+                eng.append(f"rotor {rotor:.0f}")
+            if h.get("torque_psi") is not None:
+                eng.append(f"torque {h['torque_psi']:.0f}")
+            if h.get("egt_c") is not None:
+                eng.append(f"EGT {h['egt_c']:.0f}")
             if h.get("fuel_lbs") is not None:
-                parts.append(f"Fuel {h['fuel_lbs']:.0f} pounds.")
+                eng.append(f"fuel {h['fuel_lbs']:.0f}")
+            if eng:
+                parts.append(eng[0].capitalize() + (", " + ", ".join(eng[1:]) if eng[1:] else "") + ".")
             parts.append(self.cautions_report())
         arm = self._switch("master_arm")
         if arm:
             parts.append(f"Master arm {arm.lower()}.")
         if h.get("panel"):
-            parts.append(describe_crew(h["panel"]))
+            parts.append(crew_summary(h["panel"]))
         if self.checklist.active:
             parts.append(f"{self.checklist.name.replace('_', ' ')} checklist running.")
-        return " ".join(parts)
+        return " ".join(p for p in parts if p)
 
     def state_line(self) -> str:
         """Short state summary for the LLM prompt."""
@@ -259,3 +270,24 @@ class HueyProfile:
         if arm:
             bits.append(f"master arm {arm}")
         return "; ".join(bits)
+
+
+def crew_summary(panel: Dict[str, dict]) -> str:
+    """'Gunners weapons hold.' / 'Left gunner free fire, 40 percent. Right gunner is down.'"""
+    from huey.panel import SEAT_NAMES, SPOKEN_ROE
+    rows = {s: panel[s] for s in ("left", "right") if panel.get(s)}
+    if not rows:
+        return ""
+    roes = {r.get("roe") for r in rows.values()}
+    full = all(r.get("ammo") in (None, 100) for r in rows.values())
+    if len(rows) == 2 and len(roes) == 1 and None not in roes and full:
+        return f"Gunners {SPOKEN_ROE[roes.pop()]}."
+    out = []
+    for seat, r in rows.items():
+        name = SEAT_NAMES[seat].capitalize()
+        if r.get("roe") is None:
+            out.append(f"{name} is down." if r.get("state") == "DEAD" else "")
+            continue
+        ammo = f", {r['ammo']} percent" if r.get("ammo") not in (None, 100) else ""
+        out.append(f"{name} {SPOKEN_ROE[r['roe']]}{ammo}.")
+    return " ".join(o for o in out if o)

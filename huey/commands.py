@@ -239,7 +239,7 @@ def _match_radio(t: str) -> Optional[Dict[str, Any]]:
 # ------------------------------------------------------------------ checklists
 _CHECKLIST_NAMES = [
     ("before_takeoff", re.compile(r"\b(?:before|pre) ?take ?off\b|\btake ?off check")),
-    ("before_start", re.compile(r"\b(?:before|pre) ?start(?:ing)?(?: engine)?\b|\bprestart\b")),
+    ("before_start", re.compile(r"\b(?:before|pre) ?(?:i |we )?start(?:ing)?(?: engine)?\b|\bprestart\b")),
     ("runup", re.compile(r"\brun ?up\b")),
     ("shutdown", re.compile(r"\bshut ?down\b")),
     ("start", re.compile(r"\b(?:engine )?start(?:ing)?(?: engine)?\b")),
@@ -256,7 +256,14 @@ _REPLY = [
 ]
 
 
+# "let's start engines" / "walk me through the start sequence" -> the engine start checklist
+_START_TALK = re.compile(r"\bstart (?:the )?engines?\b|\bstart(?:ing|up|-up)? (?:sequence|procedure)\b|"
+                         r"\bwalk me through (?:the )?(?:engine )?start|\bstart (?:it|her) up\b")
+
+
 def _match_checklist(t: str, active: bool) -> Optional[Dict[str, Any]]:
+    if not _CHECKLIST_WORD.search(t) and _START_TALK.search(t) and not _NEG.search(t):
+        return _r("CHECKLIST_START", value="start")
     if _CHECKLIST_WORD.search(t) and not re.search(r"\b(?:stop|cancel|abort|end|quit)\b", t):
         for name, rx in _CHECKLIST_NAMES:
             if rx.search(t):
@@ -272,9 +279,9 @@ def _match_checklist(t: str, active: bool) -> Optional[Dict[str, Any]]:
 # ------------------------------------------------------------------ questions
 _QUERIES = [
     ("STATUS", re.compile(r"^(?:status|sitrep|sit rep|situation report|status report)$")),
-    ("FUEL", re.compile(r"\bfuel (?:state|check|status|remaining|quantity|left)\b|^fuel$|"
+    ("FUEL", re.compile(r"\bfuel (?:state|estate|check|status|remaining|quantity|left)\b|^fuel$|"
                         r"\bhow much fuel\b|\bwhat(?:'s| s| is)? fuel\b")),
-    ("ENGINE", re.compile(r"\b(?:engine|gauges?|instruments?|engine instruments) (?:check|status|readout|report)\b|"
+    ("ENGINE", re.compile(r"\b(?:engines?|gauges?|instruments?|engine instruments) (?:check|status|stop us|stats|state|readout|report)\b|"
                           r"^(?:gauges|engine instruments|instruments)$|\bhow (?:is|s) engine\b")),
     ("CONTACTS", re.compile(r"\b(?:any )?(?:contacts?|threats?|enemies|bad guys)\b(?: around| near| out there)?$|"
                             r"\bwhat do you see\b")),

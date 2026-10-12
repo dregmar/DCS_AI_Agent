@@ -49,19 +49,25 @@ class CrewChief:
         self._last_contact_call = 0.0
         self._n1_prev: Optional[float] = None
         self._running = False
+        self._now = 0.0
+        self._spoken_at: Dict[str, float] = {}
 
     # ------------------------------------------------------------ helpers
-    def _edge(self, key: str, cond: bool, rearm: bool, text: str) -> None:
-        """Speak text when cond becomes true; re-arm when `rearm` is true."""
+    def _edge(self, key: str, cond: bool, rearm: bool, text: str, quiet_sec: float = 0.0) -> None:
+        """Speak text when cond becomes true; re-arm when `rearm` is true. quiet_sec: never repeat
+        sooner than this, for values that hover around a limit (torque in fast cruise)."""
         if cond and not self._armed.get(key):
             self._armed[key] = True
-            self.speak(text)
+            if self._now - self._spoken_at.get(key, -1e9) >= quiet_sec:
+                self._spoken_at[key] = self._now
+                self.speak(text)
         elif rearm:
             self._armed[key] = False
 
     # ------------------------------------------------------------ the check
     def check(self, now: Optional[float] = None) -> None:
         now = time.monotonic() if now is None else now
+        self._now = now
         snap = self.snapshot()
         h = snap.get("huey") or {}
         if snap.get("huey_age", float("inf")) > LINK_FRESH_SEC or not h:
@@ -81,11 +87,13 @@ class CrewChief:
         egt, tq, n1 = h.get("egt_c"), h.get("torque_psi"), h.get("n1_pct")
         running = (eng or 0) > 6000 or (n1 or 0) > 60
 
-        # --- engine start sequence (manual 9.1.2: rotor turning at 15 % N1, release at 40 %)
+        # --- engine start sequence (manual 9.1.2: rotor turning at 15 % N1, release at 40 %).
+        # The rotor tach barely moves at 15 % (a false "no rotor" in the first test flight), so the
+        # rotor is judged at 25 %.
         if n1 is not None and not running and self._n1_prev is not None:
-            if self._n1_prev < 15 <= n1:
-                self.speak("Fifteen percent, rotor's turning." if (rotor or 0) > 1
-                           else "Fifteen percent and no rotor. Abort the start!")
+            if self._n1_prev < 25 <= n1:
+                self.speak("Rotor's turning." if (rotor or 0) > 0.5
+                           else "No rotor turning. Abort the start!")
             if self._n1_prev < 40 <= n1:
                 self.speak("Forty percent. Release the starter.")
         self._n1_prev = n1
@@ -97,10 +105,11 @@ class CrewChief:
         if eng is not None:
             self._edge("eng_low", flying and eng < 6100, eng > 6300, "Engine RPM low.")
         if egt is not None:
-            self._edge("egt_625", egt > 625, egt < 610, f"EGT {egt:.0f}.")
+            # 625 is a running limit; a start may briefly go higher (only 760 counts then)
+            self._edge("egt_625", running and egt > 625, egt < 610, f"EGT {egt:.0f}.", quiet_sec=60)
             self._edge("egt_760", egt > 760, egt < 740, "EGT over limit!")
         if tq is not None:
-            self._edge("torque", tq > 50, tq < 48, "Torque fifty, over limit.")
+            self._edge("torque", tq > 50, tq < 45, "Torque fifty, over limit.", quiet_sec=60)
         if n1 is not None:
             self._edge("n1", n1 > 101.5, n1 < 100.5, "N1 over limit.")
 
