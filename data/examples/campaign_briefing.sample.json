@@ -1,0 +1,24 @@
+{
+  "_help": "SAMPLE ONLY (a made-up operation). Copy the format into data/campaign_briefing.json.",
+  "campaign": "Operation Granite Spear (sample)",
+  "entries": [
+    {"title": "Package priority", "tags": ["priority", "package", "objective"],
+     "text": "Package priority today: one, destroy the SA-6 battery at the Gori bridge (target area Bravo). Two, armour moving south on the main supply route. Three, logistics trucks at the Khashuri depot.",
+     "say": "Package priority: one, the SA-6 battery at the Gori bridge. Two, armour on the main supply route. Three, the trucks at the Khashuri depot."},
+    {"title": "Rules of engagement, sector Bravo", "tags": ["roe", "sector bravo"],
+     "text": "Sector Bravo is weapons free on positively identified armour and air defence. Weapons hold on anything inside the town of Gori. Friendly patrols are north of the river.",
+     "say": "Sector Bravo: weapons free on identified armour and air defence. Weapons hold inside Gori town. Friendlies north of the river."},
+    {"title": "Rules of engagement, sector Charlie", "tags": ["roe", "sector charlie"],
+     "text": "Sector Charlie is weapons hold. Return fire only."},
+    {"title": "Threats", "tags": ["threat", "air defence"],
+     "text": "Expected threats: one SA-6 battery at Gori, Shilkas with the armour column, MANPADS reported in the hills west of the main supply route. No enemy fighters expected; a pair of Mi-24s is possible."},
+    {"title": "Frequencies", "tags": ["freq", "radio", "callsign"],
+     "text": "Package common: 251.0 UHF. JTAC Axeman: 30.5 FM. Overlord: 264.0 UHF. Tower Senaki: 132.0 VHF."},
+    {"title": "FARP and divert", "tags": ["farp", "divert", "rearm", "refuel"],
+     "text": "FARP Hammer is 12 kilometres south of Gori at waypoint 5. Divert: Kutaisi."},
+    {"title": "Joker and bingo", "tags": ["joker", "bingo", "fuel"],
+     "text": "Joker 1,200 pounds, bingo 900 pounds."},
+    {"title": "Laser codes", "tags": ["lasercode", "jtac"],
+     "text": "Package laser code 1688. JTAC Axeman lases on 1511."}
+  ]
+}

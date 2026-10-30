@@ -71,6 +71,8 @@ class EngagementMonitor:
         msl, pmsl = ammo.get("msl"), prev.get("msl")
         if msl is not None and pmsl is not None and msl < pmsl:
             self._last_shot = now
+            from common.debrief import DEBRIEF
+            DEBRIEF.shot("missile", pmsl - msl)
             if msl == 0:
                 self._speak("Missile away. Missiles winchester.")
             else:
@@ -80,6 +82,8 @@ class EngagementMonitor:
             self._last_shot = now
             if now - self._last_gun_call >= GUN_CALL_GAP_SEC:
                 self._last_gun_call = now
+                from common.debrief import DEBRIEF
+                DEBRIEF.shot("gun")
                 self._speak("Firing gun." if gun > 0 else "Gun winchester.")
         rkt, prkt = ammo.get("rkt"), prev.get("rkt")
         if rkt is not None and prkt is not None and rkt < prkt:
@@ -119,6 +123,8 @@ class EngagementMonitor:
         if self._missing < MISSING_POLLS:
             return
         self._missing = 0
+        from common.debrief import DEBRIEF
+        DEBRIEF.kill("George", str(current.get("type") or "target"))
         nxt = state_store.pop_engagement()
         if nxt:
             self._speak(f"Target destroyed. Next target, {nxt['type']}.")

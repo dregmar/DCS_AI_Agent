@@ -1,6 +1,6 @@
 # What George understands
 
-Hold **SPACE** or your **PTT button** on the throttle (`JOY_BUTTON` in config.py), speak, release. The phrases below are handled instantly. Anything else goes to the
+Hold **SPACE** or your **PTT button** (button 21 on the VKB Gladiator EVO R stick; `JOY_BUTTON` in config.py), speak, release. The phrases below are handled instantly. Anything else goes to the
 LLM (2–5 s), which handles free-form requests and settings you name in your own words.
 "George", "please" and "okay" are ignored, and so is a leading "and" or "so".
 
@@ -10,7 +10,7 @@ LLM (2–5 s), which handles free-form requests and settings you name in your ow
 |---|---|
 | **fire** · **send it** · **cleared hot** · **cleared to fire** · **shoot** | Consent to fire (Multifunctional Input). Only the whole sentence counts, and only within 3 s of saying it. |
 | **cease fire** · **hold fire** · **check fire** · **stop tracking** · **stand down** | Stops everything, TADS fixed forward. |
-| **weapons free** · **weapons hold** | Sets his ROE (FREE FIRE: he shoots when ready). |
+| **weapons free** · **weapons hot** · **weapons hold** | Sets his ROE (FREE FIRE: he shoots when ready). |
 | **toggle ROE** | Flips ROE and tells you which it is now. |
 
 ## George's weapon and settings
@@ -58,7 +58,7 @@ After a search George reads his list out with clock positions, for example: "Tar
 | Say | George |
 |---|---|
 | **laser on** · **laser off** · **lase** | Laser on / off (no weapon assigned) |
-| **zoom in** · **zoom out** | TADS zoom where he can, refuses where he can't |
+| **zoom in** · **zoom** · **zoom out** | TADS zoom where he can, refuses where he can't |
 | **FLIR** · **TV** · **switch sensor** | FLIR / DTV |
 | **store target** · **mark it** | Stores the target as a TSD point |
 | **toggle threat warnings** | George's verbal threat warnings on / off |
@@ -78,8 +78,30 @@ After a search George reads his list out with clock positions, for example: "Tar
 
 | Say | Does |
 |---|---|
-| **status** · **sitrep** | Flight data, master arm, your weapon, George's settings, his list, the priority target |
+| **status** · **sitrep** | Flight data, fuel, master arm, your weapon, George's settings, his list, the priority target |
+| **fuel** · **fuel state** · **how much fuel** | Fuel only, in pounds, straight from DCS (your aircraft's fuel x its own tank size, so any loadout and external tanks are right): "Fuel 5530 pounds, with the external tanks." Needs george_comms_hook.lua; without it the Export.lua value is used |
 | **show the wheel** · **hide the wheel** · **toggle wheel** | George's wheel (it also hides itself after 6 idle seconds) |
+
+## Checklists
+
+**before start checklist** · **start checklist** · **before takeoff checklist** · **shutdown checklist**
+(also "let's start engines"). George reads each item and checks what he can see on DCS-BIOS himself:
+canopy, parking brake, master ignition, rotor brake, power levers, APU light, CMWS, lights, and the
+EUFD for warnings. For the rest he waits:
+
+| Say | George |
+|---|---|
+| **check** · **next** · **done** | Item done |
+| **set it** | Sets that switch for you (master ignition, rotor brake, parking brake, canopy, lights, CMWS) |
+| **skip** · **repeat** · **stop checklist** | |
+
+## Warnings and cautions (EUFD)
+
+| Say | George |
+|---|---|
+| **any cautions** · **warnings** · **cautions** | Reads the EUFD's warnings, cautions and advisories |
+
+Radio menu and navigation: see `COMMANDS_COMMON.md`.
 
 ## What George calls out on his own
 
@@ -87,3 +109,4 @@ After a search George reads his list out with clock positions, for example: "Tar
 - "Target destroyed. Next target, T-72B." · "Shoot list complete."
 - Low altitude, high-threat air defence detected, TADS masked.
 - "DCS not in focus." when DCS isn't the window in front (he sends no keys then).
+- New EUFD warnings and cautions: "Warning, engine 1 out." "Caution, engine 1 oil pressure low."

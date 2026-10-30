@@ -3,7 +3,8 @@ from pynput.keyboard import Key
 
 # --- PATHS & HARDWARE CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PIPER_MODEL_PATH = os.path.join(BASE_DIR, "en_US-ryan-low.onnx")
+PIPER_MODEL_PATH = os.path.join(BASE_DIR, "en_US-ryan-low.onnx")        # George / crew (intercom)
+OVERLORD_MODEL_PATH = os.path.join(BASE_DIR, "en_US-joe-medium.onnx")   # Overlord (command radio)
 
 # Audio Output Device Index (User specified device #5)
 AUDIO_OUTPUT_DEVICE = 5
@@ -13,27 +14,74 @@ SAMPLE_RATE = 16000
 # Push-To-Talk & Input Settings
 PTT_KEY = Key.space
 PTT_MODE = "both"                         # "joystick", "keyboard" or "both"
-JOY_NAME_CONTAINS = "TECS MODERN THROTTLE"  # part of the device name, e.g. "Warthog", "VKB" ("" = use the index)
+JOY_NAME_CONTAINS = "Gladiator EVO R"   # part of the device name, e.g. "Warthog", "VKB" ("" = use the index)
 JOY_DEVICE_INDEX = 5                      # fallback: the [index] joy_probe.py prints (None = name only)
-JOY_BUTTON = 17                           # 1-based button number joy_probe.py prints
+JOY_BUTTON = 21                           # 1-based button number joy_probe.py prints
+# (was TECS MODERN THROTTLE button 17 until 19 Oct 2026)
 JOY_BACKEND = "auto"                      # "auto" (pygame if installed, else Windows winmm), "pygame", "winmm"
 KEY_DELAY = 0.08
 MIN_UTTERANCE_SEC = 0.3      # ignore PTT taps shorter than this
 TRAILING_CAPTURE_SEC = 0.2   # keep recording briefly after release so the last word isn't clipped
 
 # --- STT ---
-WHISPER_MODEL = "base.en"
+WHISPER_MODEL = "small.en"    # "base.en" (~0.35 s) or "small.en" (~1.1 s, hears callsigns better).
+                              # Not "distil-small.en": it can't use the prompt and wrote garbage (24 Oct).
+                              # The console shows each one's time: "[PILOT]: '...' (STT 0.42s for 2.1s audio)"
 WHISPER_CPU_THREADS = 4      # leave cores free for DCS
-STT_PROMPT = ("Apache CPG commands: TADS, Hellfire, rockets, gun, master arm, "
-              "arm, disarm, slave, Shilka, ZSU-23, lock target, search")
+STT_PROMPT = ("Apache CPG commands: fuel, status, TADS, Hellfire, rockets, gun, master arm, "
+              "arm, disarm, slave, Shilka, ZSU-23, lock target, search, weapons free, weapons hold, "
+              "cease fire, zoom, laser, waypoint, George wheel, wingman, flight, return to base, rejoin, "
+              "engage my target, cover me, air defences, pincer, follow me, lase, laser code, pop smoke, "
+              "weapons hold, take out the ZSU, Overlord, requesting SEAD strike, CAS, close air support, CAP, escort, north of my position, "
+              "package priority, rules of engagement, briefing, sector, frequencies, go independent, Outcast 2, "
+              "engage at will, RTB, grid, bullseye, mark our position as waypoint Alpha, Bravo, objective, "
+              "nearest FARP, divert, debrief")
 
 HUEY_STT_PROMPT = ("Huey crew commands: door gunners, left gunner, right gunner, co-pilot, weapons free, "
                    "hold fire, return fire, short bursts, long bursts, flares, UHF, VHF, FM, decimal, "
-                   "checklist, check, autopilot, attitude hold, master arm, rockets")
+                   "checklist, check, autopilot, attitude hold, master arm, rockets, fuel, status, "
+                   "sling load, hook the load, wingman, flight, return to base, rejoin, cover me, follow me, "
+                   "land next to me, pop smoke, Overlord, requesting SEAD strike, CAS, close air support, CAP, escort, north of my position, "
+              "package priority, rules of engagement, briefing, sector, frequencies, go independent, Outcast 2, "
+              "engage at will, RTB, grid, bullseye, mark our position as waypoint Alpha, Bravo, objective, "
+              "nearest FARP, divert, debrief")
+
+JET_STT_PROMPT = ("Hornet and A-10 radio calls: Marshal, inbound, established, commencing, platform, check in, "
+                  "request azimuth, abort inbound, ball, Clara, see you at ten, mother, say bingo, joker, bingo, "
+                  "fuel to home, Overlord, requesting SEAD, CAS, CAP, escort, picture, bogey dope, two, go independent, "
+                  "Outcast 2, rejoin, hold position, engage at will, RTB, weapons free, grid, bullseye, waypoint Alpha, "
+                  "map carrier menu, nearest friendly airfield, debrief, JTAC, request target, next target, mark target, "
+                  "BDA, good effect")
+
+# --- DCS Olympus (wingman orders the radio menu can't give: attack a chosen target, follow,
+# waypoints, land, weapons hold/free, lase, smoke). Saved Games\DCS\Config\olympus.json has the
+# backend port; the password is the Blue commander one set in the Olympus Manager.
+# Overlord calls enemy aircraft on his own within 40 km ("pop-up group"), and again inside 15 km
+OVERLORD_AIR_WARNINGS = True
+OLYMPUS_ENABLED = True
+OLYMPUS_URL = "http://localhost:4512"     # "localhost", not 127.0.0.1: that's the name Olympus listens on
+OLYMPUS_USER = "George"
+OLYMPUS_PASSWORD = "thor"                 # Blue commander
 
 # --- LLM ---
-LLM_MODEL = "qwen2.5:7b"
-LLM_TIMEOUT_SEC = 8
+# When no fixed phrase catches an order (or Overlord / an Outcast says "say again"), the crew's
+# model may rewrite it into a standard order ("Ocast 2, destroy the defences" -> "Outcast 2,
+# engage air defences"); see intelligence/router.py. What worked is saved in
+# data/learned_phrases.json and recognised instantly next time. False = the old behaviour.
+ROUTER_ENABLED = True
+
+# --- VR kneeboard (kneeboard/): add http://127.0.0.1:5000/ as a web dashboard tab in OpenKneeboard ---
+KNEEBOARD_ENABLED = True
+KNEEBOARD_PORT = 5000             # change if another program uses 5000
+KNEEBOARD_AUTO_CHECKLIST = True   # the kneeboard turns to the Checklist page when a checklist starts
+DCS_BIOS_JSON_DIR = None          # None = Saved Games\DCS\Scripts\DCS-BIOS\doc\json (jet checklists read it)
+
+# --- Jets (A-10C, F/A-18C...): common/aircraft.py has the numbers per type ---
+FUEL_CALLS = True                 # Overlord's joker / bingo calls in jets
+AIRCRAFT_OVERRIDES = {}           # e.g. {"FA-18C_hornet": {"reserve_lbs": 3500, "joker_margin_lbs": 2000}}
+LLM_MODEL = "qwen3:8b"           # "ollama pull qwen3:8b". Back to the old one: "qwen2.5:7b".
+                                 # Compare them with: python llm_bench.py
+LLM_TIMEOUT_SEC = 12      # answers take ~0.7 s; a prompt Ollama has to read cold, ~7 s on the 5700 XT
 LLM_MAX_TOKENS = 160
 UTTERANCE_MAX_AGE_SEC = 8.0  # PTT utterances queued longer than this are dropped unexecuted
 
@@ -48,6 +96,17 @@ HUEY_CALLOUTS = True                # crew-chief callouts (limits, cautions, sin
 HUEY_CONTACT_CALLOUT_M = 1500       # call out enemy units closer than this (0 = never)
 HUEY_AUTO_ARM_FLARES = True         # "flares!" arms the dispenser first if it's on SAFE
 HUEY_FUEL_BURN_LBS_HR = 555         # for "about N minutes" (the 20-minute light is ~185 lbs)
+HUEY_FUEL_RESERVE_LBS = 185         # "bingo fuel" when flying home would leave less than this
+HUEY_TALKDOWN = True                # crew chief talks you down (heights, drift) and onto sling loads
+
+# --- AH-64D EXTRAS (apache/) ---
+APACHE_EUFD_CALLOUTS = True         # George reads new EUFD warnings / cautions aloud
+APACHE_EUFD_WCA_ROWS = 6            # top EUFD lines that hold warnings | cautions | advisories
+APACHE_EUFD_COLUMNS = [(0, 18), (19, 37), (38, 56)]
+
+# --- RADIO MENU (common/comms_menu.py, Scripts/Hooks/george_comms_hook.lua) ---
+COMMS_MENU_PORT = 5011              # in:  menu caption and items
+COMMS_CMD_PORT = 5012               # out: OPEN / SELECT n / BACK / CLOSE
 
 # --- NETWORKING & PORTS ---
 UDP_TELEMETRY_PORT = 5005   # Incoming Export.lua telemetry

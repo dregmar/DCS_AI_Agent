@@ -1,0 +1,11 @@
+{
+ "_note": "Learned from rewrites that worked. Delete any line that is wrong.",
+ "phrases": {
+  "ok cas 2 where are you going": "Outcast 2, status",
+  "put a marker where we are carly to charlie": "Mark our current position as waypoint Charlie",
+  "return to rejoin": "Outcast 2, rejoin"
+ },
+ "words": {
+  "ok cas": "outcast"
+ }
+}

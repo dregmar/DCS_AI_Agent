@@ -29,7 +29,7 @@ Examples: "right gunner, weapons free", "left gunner return fire", "co-pilot hol
 
 | Say | Does |
 |---|---|
-| **autopilot attitude hold** | ATTITUDE HOLD |
+| **autopilot attitude hold** · **hold this attitude** | ATTITUDE HOLD |
 | **autopilot level flight** | LEVEL FLIGHT |
 | **autopilot orbit** | ORBIT |
 | **autopilot on** · **autopilot off** | Presses the autopilot on/off command |
@@ -46,11 +46,13 @@ confirmed.
 | **rocket pairs three** | Rocket pair selector (0–7) |
 | **flares** · **pop flares** | One flare (arms the dispenser first if it's safe) |
 | **flares armed** · **flares safe** | Dispenser ARM switch |
-| **landing light on/off** · **search light on/off/stow** | |
+| **landing light on/off** · **search light on/off/stow** | Also "turn off the landing light". Just "lights off": George asks which |
 | **anti-collision on/off** · **nav lights steady/flash/off** · **position lights dim/bright** | |
 | **pitot heat on/off** · **battery on** · **main fuel on** · **force trim on** · **hydraulics on** · **inverter main** | |
 | **UHF 251.0** · **VHF 124 decimal 75** · **FM 30.5** | Turns that radio's dials click by click and reads them back (UHF 225–399.95 in 50 kHz steps, VHF 116–149.975, FM 30–75.95). UHF only follows its dials with the mode dial on manual; George tells you if it isn't |
-| **radio check** | Reads the three frequencies |
+| **nav 112.5** · **navigation 108 decimal 05** | Tunes the VHF NAV receiver the same way (108–117.95) |
+| **radio 124.75** · **set radio to frequency 241** | No radio named: the frequency picks it (225 and up UHF, 116–149.975 VHF, 108–115.95 NAV, 30–75.95 FM) |
+| **radio check** | Reads the radio frequencies |
 
 While you're flying George refuses: main fuel off, hydraulics off, battery off, governor
 emergency, starter-generator to start, main generator off.
@@ -71,6 +73,21 @@ George reads each item. Switches he can see on DCS-BIOS and gauges he can read (
 | **skip** | Move on |
 | **repeat** | Read it again |
 | **stop checklist** | Abandon it |
+
+## Sling loads
+
+| Say | Crew chief |
+|---|---|
+| **where's the load** · **where did the cargo go** · **load status** | "Load, 1 o'clock, 40 meters." (the nearest load) |
+| **talk me onto the load** · **pick up the cargo** · **talk on** | Talks you on until it's hooked: "Forward ten, right five, down five." ... "Steady, hold." |
+| **stop talk on** · **cancel talk on** | Stops the talk-on |
+| **hook the load** · **attach cargo** · **connect the load** | After landing within 5 m of it: DCS's hook command (RCtrl+RShift+L) |
+| **release the load** · **drop the load** | Cargo unhook |
+| **load is under me** · **calibrate the load** | Hover with the load right under the hook and say this once: George learns where the hook sits and corrects every distance after (saved in `huey_calibration.json`) |
+| **reset load calibration** | Forget that correction |
+
+He only talks you on when you ask: a mission can have several loads around you. DCS only hooks a
+load you've selected first in the radio menu (F6, cargo list): "radio menu", then the cargo item.
 
 ## Questions
 
@@ -93,4 +110,15 @@ George reads each item. Switches he can see on DCS-BIOS and gauges he can read (
   fuel", "Fire light! Engine fire!" (a lamp test is ignored).
 - Gunners, while their panel is up: "Left gunner is hit!", "Right gunner, ammo low",
   "Winchester".
-- Enemy units closer than 1.5 km: "Contact, ZU-23, 3 o'clock, 900 meters."
+- Enemy units closer than 1.5 km: "Contact, ZU-23, 3 o'clock, 900 meters." At most 3 a minute, nearest
+  first; in a busy area one "Multiple contacts, 6 more, 9 to 11 o'clock." and then quiet for a minute.
+  Air defence (ZU-23, Shilka, MANPADS, SAMs) is always called. Trucks and buildings aren't called.
+- Landing and hover (heights are skid heights): "Twenty feet." "Ten." "Five." "Three." "Skids down.",
+  "Drifting back and left." ... "Steady.", "Easy, slow your descent!", and "Skids up." on lift-off.
+  The first time you sit still on the ground he learns what "on the ground" reads.
+- Sling loads (after "talk me onto the load"): "Load, 12 o'clock, 40 meters." then "Forward ten,
+  left five, down five." ... "Steady, hold.", "You're in range. Say hook the load." when you've
+  landed next to it, and "Load's off the ground." when it lifts.
+- "Bingo fuel. Home is 12 miles, steer 225." when flying home would leave less than 185 lbs.
+
+Radio menu and navigation: see `COMMANDS_COMMON.md`.

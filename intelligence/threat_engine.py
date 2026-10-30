@@ -55,8 +55,17 @@ _TYPE_PATTERNS = [
     # Artillery and MLRS
     (r"msta|gvozdika|akatsiya|2s1\b|2s3|2s19|grad|bm-21|smerch|bm-30|uragan|bm-27|mlrs|m270|m109|"
      r"paladin|howitzer|mortar|2b11|d-30", 30),
+    # Self-propelled guns seen 22 Oct (PLZ-05)
+    (r"plz-?\d\d|pcl-?\d\d|sph\b", 30),
+    # Transport / support aircraft (22 Oct: Il-76)
+    (r"il-76|il-78|an-2[46]|an-30|c-130|c-17|kc-135|y-8|y-20|transport aircraft", 20),
+    # Other helicopters (scout / transport), seen 21 Oct: OH-58
+    (r"oh-58|kiowa|uh-60|black ?hawk|ch-47|chinook|mi-8|mi-17|mi-26|uh-1|sa342|gazelle|helicopter", 40),
     # Ships
-    (r"frigate|corvette|patrol boat|ship|boat|speedboat", 30),
+    (r"frigate|corvette|patrol boat|ship|boat|speedboat|type[_ -]?0\d\d|lpd|landing", 30),
+    # Fixed positions and buildings
+    (r"outpost|bunker|pillbox|command post|checkpoint|fortification|sandbag|watch ?tower|tent|"
+     r"barracks|building|warehouse|depot|hangar|structure|house|hut|antenna|satcom|mast", 15),
     # Trucks, utility, logistics
     (r"ural|gaz|kamaz|zil|kraz|truck|hmmwv|humvee|uaz|tigr|land ?rover|larc|m818|m978|fuel|"
      r"tanker|transport|bus|car\b|tractor", 10),
@@ -64,19 +73,28 @@ _TYPE_PATTERNS = [
 _reported_unknown = set()
 
 
+def threat_weight(target_type: str) -> int:
+    """Threat weight of a DCS type name (also used for the Huey crew chief's contact calls)."""
+    return _threat_weight(target_type)
+
+
 def _threat_weight(target_type: str) -> int:
     if target_type in THREAT_WEIGHTS:
         return THREAT_WEIGHTS[target_type]
     if target_type.strip().upper() in CLASSIFICATION_WEIGHTS:
         return CLASSIFICATION_WEIGHTS[target_type.strip().upper()]
+    from common.unit_types import TYPES          # what DCS itself says the type is (no hard-coding)
+    w = TYPES.weight(target_type)
+    if w is not None:
+        return w
     low = target_type.lower()
     for pattern, score in _TYPE_PATTERNS:
         if re.search(pattern, low):
             return score
     if target_type not in _reported_unknown:
         _reported_unknown.add(target_type)
-        print(f"[THREAT] Unrecognized target type '{target_type}' - scoring as UNKNOWN. "
-              f"Add it to THREAT_WEIGHTS if it matters.")
+        print(f"[THREAT] Unrecognized target type '{target_type}' - scoring as UNKNOWN until DCS "
+              f"describes it (george_comms_hook.lua sends every unit type's attributes).")
     return THREAT_WEIGHTS["UNKNOWN"]
 
 

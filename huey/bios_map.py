@@ -48,6 +48,7 @@ HUEY_BIOS_STRINGS = {
     # what the cockpit dials show (these are what the radio follows)
     "uhf_dial": (0x14E2, 6),     # "232.00"
     "vhf_dial": (0x14D6, 7),     # "124.750"
+    "nav_dial": (0x14F2, 6),     # VHF NAV (ARN-82) "108.00"
 }
 
 

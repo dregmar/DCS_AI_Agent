@@ -1,0 +1,3053 @@
+{
+ "title": "DCS Supercarrier Operations Guide EN.pdf",
+ "aircraft": [
+  "FA-18C_hornet"
+ ],
+ "entries": [
+  {
+   "title": "LATEST CHANGES",
+   "text": "Significant changes to the guide will be noted on this page. Changes may be identified by a black bar next to the new or revised text as shown here in the right margin. 18 May 2020 – First edition of the DCS: Supercarrier Operations Guide 23 May 2020 – Updated graphic in Overhead Break and Case III section to show ‘on glideslope’ at ¾ mile. 24 May 2020 – Added subsection on the Adm Kuznetsov aircraft carrier and a description of the Nimitz class’s defensive systems.",
+   "tags": [
+    "changes",
+    "latest"
+   ],
+   "section": "LATEST CHANGES",
+   "page": 5
+  },
+  {
+   "title": "QUICKSTART GUIDE > How do I install this module?",
+   "text": "Upon first starting DCS World after purchasing DCS: Supercarrier, you will first want to install the module. To do so, select the Module Manager along the top of the Main Menu page:\n\nOnce selected, the Module Manager will automatically prompt you to install DCS: Supercarrier.",
+   "tags": [
+    "guide",
+    "how",
+    "install",
+    "module",
+    "quickstart",
+    "this"
+   ],
+   "section": "QUICKSTART GUIDE > How do I install this module?",
+   "page": 7
+  },
+  {
+   "title": "QUICKSTART GUIDE > How do I know the module is installed?",
+   "text": "You should now have DCS: Supercarrier installed and have its icon along the bottom of your Main Menu page. You may need to use the left and right arrows at the ends of the icon bar to find it. From the icon, you can select it as your Main Menu wallpaper.",
+   "tags": [
+    "guide",
+    "how",
+    "installed",
+    "know",
+    "module",
+    "quickstart",
+    "the"
+   ],
+   "section": "QUICKSTART GUIDE > How do I know the module is installed?",
+   "page": 7
+  },
+  {
+   "title": "QUICKSTART GUIDE > How do I select a Supercarrier mission? (1)",
+   "text": "All missions on the Supercarrier are found in the aircraft Missions. There is not a Supercarrier Missions list. For instance: to select F/A-18C Hornet missions that operate from the Supercarrier, select Missions from the Main Menu page, and then select the F/A-18C. Included are Hornet Supercarrier missions on both the Black Sea and Persian Gulf maps for:\n• Cold Start\n• Launch Start from Catapult\n• Case I Recovery (daylight landing)\n• Case II Recovery (reduced visibility)\n• Case III Recovery (night landing) To get you started, select the “Mission Qualification – Supercarrier Launch” mission.",
+   "tags": [
+    "guide",
+    "how",
+    "mission",
+    "quickstart",
+    "select",
+    "supercarrier"
+   ],
+   "section": "QUICKSTART GUIDE > How do I select a Supercarrier mission?",
+   "page": 8
+  },
+  {
+   "title": "QUICKSTART GUIDE > How do I select a Supercarrier mission? (2)",
+   "text": "This will place you hooked up to catapult 1 and ready to go.",
+   "tags": [
+    "guide",
+    "how",
+    "mission",
+    "quickstart",
+    "select",
+    "supercarrier"
+   ],
+   "section": "QUICKSTART GUIDE > How do I select a Supercarrier mission?",
+   "page": 8
+  },
+  {
+   "title": "QUICKSTART GUIDE > Creating Your Own Mission (1)",
+   "text": "Once you have mastered the included familiarization Missions, you may wish to create your own using the Mission Editor. Let’s go over some of the basics of how to add a Supercarrier. Select the Mission Editor option from the Main Menu.\n\nNext, select Create New Mission.\n\nThe next step is to select the map you wish to use as your canvas and the countries that will take part. In this example, I have chosen the Persian Gulf map with the default Modern arrangement of countries to the Blue and Red sides. Once ready, press the green OK button in the bottom right corner.",
+   "tags": [
+    "creating",
+    "guide",
+    "mission",
+    "own",
+    "quickstart",
+    "your"
+   ],
+   "section": "QUICKSTART GUIDE > Creating Your Own Mission",
+   "page": 9
+  },
+  {
+   "title": "QUICKSTART GUIDE > Creating Your Own Mission (2)",
+   "text": "Welcome to the Mission Editor (ME)! This is a powerful system, but it can also be complex. Let’s go over the very basics of adding a Supercarrier to a mission. From the Tool Bar along the left side of the ME, select the ship icon. With that selected, the Naval Group options are displayed along the right side of the ME. To select a Supercarrier:\n1. Select Country to USA\n2. Select Type to CVN-71 Theodore Roosevelt (you can select any of the listed CVNs) Once set, left mouse-click on any sea area of the ME to create its starting location.",
+   "tags": [
+    "creating",
+    "guide",
+    "mission",
+    "own",
+    "quickstart",
+    "your"
+   ],
+   "section": "QUICKSTART GUIDE > Creating Your Own Mission",
+   "page": 9
+  },
+  {
+   "title": "QUICKSTART GUIDE > Creating Your Own Mission (3)",
+   "text": "The Supercarrier location appears as a stylized icon with its air defense weapon search (yellow) and engagement (red) circles around it. With the ADD button selected, left click again on the map to set the Supercarriers first navigation point. Subsequent left mouse button clicks add more navigation points to create a route the Supercarrier will follow. By selecting the EDIT button to the right of the ADD button, you can left mouse button click on a navigation point to edit it, including holding down the left mouse button over the point and dragging it to a new location.",
+   "tags": [
+    "creating",
+    "guide",
+    "mission",
+    "own",
+    "quickstart",
+    "your"
+   ],
+   "section": "QUICKSTART GUIDE > Creating Your Own Mission",
+   "page": 9
+  },
+  {
+   "title": "QUICKSTART GUIDE > Creating Your Own Mission (4)",
+   "text": "With the navigation point selected, you can adjust the speed of the supercarrier. With no wind, it is best to have speed between 20 and 30 knots.\n\nWith the Supercarrier placed, you can then add an F/A-18C Hornet to the mission and place its first waypoint next to the carrier. You can then set its first waypoint from the Type waypoint list to have it start on a catapult (Takeoff from runway), start ready to go at a parking spot, or start from a cold and dark aircraft in the parking area.",
+   "tags": [
+    "creating",
+    "guide",
+    "mission",
+    "own",
+    "quickstart",
+    "your"
+   ],
+   "section": "QUICKSTART GUIDE > Creating Your Own Mission",
+   "page": 9
+  },
+  {
+   "title": "QUICKSTART GUIDE > Creating Your Own Mission (5)",
+   "text": "This was a brief overview to get you started. More detailed information can be found in the DCS: World manual, with step by step guides to setting up the following:\n• Set TACAN channel\n• Set ICLS channel\n• Set Rules of Engagement\n• Setting weather conditions that include wind direction and speed\n• Setting radio frequency",
+   "tags": [
+    "creating",
+    "guide",
+    "mission",
+    "own",
+    "quickstart",
+    "your"
+   ],
+   "section": "QUICKSTART GUIDE > Creating Your Own Mission",
+   "page": 9
+  },
+  {
+   "title": "QUICKSTART GUIDE > Catapult Start",
+   "text": "As mentioned, the Mission Designer can elect to start your aircraft on a catapult or at one of the parking locations. If you start on a catapult, you simply need to provide the Salute command to the deck crew and away you go. This can be done either with the key command [LCtrl+LShift+LAlt+S] or pressing [\\] to bring up the radio menu dialog: Select F11. Parent Menu\n\nSelect F8. Ground Crew…\n\nSelect F6. Salute!",
+   "tags": [
+    "catapult",
+    "guide",
+    "quickstart",
+    "start"
+   ],
+   "section": "QUICKSTART GUIDE > Catapult Start",
+   "page": 12
+  },
+  {
+   "title": "QUICKSTART GUIDE > Taxi to Catapult (1)",
+   "text": "If you find yourself at one of the parking locations in either a cold and dark aircraft or one ready to go, you will need to taxi to a takeoff catapult. There are four catapults located on the Supercarrier: two on the bow and two along the waist.\n\nBehind each catapult is a Jet Blast Deflector (JBD). When you taxi to a catapult, taxi to approach the catapult from directly behind it and slowly move forward until the taxi director (yellow shirt) on the catapult directs you.",
+   "tags": [
+    "catapult",
+    "guide",
+    "quickstart",
+    "taxi"
+   ],
+   "section": "QUICKSTART GUIDE > Taxi to Catapult",
+   "page": 13
+  },
+  {
+   "title": "QUICKSTART GUIDE > Taxi to Catapult (2)",
+   "text": "Based on other aircraft being launched, this may not be immediate. Sit tight and the taxi director will bring you onto the catapult once they are ready. The catapult hook-up procedure is detailed in the Launch Operations section below.",
+   "tags": [
+    "catapult",
+    "guide",
+    "quickstart",
+    "taxi"
+   ],
+   "section": "QUICKSTART GUIDE > Taxi to Catapult",
+   "page": 13
+  },
+  {
+   "title": "QUICKSTART GUIDE > Returning to the Boat",
+   "text": "Recovery (landing) operations are more complicated than launching. These are explained in detail within the Recovery Operations section below.",
+   "tags": [
+    "boat",
+    "guide",
+    "quickstart",
+    "returning",
+    "the"
+   ],
+   "section": "QUICKSTART GUIDE > Returning to the Boat",
+   "page": 14
+  },
+  {
+   "title": "QUICKSTART GUIDE > Fly Safe and Have Fun",
+   "text": "We hope this gets you up and flying with DCS: Supercarrier. Please remember that the following sections are available to provide detailed instruction on both launches, and more importantly, recovery operations. It also discusses other elements of the module that include the Landing Signal Officer (LSO) station , the landing grading scores, and more.",
+   "tags": [
+    "and",
+    "fly",
+    "fun",
+    "guide",
+    "have",
+    "quickstart",
+    "safe"
+   ],
+   "section": "QUICKSTART GUIDE > Fly Safe and Have Fun",
+   "page": 14
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Overview (1)",
+   "text": "The Nimitz class aircraft carrier (CVN) is a set of ten nuclear powered aircraft carriers currently in service with the US Navy. The general arrangement of these ships is similar to the previous Kitty Hawk class with a large 4.5-acre flight deck with an island structure on the starboard side reaching nearly 20 stories tall. The angled deck used for landing is canted approximately 14 degrees to port and is almost 800 feet long. Four high speed aircraft elevators, each more than 4,000 square feet, bring planes to the flight deck from the hangar below.",
+   "tags": [
+    "aircraft",
+    "carrier",
+    "class",
+    "nimitz",
+    "overview",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Overview",
+   "page": 16
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Overview (2)",
+   "text": "• Displacement: 72,916 tons light, 96,000 - 102,000 full load.\n• Length: 1040 feet along the flight deck (317 meters).\n• Beam: 252 feet (76.8 meters).\n• Speed: 30+ knots (34.5+ miles per hour).\n• Power Plant: Two nuclear reactors, four geared steam turbines, four propellers (thirteen to fifteen years between refueling or 800,000 to 1,000,000 miles).\n• Complement: 3,200 regular ship’s compliment + 2,480 Air Wing personnel.\n• Defense: Four NATO Sea Sparrow, three to four 20mm Vulcan Phalanx CIWS.\n• Air Wing (including legacy): 70-80 aircraft including F-14s, F/A-18s, EA-6Bs, E-2Cs, S-3A/Bs, C-2s",
+   "tags": [
+    "aircraft",
+    "carrier",
+    "class",
+    "nimitz",
+    "overview",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Overview",
+   "page": 16
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Overview (3)",
+   "text": ", SH-60Fs, HH-60Hs.\n\nThe DCS: Supercarrier module represents the Theodore Roosevelt subclass of the Nimitz carrier, often referred to as the improved Nimitz class. The hulls available here include: CVN-71 Theodore Roosevelt. (TR, Big Stick) Date commissioned: 25 Oct 1986 CVN-72 Abraham Lincoln. (Abe) Date commissioned: 11 Nov 1989\n\nCVN-73 George Washington. (The Spirit of Freedom, GW, G-Dub) Date commissioned: 04 Jul 1992",
+   "tags": [
+    "aircraft",
+    "carrier",
+    "class",
+    "nimitz",
+    "overview",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Overview",
+   "page": 16
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment",
+   "text": "The enormous flight deck of a Nimitz class carrier is the core of its offensive capability. During flight operations, it is regarded as one of the most dangerous places in the world to work.",
+   "tags": [
+    "aircraft",
+    "and",
+    "carrier",
+    "class",
+    "deck",
+    "equipment",
+    "flight",
+    "layout",
+    "nimitz",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment",
+   "page": 18
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Catapults (1)",
+   "text": "Four catapults are available to ‘slingshot’ aircraft off the deck and into the air. Catapults one and two are located on the bow while catapult three and four are located on the waist. Together, on average these can launch one aircraft every 20 seconds. The launch is initiated by personnel situated in the Integrated Catapult Control Station (ICCS), also called the “bubble”. This is a small dome located between catapult 1 and 2 on the bow and left of catapult 4 on the waist. These are steam powered catapults with two cylinders running the length of each track.",
+   "tags": [
+    "aircraft",
+    "and",
+    "carrier",
+    "catapults",
+    "class",
+    "deck",
+    "equipment",
+    "flight",
+    "layout",
+    "nimitz",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Catapults",
+   "page": 18
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Catapults (2)",
+   "text": "A piston on each cylinder connects to a shuttle that extends out of each track. The launching aircraft taxis so the launch bar at its nose wheel connects to the shuttle. At launch, high pressure steam is ported into the cylinders. This forces the shuttle down the track at high speed, launching the aircraft. A water brake slows the shuttle at the end of the run so it can be retracted for the next launch.",
+   "tags": [
+    "aircraft",
+    "and",
+    "carrier",
+    "catapults",
+    "class",
+    "deck",
+    "equipment",
+    "flight",
+    "layout",
+    "nimitz",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Catapults",
+   "page": 18
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Jet Blast Deflectors",
+   "text": "These heavy-duty panels are located behind each catapult to deflect high speed exhaust produced by launching aircraft’s engines. Hydraulic cylinders raise each panel into place upward at a 45 degree angle. A seawater cooling system is installed in each to prevent damage from hot engine exhaust. These are retracted when not in use and sit flush with the deck.",
+   "tags": [
+    "aircraft",
+    "and",
+    "blast",
+    "carrier",
+    "class",
+    "deck",
+    "deflectors",
+    "equipment",
+    "flight",
+    "jet",
+    "layout",
+    "nimitz",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Jet Blast Deflectors",
+   "page": 19
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Arresting Gear (1)",
+   "text": "Four steel arresting cables, also known as cross-deck pendants, span the landing area. The aircraft’s tailhook connects to one of these cables on touchdown, hauling the aircraft to a stop in about 300 feet. The cables are made of braided steel strands with a polyester core for flexibility. Each end is connected to an arresting engine below deck via a purchase cable. The arresting engines are hydro-pneumatic systems that use a ram and fluid within a cylinder to absorb and disperse the energy of the arrestment.",
+   "tags": [
+    "aircraft",
+    "and",
+    "arresting",
+    "carrier",
+    "class",
+    "deck",
+    "equipment",
+    "flight",
+    "gear",
+    "layout",
+    "nimitz",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Arresting Gear",
+   "page": 20
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Arresting Gear (2)",
+   "text": "Cables are numbered one through four from back to front. Although there are four cables, the visual approach aids are calibrated so the aircraft will catch the three wire on a well-executed approach. Landing short at the one wire risks a ramp strike at the end of the ship. Landing long at the four wire risks missing the cables altogether, known as a ‘bolter’.",
+   "tags": [
+    "aircraft",
+    "and",
+    "arresting",
+    "carrier",
+    "class",
+    "deck",
+    "equipment",
+    "flight",
+    "gear",
+    "layout",
+    "nimitz",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Arresting Gear",
+   "page": 20
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Hangar Bay",
+   "text": "The hangar bay is located two decks below the flight deck and spans approximately two-thirds of the total length of the carrier. The bay is divided into three areas separated by massive sliding doors that are intended to limit the damage in the event of a fire or explosion. The hangar bay is used for aircraft maintenance, as well as spare parts and equipment storage.",
+   "tags": [
+    "aircraft",
+    "and",
+    "bay",
+    "carrier",
+    "class",
+    "deck",
+    "equipment",
+    "flight",
+    "hangar",
+    "layout",
+    "nimitz",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Hangar Bay",
+   "page": 21
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Elevators",
+   "text": "Four large elevators provide for movement of aircraft to and from the hangar bay and flight deck. Each can hold two aircraft or about 150,000 lbs of equipment. In addition to the four main elevators, there are several small weapons elevators located around the flight deck.",
+   "tags": [
+    "aircraft",
+    "and",
+    "carrier",
+    "class",
+    "deck",
+    "elevators",
+    "equipment",
+    "flight",
+    "layout",
+    "nimitz",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Layout and Equipment > Elevators",
+   "page": 21
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel",
+   "text": "The DCS: Supercarrier module includes deck crew who will direct you into position on the catapults and perform steps necessary to launch your aircraft. Additional crew members may also be placed on deck by mission designers. All personnel on the flight deck wear colored jerseys that indicate their role.",
+   "tags": [
+    "aircraft",
+    "carrier",
+    "class",
+    "deck",
+    "flight",
+    "nimitz",
+    "personnel",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel",
+   "page": 22
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > Yellow Shirts",
+   "text": "These include the Plane Directors who will guide you around the deck and into position for launch. All taxi guidance comes from these personnel. Other yellow shirts include Flight Deck Officers, Arresting Gear Officers, Catapult Officers (Shooters), Catapult Spotters and Aircraft Handling Officers.",
+   "tags": [
+    "aircraft",
+    "carrier",
+    "class",
+    "deck",
+    "flight",
+    "nimitz",
+    "personnel",
+    "shirts",
+    "the",
+    "yellow"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > Yellow Shirts",
+   "page": 22
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > Green Shirts",
+   "text": "You will encounter these personnel during launch as Catapult and Arresting Gear crews position the holdback bar and ensure proper attachment to the catapult shuttle. Maintenance personnel of various specialties may also be on hand to troubleshoot last minute problems with the aircraft. Other green shirts include Helicopter Landing Signal Enlisted (LSE), Cargo-handling personnel, Ground support equipment troubleshooters, Hook runners and Photographers mates",
+   "tags": [
+    "aircraft",
+    "carrier",
+    "class",
+    "deck",
+    "flight",
+    "green",
+    "nimitz",
+    "personnel",
+    "shirts",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > Green Shirts",
+   "page": 22
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > Brown Shirts",
+   "text": "These include Plane Captains and Line Petty Officers. Aircraft general maintenance and servicing is performed by these personnel. They are responsible for the safe operation of the aircraft in flight and are often referred to as ‘owning’ the aircraft.",
+   "tags": [
+    "aircraft",
+    "brown",
+    "carrier",
+    "class",
+    "deck",
+    "flight",
+    "nimitz",
+    "personnel",
+    "shirts",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > Brown Shirts",
+   "page": 22
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > Blue Shirts",
+   "text": "These personnel position aircraft on the deck when they are not being taxied by the pilot. They include Aircraft handlers (pushers, chockers, chainers, etc.), Tractor Drivers, Messengers and Phone Talkers and Elevator Operators.",
+   "tags": [
+    "aircraft",
+    "blue",
+    "carrier",
+    "class",
+    "deck",
+    "flight",
+    "nimitz",
+    "personnel",
+    "shirts",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > Blue Shirts",
+   "page": 22
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > Purple Shirts",
+   "text": "These are the Fueling personnel who are responsible for safely refueling aircraft and equipment on deck. This is an important job due to the extreme risk fire poses to a crowded flight deck.",
+   "tags": [
+    "aircraft",
+    "carrier",
+    "class",
+    "deck",
+    "flight",
+    "nimitz",
+    "personnel",
+    "purple",
+    "shirts",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > Purple Shirts",
+   "page": 23
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > Red Shirts",
+   "text": "These are the Aviation Ordnancemen who build, test, transport, and load weapons on the aircraft. They also test and maintain the aircraft gun systems, as well as avionics and release equipment used to employ weapons in the air. Crash and salvage crews and Explosive Ordnance Disposal (EOD) personnel are also red shirts.",
+   "tags": [
+    "aircraft",
+    "carrier",
+    "class",
+    "deck",
+    "flight",
+    "nimitz",
+    "personnel",
+    "red",
+    "shirts",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > Red Shirts",
+   "page": 23
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > White Shirts",
+   "text": "You will encounter these personnel during launch as Final Checkers give your aircraft a last-minute look for problems. The Landing Signal Officers (LSO) are also white shirts. For more on this, see the section on the LSO Station below. Other white shirts include Safety personnel, Medical personnel, Quality Assurance personnel and Air Transfer Officers (ATO).",
+   "tags": [
+    "aircraft",
+    "carrier",
+    "class",
+    "deck",
+    "flight",
+    "nimitz",
+    "personnel",
+    "shirts",
+    "the",
+    "white"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Flight Deck Personnel > White Shirts",
+   "page": 23
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment",
+   "text": "The aircraft carrier is a floating airport, complete with all the equipment necessary to conduct instrument approaches. See the section on MISSION EDITOR FEATURES for information on how to set these up in a mission.",
+   "tags": [
+    "aircraft",
+    "approach",
+    "carrier",
+    "class",
+    "equipment",
+    "instrument",
+    "nimitz",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment",
+   "page": 24
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Tactical Air Navigation System (TACAN)",
+   "text": "The TACAN system provides relative bearing and/or slant range distance to a selected TACAN station (land, ship or aircraft). TACAN range depends on aircraft altitude Line Of Sight (LOS) to the station, but can have a maximum range of 200 miles for an airborne station and 390 miles for a surface station. Each TACAN station has a three-letter identifier which is used to identify the beacon. The ship’s TACAN is used primarily for determining its position while on approach or establishing a holding pattern. The TACAN is referred to as “father” while the carrier is referred to as “mother”.",
+   "tags": [
+    "air",
+    "aircraft",
+    "approach",
+    "carrier",
+    "class",
+    "equipment",
+    "instrument",
+    "navigation",
+    "nimitz",
+    "system",
+    "tacan",
+    "tactical",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Tactical Air Navigation System (TACAN)",
+   "page": 24
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Instrument Carrier Landing System (ICLS) (1)",
+   "text": "US Navy and Marine Corps carrier-based aircraft are equipped with the AN/SPN-41A Instrument Carrier Landing System (ICLS). This operates much like a traditional ILS system, but it is only operational for US aircraft carriers. Using the ICLS is a matter of setting up the correct aircraft carrier ICLS channel and following the localizer and glideslope beams to within visual distance of the IFLOLS visual reference at the ship. The azimuth transmitter is installed at the stern of the ship, slightly below the centerline of the landing area.",
+   "tags": [
+    "aircraft",
+    "approach",
+    "carrier",
+    "class",
+    "equipment",
+    "icls",
+    "instrument",
+    "landing",
+    "nimitz",
+    "system",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Instrument Carrier Landing System (ICLS)",
+   "page": 24
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Instrument Carrier Landing System (ICLS) (2)",
+   "text": "The elevation transmitter is located above the flight deck, aft of the island. The ICLS is referred to as “bullseye” to differentiate it from the ACLS.",
+   "tags": [
+    "aircraft",
+    "approach",
+    "carrier",
+    "class",
+    "equipment",
+    "icls",
+    "instrument",
+    "landing",
+    "nimitz",
+    "system",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Instrument Carrier Landing System (ICLS)",
+   "page": 24
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Automated Carrier Landing System (ACLS) (1)",
+   "text": "The AN/SPN-46 ACLS is similar to the ICLS in that it displays \"needles\" that provide approach guidance information to the aircrew. But unlike the ICLS, the system is gyro-stabilized to provide accurate glideslope and azimuth data regardless of deck movement in heavy seas. Up to two aircraft may be controlled by the system simultaneously. The ACLS has three modes for approach: Mode I. This mode provides for an automatic, hands off approach. Command and error signals are transmitted to the aircraft from the ACLS.",
+   "tags": [
+    "acls",
+    "aircraft",
+    "approach",
+    "automated",
+    "carrier",
+    "class",
+    "equipment",
+    "instrument",
+    "landing",
+    "nimitz",
+    "system",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Automated Carrier Landing System (ACLS)",
+   "page": 24
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Automated Carrier Landing System (ACLS) (2)",
+   "text": "The aircraft then translates them into the appropriate control actions to stay on the proper approach path all the way to landing. (Mode 1a is a submode where the pilot takes over the approach after visual acquisition of the IFLOLS.) Mode II. This mode is similar to a conventional ILS approach. Glideslope and azimuth errors are transmitted to the aircraft and shown on a display. The pilot manually ‘flies the needles’ to stay on the proper approach path. Mode III. This is known as a Carrier Controlled Approach (CCA). No data is transmitted directly to the aircraft.",
+   "tags": [
+    "acls",
+    "aircraft",
+    "approach",
+    "automated",
+    "carrier",
+    "class",
+    "equipment",
+    "instrument",
+    "landing",
+    "nimitz",
+    "system",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Automated Carrier Landing System (ACLS)",
+   "page": 24
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Automated Carrier Landing System (ACLS) (3)",
+   "text": "The approach controller provides verbal azimuth and glideslope information to the pilot, who flies the approach manually based on this guidance. See the applicable aircraft manual for information on system operation and available modes.",
+   "tags": [
+    "acls",
+    "aircraft",
+    "approach",
+    "automated",
+    "carrier",
+    "class",
+    "equipment",
+    "instrument",
+    "landing",
+    "nimitz",
+    "system",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Automated Carrier Landing System (ACLS)",
+   "page": 24
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Improved Fresnel Lens Optical Landing System (IFLOLS) (1)",
+   "text": "This device is mounted on the left side of the carrier to provide the pilot with visual glidepath information during the final phase of the approach. The system displays a bright orange ‘ball’ that is dynamically stabilized to compensate for ship’s pitch, roll and heave motion. The system is normally set for a 3.5° glideslope targeting the 3-wire.",
+   "tags": [
+    "aircraft",
+    "approach",
+    "carrier",
+    "class",
+    "equipment",
+    "fresnel",
+    "iflols",
+    "improved",
+    "instrument",
+    "landing",
+    "lens",
+    "nimitz",
+    "optical",
+    "system",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Improved Fresnel Lens Optical Landing System (IFLOLS)",
+   "page": 25
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Improved Fresnel Lens Optical Landing System (IFLOLS) (2)",
+   "text": "The ball appears aligned between two horizontal datum lights when the pilot is approaching on the optimum glide path. If the ball is above the datum lights the aircraft is above the glidepath. If the ball is below the datum lights, the aircraft is below glidepath.",
+   "tags": [
+    "aircraft",
+    "approach",
+    "carrier",
+    "class",
+    "equipment",
+    "fresnel",
+    "iflols",
+    "improved",
+    "instrument",
+    "landing",
+    "lens",
+    "nimitz",
+    "optical",
+    "system",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Improved Fresnel Lens Optical Landing System (IFLOLS)",
+   "page": 25
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Improved Fresnel Lens Optical Landing System (IFLOLS) (3)",
+   "text": "Lens Assembly. The lens assembly is a vertical box that contains 12 fiber optic light cells. The aircraft’s position on the glidepath determines which cell is visible to the pilot. The upper cells are amber in color while the bottom two are red. If a red lens is visible, the aircraft is dangerously low. Datum Lights. Green datum lights are mounted horizontally to the lens assembly with ten lights on each side. The position of the ball in reference to the datum lights provides the pilot with glideslope information.",
+   "tags": [
+    "aircraft",
+    "approach",
+    "carrier",
+    "class",
+    "equipment",
+    "fresnel",
+    "iflols",
+    "improved",
+    "instrument",
+    "landing",
+    "lens",
+    "nimitz",
+    "optical",
+    "system",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Improved Fresnel Lens Optical Landing System (IFLOLS)",
+   "page": 25
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Improved Fresnel Lens Optical Landing System (IFLOLS) (4)",
+   "text": "If the ball is illuminated above or below the datums, the aircraft is high or low respectively. Cut Lights. Mounted horizontally and centered above the lens box are four green cut lights. The cut lights are used by the LSO to communicate with the aircraft during Zip Lip (no radio) operations. As the aircraft",
+   "tags": [
+    "aircraft",
+    "approach",
+    "carrier",
+    "class",
+    "equipment",
+    "fresnel",
+    "iflols",
+    "improved",
+    "instrument",
+    "landing",
+    "lens",
+    "nimitz",
+    "optical",
+    "system",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Improved Fresnel Lens Optical Landing System (IFLOLS)",
+   "page": 25
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Improved Fresnel Lens Optical Landing System (IFLOLS) (5)",
+   "text": "approaches the groove, the LSO will momentarily illuminate the cut lights to indicate a “Roger ball” call. Subsequent illumination of the cut lights indicates a call to add power. Waveoff Lights. Waveoff lights are mounted vertically on each side of the lens box. These red lights are controlled by the LSO. When they are illuminated, the aircraft must immediately execute a waveoff. The LSO will initiate a waveoff any time the deck is foul (people or equipment in the landing area) or an aircraft is not within safe approach parameters.",
+   "tags": [
+    "aircraft",
+    "approach",
+    "carrier",
+    "class",
+    "equipment",
+    "fresnel",
+    "iflols",
+    "improved",
+    "instrument",
+    "landing",
+    "lens",
+    "nimitz",
+    "optical",
+    "system",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Improved Fresnel Lens Optical Landing System (IFLOLS)",
+   "page": 25
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > FLOLS Overlay",
+   "text": "An additional overlay with all the elements listed above is available to assist pilots flying in VR or with lower screen resolutions, who may not be able to see the IFLOLS on the carrier clearly. It is activated when your aircraft is on final approach and configured for landing. The overlay may be repositioned by clicking and dragging the ‘FLOLS’ text at the top.\n\nSee the LSO Station section for additional information on related displays and controls.\n\nClick to Drag FLOLS Overlay",
+   "tags": [
+    "aircraft",
+    "approach",
+    "carrier",
+    "class",
+    "equipment",
+    "flols",
+    "instrument",
+    "nimitz",
+    "overlay",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > FLOLS Overlay",
+   "page": 26
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Long Range Laser Lineup System (1)",
+   "text": "The Long Range Laser Lineup System uses eye-safe, color-coded lasers to provide visual lineup information to approaching aircraft. These low intensity lasers are projected aft of the ship and are visible out to 10 miles at night.",
+   "tags": [
+    "aircraft",
+    "approach",
+    "carrier",
+    "class",
+    "equipment",
+    "instrument",
+    "laser",
+    "lineup",
+    "long",
+    "nimitz",
+    "range",
+    "system",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Long Range Laser Lineup System",
+   "page": 27
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Long Range Laser Lineup System (2)",
+   "text": "The color of the laser light and rate at which they flash indicate the pilot’s position in relation to the angled deck’s centerline.\n• Steady Amber – within 0.5 degree of centerline\n• Steady Green – 0.5 – 0.7 right of centerline\n• Slow Flashing Green – 0.75 – 4.0 degrees right of centerline\n• Fast Flashing Green - 4.0 – 6.0 degrees right of centerline\n• Steady Red – 0.5 – 0.7 left of centerline\n• Slow Flashing Red – 0.75 – 4.0 degrees left of centerline\n• Fast Flashing Red - 4.0 – 6.0 degrees left of centerline",
+   "tags": [
+    "aircraft",
+    "approach",
+    "carrier",
+    "class",
+    "equipment",
+    "instrument",
+    "laser",
+    "lineup",
+    "long",
+    "nimitz",
+    "range",
+    "system",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Instrument Approach Equipment > Long Range Laser Lineup System",
+   "page": 27
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Defensive Systems (1)",
+   "text": "The Nimitz Class carriers rely on their own aircraft or other assets in the Carrier Battle Group for defense against air or missile attack but still have their own defensive systems in case threats happen to break through. These systems operate automatically unless defensive actions are intentionally disabled using the mission editor.\n\nRIM-7 Sea Sparrow Missiles. These are short to medium range semi-active radar guided missiles housed in an 8-cell MK 29 box launcher. Their primary targets are aircraft or anti-ship cruise missiles.",
+   "tags": [
+    "aircraft",
+    "carrier",
+    "class",
+    "defensive",
+    "nimitz",
+    "systems",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Defensive Systems",
+   "page": 28
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Defensive Systems (2)",
+   "text": "RIM-116 Rolling Airframe Missiles (RAM). These are small heat-seeking missiles used for point defense against anti-ship missiles. They are launched from MK 49 box launchers, each holding 21 missiles.\n\nMk 15 Phalanx Close-In Weapon System (CIWS). This system consists of radarguided 20 mm Vulcan cannon mounted on a swiveling base. It serves as a last line of defense against anti-ship missiles.\n\nRIM-7 Sea Sparrow RIM-7 Sea Sparrow Mk 15 Phalanx Mk 15 Phalanx RIM-116 RAM RIM-116 RAM",
+   "tags": [
+    "aircraft",
+    "carrier",
+    "class",
+    "defensive",
+    "nimitz",
+    "systems",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Defensive Systems",
+   "page": 28
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Viewing the Carrier",
+   "text": "The standard ‘Ship View’ is available using the [F9] key. Use your mouse to move the view around and zoom in and out.\n\nSelect [LALT+F9] for a view from the LSO Station. This station has additional functionality, and is covered in detail in the LSO Station section.\n\nSelect [RCTRL+F9] for a view from each catapult. Each subsequent press of the keyboard command takes you to the next catapult in sequence.\n\nSelect [RSHIFT+F9] for a view of the Hangar Bay. Use the mouse to look around and the mouse wheel to move fore and aft.",
+   "tags": [
+    "aircraft",
+    "carrier",
+    "class",
+    "nimitz",
+    "the",
+    "viewing"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Viewing the Carrier",
+   "page": 29
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets",
+   "text": "The new and upgraded features in the DCS: Supercarrier module focus on the Nimitz Class carriers but other naval assets have received upgrades or additions with this module. These include the all new Arleigh Burke Class guided missile destroyer (right) and a new model for the",
+   "tags": [
+    "additional",
+    "aircraft",
+    "assets",
+    "carrier",
+    "class",
+    "module",
+    "nimitz",
+    "supercarrier",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets",
+   "page": 31
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier (1)",
+   "text": "The Admiral Kuznetsov is the Russian Navy’s largest warship and its sole aircraft carrier capable of carrying horizontal take-off and landing aircraft. Although an aircraft carrier at first glance, it is technically designated an ‘aircraft-carrying cruiser’, due to its formidable long-range anti-ship cruise missile capability. This designation allows it to pass in and out of the Black Sea while conforming to the 1936 Montreux Convention, an international agreement that does not allow aircraft carriers heavier than 15,000 tons to pass through the Turkish Straits.",
+   "tags": [
+    "additional",
+    "admiral",
+    "aircraft",
+    "assets",
+    "carrier",
+    "class",
+    "kuznetsov",
+    "module",
+    "nimitz",
+    "supercarrier",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier",
+   "page": 32
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier (2)",
+   "text": "The Admiral Kuznetsov differs greatly from US aircraft carrier designs in that it does not feature catapults for launching aircraft. Instead, it features a ‘ski-jump’, or upward curved ramp, that converts some of the aircraft’s forward momentum into a positive rate of climb. This, along with wind over the deck from the carrier’s speed, greatly reduces the required takeoff roll for aircraft. Three starting positions are available for fighter aircraft. Positions 1 and 2 are located near the bow of the ship and provide a 90-meter takeoff run.",
+   "tags": [
+    "additional",
+    "admiral",
+    "aircraft",
+    "assets",
+    "carrier",
+    "class",
+    "kuznetsov",
+    "module",
+    "nimitz",
+    "supercarrier",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier",
+   "page": 32
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier (3)",
+   "text": "Position 3 is located farther aft and provides a takeoff run of 180 meters, twice that of the other two. This third location should be selected for aircraft with heavier fuel or weapons loadouts that require a longer takeoff run.\n\nParking (typical) Elevator Elevator\n\nEach starting position features a jet blast deflector that serves the same function as on the Nimitz class carrier. There are also two holdback devices, or ‘stoppers’, that extend upwards, forward of the main wheels. These hold the aircraft in place until after the aircraft’s engines are run up before launch.",
+   "tags": [
+    "additional",
+    "admiral",
+    "aircraft",
+    "assets",
+    "carrier",
+    "class",
+    "kuznetsov",
+    "module",
+    "nimitz",
+    "supercarrier",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier",
+   "page": 32
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier (4)",
+   "text": "The Luna-3 Optical Landing System works in a manner similar to the Nimitz class’s IFLOLS system. A green light indicator will be visible when on glideslope for landing. A yellow light will be visible when above glideslope and red light will be visible when below glideslope. Aircraft also land on an angled deck in a comparable way to those on the Nimitz class carrier. Four arresting wires of the Svetlana-2 system are strung across the deck at a spacing of 12 meters. The aircraft’s tailhook catches a wire and brings it to a stop.\n\nJet Blast Deflector Stoppers Luna-3 OLS Arresting Wires",
+   "tags": [
+    "additional",
+    "admiral",
+    "aircraft",
+    "assets",
+    "carrier",
+    "class",
+    "kuznetsov",
+    "module",
+    "nimitz",
+    "supercarrier",
+    "the"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier",
+   "page": 32
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier > Offensive Weapons (1)",
+   "text": "The Admiral Kuznetsov is equipped with SS-N-19 'Shipwreck' (P-700 Granit) anti-ship missiles, fired from 12 vertical launch tubes on the forward flight deck. A small solid rocket fires them clear of the launcher. Flight is sustained by a turbojet propulsion system, accelerating the missile to a top speed of mach 2.5 at high altitude or mach 1.2 at its normal low altitude. The maximum range is approximately 300 nm (550 km). The missiles rely on their own inertial navigation system to approach the target then switch to active radar homing for the terminal guidance phase.",
+   "tags": [
+    "additional",
+    "admiral",
+    "aircraft",
+    "assets",
+    "carrier",
+    "class",
+    "kuznetsov",
+    "module",
+    "nimitz",
+    "offensive",
+    "supercarrier",
+    "the",
+    "weapons"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier > Offensive Weapons",
+   "page": 34
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier > Offensive Weapons (2)",
+   "text": "A 1,650 lb (750 kg) conventional warhead is fitted for use against ships.\n\nEngagements with these missiles are limited to a 90-degree arc in front of the firing vessel. The carrier must be maneuvered into the proper position before firing.\n\nThe ‘Attack Group’ task is recommended to allow realistic target sorting for waves of multiple missiles. See the DCS: World manual for details on setting this up.",
+   "tags": [
+    "additional",
+    "admiral",
+    "aircraft",
+    "assets",
+    "carrier",
+    "class",
+    "kuznetsov",
+    "module",
+    "nimitz",
+    "offensive",
+    "supercarrier",
+    "the",
+    "weapons"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier > Offensive Weapons",
+   "page": 34
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier > Defensive Weapons (1)",
+   "text": "The Admiral Kuznetsov is equipped with multiple defensive weapon systems for defense against aircraft, missile or submarine threats. Operation of these systems is automatic unless defensive actions are intentionally disabled using the mission editor.\n\n90º Target Admiral Kuznetsov Firing Arc SA-N-9 SA-N-9 SA-N-9 Kortik Kortik Kortik AK-630 AK-630 UDAV-1 SA-N-9 Kortik AK-630 UDAV-1 AK-630",
+   "tags": [
+    "additional",
+    "admiral",
+    "aircraft",
+    "assets",
+    "carrier",
+    "class",
+    "defensive",
+    "kuznetsov",
+    "module",
+    "nimitz",
+    "supercarrier",
+    "the",
+    "weapons"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier > Defensive Weapons",
+   "page": 35
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier > Defensive Weapons (2)",
+   "text": "SA-N-9 Gauntlet (3K95 Kinzhal). This is a navalized variant of the SA-15 Gauntlet air defense system. Missiles are launched from vertical launch tubes with the exit ports flush-mounted with the ship’s structure. It is capable of engaging threats out to a range of 6.5 nm (12 km).\n\nKortik Air Defense System. This is a combined gun and missile system, similar to the land-based SA-19 Grison (Tunguska). It provides close-in engagement of aircraft and missile threats out to a range of 2.2 nm (4 km). The 30mm gun system is also capable of engaging ship or shore targets.",
+   "tags": [
+    "additional",
+    "admiral",
+    "aircraft",
+    "assets",
+    "carrier",
+    "class",
+    "defensive",
+    "kuznetsov",
+    "module",
+    "nimitz",
+    "supercarrier",
+    "the",
+    "weapons"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier > Defensive Weapons",
+   "page": 35
+  },
+  {
+   "title": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier > Defensive Weapons (3)",
+   "text": "AK-630 CIWS. This fully automatic Close In Weapon System (CIWS) consists of turret mounted 30mm guns directed by a radar. It is primarily used to defend against small, high-speed missile threats.\n\nUDAV-1. This system operates in conjunction with the ship’s sonar to engage submarine or torpedo threats. Different rocket types can be fired from turrets mounted on the stern of the ship.",
+   "tags": [
+    "additional",
+    "admiral",
+    "aircraft",
+    "assets",
+    "carrier",
+    "class",
+    "defensive",
+    "kuznetsov",
+    "module",
+    "nimitz",
+    "supercarrier",
+    "the",
+    "weapons"
+   ],
+   "section": "THE NIMITZ CLASS AIRCRAFT CARRIER > Additional Supercarrier Module Assets > Admiral Kuznetsov Aircraft Carrier > Defensive Weapons",
+   "page": 35
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Flight Deck Procedures",
+   "text": "After startup, you will need to taxi to a catapult for launch. Catapults 1 and 2 are on the bow and catapults 3 and 4 are on the waist. Unless you are directed to a specific catapult during the briefing, you may choose any of the four. Taxi to the desired catapult using small power inputs while using nosewheel steering in high gain.\n\nOnce behind the Jet Blast Defector (JBD) of the catapult you will launch from, follow the signals given by the Taxi Director.",
+   "tags": [
+    "deck",
+    "flight",
+    "launch",
+    "operations",
+    "procedures"
+   ],
+   "section": "LAUNCH OPERATIONS > Flight Deck Procedures",
+   "page": 38
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Catapult Procedures (1)",
+   "text": "To ensure proper spotting on the catapult, you must follow the signals from the Taxi Director precisely. The normal sequence for catapult operations is as follows:\n1. Unfold wings. When directed, spread the wings using the applicable aircraft controls.\n\nUnfold Wings\n\n2. Align with catapult track. When directed, slowly move forward of the JBD. The Taxi Director will provide signals for left or right turns to align your nosewheel along the catapult track.\n\nTurn Left Come Forward Turn Right",
+   "tags": [
+    "catapult",
+    "launch",
+    "operations",
+    "procedures"
+   ],
+   "section": "LAUNCH OPERATIONS > Catapult Procedures",
+   "page": 39
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Catapult Procedures (2)",
+   "text": "3. Stop and extend launch bar. When directed, stop and hold the brakes. Extend the launch bar using applicable aircraft controls.\n\nStop Extend Launch Bar\n\n4. Connect to catapult shuttle. Following the Director’s signals, taxi forward slowly to position the launch bar over the shuttle. Significant power, as much as 80-85% RPM, may be required. When the launch bar drops over the shuttle, the aircraft will be stopped as the holdback engages the catapult buffer. Reduce power to idle.\n\nCome Forward Stop",
+   "tags": [
+    "catapult",
+    "launch",
+    "operations",
+    "procedures"
+   ],
+   "section": "LAUNCH OPERATIONS > Catapult Procedures",
+   "page": 39
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Catapult Procedures (3)",
+   "text": "5. Seat launch bar in shuttle. When directed, raise the launch bar to seat it in the catapult shuttle. Note that the bar will not fully retract until it is clear of the shuttle after launch.\n\nRaise Launch Bar\n\n6. Run up engines and perform final checks. The Director will pass control to the Catapult Officer, who will signal for engine run-up. Check the engine instruments and monitor the caution and warning lights. Wipeout the controls and verify the full throw of the stick and rudder in all directions.\n\nRun Up Engines",
+   "tags": [
+    "catapult",
+    "launch",
+    "operations",
+    "procedures"
+   ],
+   "section": "LAUNCH OPERATIONS > Catapult Procedures",
+   "page": 39
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Catapult Procedures (4)",
+   "text": "7. Select ‘SALUTE’ from radio menu. When ready for launch, give the ‘SALUTE’ command from the radio menu or keyboard command [LCtrl+LShift+LAlt+S]. The Catapult Officer will make final checks, looking fore and aft, and then touch the deck.\n\nLaunch\n\n8. Launch. The catapult will fire, and the aircraft will accelerate, reaching end speed in about two seconds. As the aircraft clears the end of the deck, rotate to a nose up attitude and establish a positive rate of climb. Gear and flaps will be raised in accordance with the specific aircraft’s procedures.",
+   "tags": [
+    "catapult",
+    "launch",
+    "operations",
+    "procedures"
+   ],
+   "section": "LAUNCH OPERATIONS > Catapult Procedures",
+   "page": 39
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (1)",
+   "text": "Aircraft on the deck are subject to strict rules regarding how they are taxied to catapults and how they are moved from the landing area to a parking location. Taxiing on the deck is along specific routes. Plane directors (yellow shirts) assist the player and AI by using gestures to indicate the direction of movement along the route. The use of radio during taxiing is prohibited. Routes for takeoff begin at the parking spots and end at the catapults behind the holdback bar attachment points. Routes to parking after landing start in the landing area and end at the parking spots.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (2)",
+   "text": "Routes for Taxiing for Takeoff.\n\nRoutes for Taxiing to Parking.\n\nDuring movement along the route, the pilot interacts with members of the deck crew, whose instructions the pilot must follow without deviation. Crew members are visually distinguished by the colors of their clothing:\n\n● Brown shirt (Plane Captain) – Releases the aircraft from parking and guiding it to parking. He will also provide commands to start and stop the engines.\n● Yellow shirt (Plane Director) – Directs the aircraft along the proscribed taxi route.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (3)",
+   "text": "Typically, these deck crew members are positioned along the aircraft’ route (see Image for taxiing to the catapult and for taxiing to parking). The route consists of segments connected by turning points (TP). When moving along a route, deck crew members use hand signals during the day or illuminated wands at night to give direction to the current TP. After the center of the aircraft enters the TP area, it is handed off to the next TP until it reaches the final TP.\n\nExample of deck crew placement for escorting an aircraft for takeoff, indicating service sectors for each member.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (4)",
+   "text": "Example of deck crew placement for escorting an aircraft to parking, indicating service sectors for each member. Each crew member (usually a Plane Director) directs the aircraft along just one leg of the route. As the aircraft passes through a leg, control is handed off to the plane director responsible for the next leg. At any given time, the aircraft's movement is only controlled by one deck crew member. New control gestures (basic ones described earlier in the Catapult Procedures section):\n● Engine startup – with this signal, the Plane Captain authorizes the engines to start.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (5)",
+   "text": "Engine startup\n\n● Hand Off – This signal is used to hand off control of the aircraft's movement to another crew member.\n\nHand Off\n\n● Attention On me – This signal is used by a crew member to attract the pilot's attention, typically when handing off control from one crew member to another. The crew member taking over direction shows this signal to the pilot for a short time to gain attention.\n\nAttention On me\n\n● Come forward – The aircraft should move straight ahead at a safe speed (5–10 km/h).\n\nCome forward",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (6)",
+   "text": "● Turn Left/Right – The aircraft should turn in the specified direction without moving forward. Ideally, upon receiving this direction, the aircraft should stop and then begin turning in the indicated direction.\n\nTurn Left Turn Right\n\n● Stop – The pilot must immediately set throttles to idle and apply the brakes and stop. The aircraft should remain braked for as long as the deck crew member directs this signal.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (7)",
+   "text": "Stop While taxiing along the route, the pilot must constantly maintain visual contact with the current directing crew member and promptly and accurately follow all instructions. This can be assisted with a purple icon over the active director. To more easily respond to direction, it is recommended to taxi at a maximum speed not exceeding 5–7 km/h and avoid abrupt use of the throttle, pedals, and brakes. When taxiing, use nose wheel steering with large deflection angles and high gain nosewheel steering if available.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (8)",
+   "text": "To start moving from a standstill, increase the throttle to approximately 73% engine RPM. After initiating movement and reaching taxi speed, smoothly reduce the throttle to idle and taxi by inertia. Use the brakes smoothly during taxiing by applying gentle, short presses on the two brakes. As speed decreases, smoothly increase the throttle by 2–3%, then set it back to idle. When making sharp turns, maintain taxi speed by increasing the throttle by 2–3% if necessary, then returning to idle.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (9)",
+   "text": "During taxi route direction, STOP signals may be given for various reasons, including:\n- The crew member responsible for the next section is busy directing another aircraft.\n- The crew member responsible for the next section is obscured by another aircraft.\n- The taxi route is blocked by another aircraft.\n- A STOP command has been received from the flight director.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (10)",
+   "text": "UPON RECEIVING A STOP COMMAND, IMMEDIATELY SET THROTTLES TO IDLE AND APPLY TOE BRAKES. If you lose sight of your Plane Director and are unsure where to taxi, you should brake, look around, locate your Plane Director, and only then continue taxiing based on their direction. The simulation provides a mode in which a purple marker is placed above the current controlling crew member to facilitate orientation on the deck in complex conditions. Press [LCtrl+LShift+LAlt+H] to toggle these helpers. Approaching the catapult should be done at minimal speed with smooth braking and nosewheel steering.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (11)",
+   "text": "While taxiing onto the catapult, pay close attention to the Catapult Director's signals and strictly follow their commands. The process involves a series of maneuvers to position the aircraft's center on the catapult's axis while aligning the aircraft's longitudinal axis with the catapult's axis. Initially, the pilot is directed toward the closest point on the catapult's axis. When the aircraft's center reaches the catapult axis, directions are given to turn the aircraft so that the nose gear also aligns closely with the catapult axis.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (12)",
+   "text": "This process is repeated until both the aircraft's center and nose gear are sufficiently aligned with the catapult axis. Upon achieving the required alignment and positioning, the Director gives the \"Stop\" command. Further actions for takeoff preparation are detailed in the Catapult Procedures section 3: Stop and Extend Launch Bar.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (13)",
+   "text": "IMPORTANT: The current implementation of takeoff and landing algorithms requires strict adherence to the directors by all participants — single player and multiplayer. It involves moving aircraft on the deck along specific routes for launch and recovery, while often sharing the directors. This imposes significant restrictions on launch and recovery operations: During aircraft launches, it is highly discouraged to perform recoveries. Failure to comply with this rule may lead to improper functioning of the deck crew and, consequently, the inability of the ship's simulation to operate correctly.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (14)",
+   "text": "Auxiliary messages are displayed near the center of the screen in yellow and inform the player. Possible messages include:\n• Awaiting Salute gesture. Make salute when ready\n• Awaiting personnel\n• Awaiting crew member\n• Member # busy\n• Awaiting member # idle\n• Awaiting startup permission\n• Awaiting engine startup\n• Awaiting salute gesture\n• Awaiting parking tasks to finish\n• Awaiting landing aircraft\n• Awaiting taxi permission\n• Awaiting requested crew member\n• Awaiting taxi permission, other clients taxiing\n• Awaiting stop\n• Awaiting engine idle\n• Awaiting wing fold\n• Awaiting catapult ready\n•",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (15)",
+   "text": "Awaiting member visibility, taxi prohibited\n• Awaiting aircraft to park\n• Awaiting free terminal\n• Taxi prohibited\n• Maximum velocity exceeded\n• Teleport allowed only one time\n• Rearming in progress\n• Refueling in progress\n• Rearming and refueling in progress\n• Parking slot obstructed, awaiting clearance\n• No parking available or taxiway blocked, you will be automatically moved to parking. Awaiting stop\n• No parking available or taxiway blocked, you will be automatically moved to parking.",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview (16)",
+   "text": "Awaiting engine idle\n• No parking available or taxiway blocked, you will be automatically moved to parking. Awaiting wing fold",
+   "tags": [
+    "deck",
+    "launch",
+    "new",
+    "operations",
+    "overview",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Overview",
+   "page": 44
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing from Parking to Catapult (1)",
+   "text": "1. To begin the deck crew's launch procedures for your aircraft, you must first signal readiness by pressing [LCtrl+LShift+LAlt+S] or select the Salute command from the Ground Crew… radio menu. This informs the plane captain (brown shirt) of your readiness to start the aircraft and prepare for launch.\n2. Two individuals will approach the aircraft from the front (or will already be in position at the start of the mission): a brown shirt and a yellow shirt. See images below.\n3. The brown shirt will display a gesture authorizing engine start.",
+   "tags": [
+    "catapult",
+    "deck",
+    "for",
+    "from",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing from Parking to Catapult",
+   "page": 51
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing from Parking to Catapult (2)",
+   "text": "The position of the Plane Captain and Plane Director at the from a Cold Start. The brown shirt shows the gesture authorizing engine start.",
+   "tags": [
+    "catapult",
+    "deck",
+    "for",
+    "from",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing from Parking to Catapult",
+   "page": 51
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing from Parking to Catapult (3)",
+   "text": "Position of the Plane Captain and Plane Director at the mission start with a Hot Start. The Plane Captain awaits the command to taxi.\n4. After starting the engine, you need to signal readiness again by pressing [LCtrl+LShift+LAlt+S] or selecting the Salute command from the Ground Crew… radio menu.\n5. If taxi clearance is granted and the yellow shirt is visible, the brown shirt will display the signal handing off control to the yellow shirt (See images below). The yellow shirt will then begin giving taxiing direction signals.",
+   "tags": [
+    "catapult",
+    "deck",
+    "for",
+    "from",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing from Parking to Catapult",
+   "page": 51
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing from Parking to Catapult (4)",
+   "text": "After receiving the command, the Plane Captain uses the \"Hand off to Next\" gesture to transfer control to the next Plane Director. If the player spawns in an aircraft ready to taxi with the engine running, the sequence of actions is the same except for point 3. Note that the allocation of deck crew personnel for escorting the aircraft occurs after the player gives the first readiness signal [LCtrl+LShift+LAlt+S]. IMPORTANT: Yellow shirts may be assisting other aircraft with taxiing for launch or recovery.",
+   "tags": [
+    "catapult",
+    "deck",
+    "for",
+    "from",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing from Parking to Catapult",
+   "page": 51
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing from Parking to Catapult (5)",
+   "text": "There's no need to signal taxi readiness early if you're not planning to taxi immediately, as the Plane Directors assigned to your route may be assisting other aircraft. This can result in players who are ready to taxi forced to wait until the assigned Plane Director becomes available. When multiple aircraft are taxiing for launch simultaneously, priority may be given to different aircraft at different times depending on their positions on the deck. This is managed by the combined logic of ATC and the deck crew. In such situations, some aircraft may receive a \"Stop\" signal.",
+   "tags": [
+    "catapult",
+    "deck",
+    "for",
+    "from",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing from Parking to Catapult",
+   "page": 51
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery (1)",
+   "text": "After the aircraft has come to a stop after a recovery, you must set the throttle to idle, raise the tail hook to detach from the arresting cable, raise the flaps, and fold the wings. Then, as quickly as possible, follow the deck crew's directions to promptly clear the landing area. The taxi route to parking will be assigned after detaching from the arresting wire, and it will depend on parking availability and deck conditions. When taxiing to parking, precisely follow deck crew commands.",
+   "tags": [
+    "after",
+    "deck",
+    "for",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "recovery",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery",
+   "page": 53
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery (2)",
+   "text": "After reaching the parking spot and receiving the \"Stop\" command, apply the brakes and set the throttle to idle (or shut down the engine). Your aircraft will then automatically be turned into the parking position.",
+   "tags": [
+    "after",
+    "deck",
+    "for",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "recovery",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery",
+   "page": 53
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery (3)",
+   "text": "IMPORTANT: In case of aircraft damage or other emergencies, an automatic method to move the aircraft to a parking spot is available. To use this, you must stop, lower the tail hook, fold the wing, and set the throttle to idle or turn off the engine. Then, by pressing [LCtrl+LShift+LAlt+T], the aircraft will be moved to the assigned parking spot and turned into the parking position. Automatic movement to parking is available at any time during the taxi to parking. Upon arrival at the parking spot, the player can access a game menu to request repairs, refueling, rearming, and request launch.",
+   "tags": [
+    "after",
+    "deck",
+    "for",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "recovery",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery",
+   "page": 53
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery (4)",
+   "text": "The parking menu can be invoked by pressing [LCtrl+LShift+LAlt+Р] and is only available when in the assigned parking spot.\n\nWhen requesting a launch after a recovery, a taxi route for launch is assigned. If a route is available from the current parking spot, proceed as described in the section above.",
+   "tags": [
+    "after",
+    "deck",
+    "for",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "recovery",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery",
+   "page": 53
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery (5)",
+   "text": "If no taxi route for launch is available from the current parking spot (see Image below), the game will search for available parking spots that have a taxi route to an available catapult. If a free parking spot is found, the aircraft is automatically moved there, and you can proceed as described in the LAUNCH OPERATIONS section. If no such parking spots are available, you will remain at your current spot until one becomes available.",
+   "tags": [
+    "after",
+    "deck",
+    "for",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "recovery",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery",
+   "page": 53
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery (6)",
+   "text": "During recoveries, aircraft are directed to parking spots starting from the stern towards the bow. If the taxi route to the parking spot is blocked, the next available spot is selected. The order of parking spot allocation is described below.\n\nIf there are obstacles (aircraft or other objects) on the parking spots opposite the Island, these spots are used for parking. See Image:",
+   "tags": [
+    "after",
+    "deck",
+    "for",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "recovery",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery",
+   "page": 53
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery (7)",
+   "text": "If, after recovery, an aircraft appears on elevator №2, parking will be directed to indicated spots in the image above. After these spots are filled, and if there are no obstacles opposite the Island, parking will be directed from the stern towards the Island. See Image:\n\nParking spots from which no taxi route to the catapults is also provided:",
+   "tags": [
+    "after",
+    "deck",
+    "for",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "recovery",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery",
+   "page": 53
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery (8)",
+   "text": "If after recovering you cannot proceed to a parking spot, the aircraft will be moved to parking according to the algorithm described below. The following conditions must be met for relocation to parking: Elevator 1 Elevator 2 Elevator 3 Elevator 4 Elevator 1 Elevator 2 Elevator 3 Elevator 4 Elevator 1 Elevator 2 Elevator 3 Elevator 4",
+   "tags": [
+    "after",
+    "deck",
+    "for",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "recovery",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery",
+   "page": 53
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery (9)",
+   "text": "- The parking spot must be unoccupied, and aircraft in adjacent spots must not hinder the placement of your aircraft.\n- Wings must be folded.\n- The aircraft must be stationary.\n- The engine must be idle or turned off. Algorithm for Moving to Parking Spots:\n1. If free parking spots with taxi routes from the landing area are available but passage is blocked, the aircraft is moved to the first available spot among them. Repeat launches from these spots proceed as usual.\n2. If no such parking spots are available, the aircraft is moved to one of the parking spots on elevator №4.",
+   "tags": [
+    "after",
+    "deck",
+    "for",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "recovery",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery",
+   "page": 53
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery (10)",
+   "text": "Repeat launches from these spots proceed as usual.\n\n3. If there are no free parking spaces, the aircraft is moved to one of the 16 parking spots in the hangar. Repairs, refueling, and rearming is available at these spots via the parking menu. When requesting a launch after recovering, you will wait until a parking spot on the deck becomes available, after which your aircraft will be automatically moved there.",
+   "tags": [
+    "after",
+    "deck",
+    "for",
+    "launch",
+    "new",
+    "operations",
+    "parking",
+    "personnel",
+    "procedure",
+    "recovery",
+    "taxiing",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Procedure for Taxiing to Parking After Recovery",
+   "page": 53
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Options and Keyboard Commands (1)",
+   "text": "To simplify gameplay, the following options are available from Options  Special tab  Supercarrier:\n● Enable deck crew – In this mode, when unchecked, the deck crew is absent, and only catapult commands are present.\n● Enable special helpers showing currently assigned deck crew member – In this mode, a purple marker is placed above the current controlling crew member to aid deck orientation.\n● Enable helper messages in cockpit while taxi – This option allows you to disable message display.\n● Enable velocity limit while taxi – In this mode, if the player exceeds the maximum taxi speed for 3 sec",
+   "tags": [
+    "and",
+    "commands",
+    "deck",
+    "keyboard",
+    "launch",
+    "new",
+    "operations",
+    "options",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Options and Keyboard Commands",
+   "page": 56
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Options and Keyboard Commands (2)",
+   "text": "onds, wheel chocks are automatically applied, and the aircraft stops.\n● Enable simplified taxi signals while taxing to catapult or parking – In this mode, less strict requirements are applied when passing TPs. Note that using this mode may result in less accurate route following, and the responsibility for safe deck taxiing lies with the player.\n\nElevator 1 Elevator 2 Elevator 3 Elevator 4",
+   "tags": [
+    "and",
+    "commands",
+    "deck",
+    "keyboard",
+    "launch",
+    "new",
+    "operations",
+    "options",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Options and Keyboard Commands",
+   "page": 56
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Options and Keyboard Commands (3)",
+   "text": "Keyboard Commands: At noted earlier, several hot keys are also available that can be rebound from the Controls Manager for Supercarrier: [LCtrl+LShift+LAlt+S] – Salute [LCtrl+LShift+LAlt+P] – Parking Menu [LCtrl+LShift+LAlt+T] – Teleport [LCtrl+LShift+LAlt+H] – Toggle Helpers [LCtrl+LShift+LAlt+M] – Toggle Messages",
+   "tags": [
+    "and",
+    "commands",
+    "deck",
+    "keyboard",
+    "launch",
+    "new",
+    "operations",
+    "options",
+    "personnel",
+    "the",
+    "use"
+   ],
+   "section": "LAUNCH OPERATIONS > Use of the new Deck Personnel > Options and Keyboard Commands",
+   "page": 56
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Case I Departure",
+   "text": "Case I departures are flown during the day when weather conditions allow departure under visual flight rules (VFR). The weather minimums are a cloud deck above 3,000 feet and visibility greater than 5 miles. Once the aircraft clears the catapult and a positive rate of climb is established, execute a clearing turn to stay clear of the ship’s path. Climb to 500 feet and fly parallel to the ship’s heading, or base recovery course (BRC). Continue straight ahead at 500 feet and 300 KIAS paralleling BRC until 7 miles from the carrier. At that point, climb along the planned route.",
+   "tags": [
+    "case",
+    "departure",
+    "launch",
+    "operations"
+   ],
+   "section": "LAUNCH OPERATIONS > Case I Departure",
+   "page": 58
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Case II Departure (1)",
+   "text": "Case II departures are flown during the day when visual conditions are present at the carrier, but a controlled climb through the clouds is required. The weather minimums are a cloud deck above 1,000 feet and visibility greater than 5 miles. After the clearing turn, proceed straight ahead at 500 feet and 300 KIAS paralleling the BRC as on Case I. At 7 miles from the carrier, turn to intercept the arc running 10 miles from the carrier, staying below the cloud deck. Stay on this 10-mile arc until you reach the briefed departure radial.",
+   "tags": [
+    "case",
+    "departure",
+    "launch",
+    "operations"
+   ],
+   "section": "LAUNCH OPERATIONS > Case II Departure",
+   "page": 59
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Case II Departure (2)",
+   "text": "Climb on that course maintaining 300 KIAS until clear of the clouds.",
+   "tags": [
+    "case",
+    "departure",
+    "launch",
+    "operations"
+   ],
+   "section": "LAUNCH OPERATIONS > Case II Departure",
+   "page": 59
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Case III Departure (1)",
+   "text": "Case III departures are flown at night and when weather conditions are below the minimums of 1,000 feet cloud deck and 5 miles visibility. A controlled climb is maintained throughout the departure. The aircraft will launch with a minimum launch interval of 30 seconds between aircraft. Following the launch, climb straight ahead at 300 KIAS, crossing 5 nautical miles from the carrier at 1500 feet AGL or above. At 7 nm from the carrier, turn to intercept the 10 nm arc. Continue climbing along the arc until you reached the briefed departure radial.",
+   "tags": [
+    "case",
+    "departure",
+    "iii",
+    "launch",
+    "operations"
+   ],
+   "section": "LAUNCH OPERATIONS > Case III Departure",
+   "page": 60
+  },
+  {
+   "title": "LAUNCH OPERATIONS > Case III Departure (2)",
+   "text": "Continue to climb on that course until clear of the weather.",
+   "tags": [
+    "case",
+    "departure",
+    "iii",
+    "launch",
+    "operations"
+   ],
+   "section": "LAUNCH OPERATIONS > Case III Departure",
+   "page": 60
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Overview (1)",
+   "text": "The recovery process starts on entry to the Carrier Control Area, or CCA. This is a fifty-mile radius circle around the carrier where standardized procedures are followed to quickly recover large numbers of aircraft with as little communication as possible. Once inside the CCA, check in on Marshal frequency with call sign, position, altitude and fuel state. Marshal will provide recovery holding instructions and pass the ship’s weather, altimeter setting and ship’s heading (BRC).",
+   "tags": [
+    "operations",
+    "overview",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Overview",
+   "page": 62
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Overview (2)",
+   "text": "Three different types of recovery can be expected depending on the current weather conditions: Case I: This is a daytime visual recovery flown in when the cloud deck is higher than 3,000 feet and visibility is greater than 5 miles. Aircraft proceed to a holding stack over the carrier. Case I recoveries are used to the maximum extent possible. Case II: Case II recoveries are flown when weather conditions require instrument flight during the descent but allow visual flight near the carrier. Case III procedures are used until the ship is in sight, at which point, Case I procedures will be used.",
+   "tags": [
+    "operations",
+    "overview",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Overview",
+   "page": 62
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Overview (3)",
+   "text": "The minimum weather requirements are a 1,000-foot ceiling and 5-mile visibility. Case III: This instrument recovery is used at night or when the weather is below Case II minimums. Case II and III recoveries are flown from a marshal stack behind the carrier.",
+   "tags": [
+    "operations",
+    "overview",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Overview",
+   "page": 62
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Marshal (1)",
+   "text": "At 50 miles or closer, you should select ‘INBOUND’ from the ATC carrier radio menu. Upon doing so, the following message is sent from you to the marshal controller:\n\n“Marshal, [SIDE NUMBER] holding hands with [SIDE NUMBER], marking mom’s [BEARING FROM SHIP TO PLAYER] for [RANGE], angels [ALTITUDE], [NUMBER IN FLIGHT], low state [REMAINING FUEL].”\n\nThe carrier MARSHAL will respond with: “[SIDE NUMBER], mother’s weather is [VISIBILITY], [CLOUDS], altimeter [PRESSURE]. CASE I recovery expected BRC is [HEADING OF CARRIER]. Report a see me at 10.”",
+   "tags": [
+    "case",
+    "marshal",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Marshal",
+   "page": 64
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Marshal (2)",
+   "text": "You will automatically acknowledge with: “[SIDE NUMBER].”",
+   "tags": [
+    "case",
+    "marshal",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Marshal",
+   "page": 64
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > See You at 10 (1)",
+   "text": "After the initial check in with Marshal, proceed directly to the carrier and enter overhead holding at your squadron’s holding altitude. Altitudes are assigned in 1,000-foot increments starting at 2,000 feet above the carrier, so your holding altitude could be 2,000 feet, 3,000 feet, 4,000 feet, and so on. Aircraft returning for Case I recoveries must be established at their holding altitudes no later than 10 nautical miles from the carrier. Once you are within 10 miles and visual contact is established, you should select ‘SEE YOU AT 10’ from the ATC carrier radio menu item.",
+   "tags": [
+    "case",
+    "operations",
+    "recovery",
+    "see",
+    "you"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > See You at 10",
+   "page": 64
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > See You at 10 (2)",
+   "text": "You will send: “[SIDE NUMBER] see you at 10.”\n\nMarshal will respond with: “[SIDE NUMBER], update state, go tower.”\n\nYou automatically respond with: “[SIDE NUMBER], [FUEL REMANING]”\n\nYou will then proceed to holding and enter the pattern at the outside of the turn. (See the visual aid below.) The next radio call will happen automatically when you enter the",
+   "tags": [
+    "case",
+    "operations",
+    "recovery",
+    "see",
+    "you"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > See You at 10",
+   "page": 64
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Holding Pattern (1)",
+   "text": "The overhead holding pattern is a left-hand pattern, with Point 1 located directly overhead the carrier and Points 2, 3 and 4 following in 90-degree increments. This holding pattern is often referred to as the “stack”. All aircraft must remain within 5 nm of the carrier and no lower than 2,000 feet AGL. Any climbs must be accomplished between points 1 and 3 while any descents must be accomplished between points 3 and 1.",
+   "tags": [
+    "case",
+    "holding",
+    "operations",
+    "pattern",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Holding Pattern",
+   "page": 65
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Holding Pattern (2)",
+   "text": "While holding, the flight will remain at max conserve fuel flow unless briefed otherwise. Aircraft in overhead holding will stagger their intervals to ensure equal spacing from all flights at the same altitude. If there are two total flights, then they should be 180-degrees apart. Three flights should be 120degrees apart. Four flights will be 90-degrees apart. You will leave the holding pattern on the ‘charlie’ signal from the tower.",
+   "tags": [
+    "case",
+    "holding",
+    "operations",
+    "pattern",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Holding Pattern",
+   "page": 65
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Commencing the Approach (1)",
+   "text": "Once you are within 3 nm of carrier and enough interval exists between you and other landing aircraft, you will automatically send:\n\n“[TOWER], [SIDE NUMBER], overhead, angels [ALTITUDE], [NUMBER IN FLGHT], low state [REMAINING FUEL].”\n\nThe tower responds with: “[SIDE NUMBER], Tower, Roger. BRC is [CARRIER HEADING], your signal is Charlie.”\n\nYou will auto-respond with: “[SIDE NUMBER].”",
+   "tags": [
+    "approach",
+    "case",
+    "commencing",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Commencing the Approach",
+   "page": 66
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Commencing the Approach (2)",
+   "text": "At this point, the next communication will be with the LSO at ¾ mile behind the carrier. The flight will depart holding from outside point 3 and descend to 800 feet. An arcing turn will be flown to the initial point 3nm astern of the ship. The flight will continue inbound and fly just outboard the starboard side of the ship at 800 feet, paralleling BRC. The radio command ‘KISS OFF’ should be given to your flight and the landing pattern should be entered.",
+   "tags": [
+    "approach",
+    "case",
+    "commencing",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Commencing the Approach",
+   "page": 66
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Overhead Break (1)",
+   "text": "The landing pattern is entered with the radio command ‘KISS OFF’ to your flight followed by a sharp break turn to the left. The members of your flight will continue ahead and execute their own break to enter the pattern behind you. A 15-20 second break interval will correspond to a proper 40-60 second landing interval. If you are unable to break before 4 nm, you will have to depart and reenter the pattern. To accomplish this, maintain 800 feet until 5 nm from the carrier, then climb to 1,200 feet and execute a left-hand descending arc back to the initial.",
+   "tags": [
+    "break",
+    "case",
+    "operations",
+    "overhead",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Overhead Break",
+   "page": 67
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Overhead Break (2)",
+   "text": "Break altitude is 800 feet, and all breaks will be level. When established on downwind, you will descend to pattern altitude of 600 feet, configure for landing and closely monitor the abeam distance. The optimal distance varies from aircraft to aircraft but 1 ¼ to 1 ½ miles generally allows a smooth entry into the next phase called ‘the groove’.",
+   "tags": [
+    "break",
+    "case",
+    "operations",
+    "overhead",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Overhead Break",
+   "page": 67
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > In the Groove",
+   "text": "You will continue to descend in a left-hand turn, rolling out wings level ¾ nm astern of the ship in line with the angled deck. This phase will be flown based on the state of the IFLOLS ball and verbal directions from the LSO.",
+   "tags": [
+    "case",
+    "groove",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > In the Groove",
+   "page": 68
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Call the Ball",
+   "text": "When your aircraft is in the groove (wings level) and you have the ball in sight, you should select ‘BALL’ from the ATC carrier radio menu. You will transmit: “[SIDE NUMBER] [Ball] [FUEL STATE]” The LSO responds with: “Roger ball”\n\nThe LSO may also make these calls if your aircraft is not configured for landing: “Wave off, gear” – Your landing gear is not extended. “Wave off, flaps” – Your flaps are not configured for landing.",
+   "tags": [
+    "ball",
+    "call",
+    "case",
+    "groove",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Call the Ball",
+   "page": 68
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Clara (1)",
+   "text": "If you do not have the ball in sight, select ‘CLARA’ from the ATC menu. The LSO will provide the following calls to get you on glidepath if necessary: “You’re high” – You are far above the glidepath. “You’re low, POWER” – You are far below the glidepath. If you are still not within glidepath limits at ½ mile astern of the carrier the LSO will transmit “Wave off, wave off, wave off”. The IFLOLS waveoff lights will also flash red. ‘Clara’ may be transmitted automatically in some cases when you greatly exceed glidepath limits.",
+   "tags": [
+    "case",
+    "clara",
+    "groove",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Clara",
+   "page": 68
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Clara (2)",
+   "text": "“Ball” will be automatically transmitted once you are back within glidepath limits. The LSO will respond with “Roger ball”.",
+   "tags": [
+    "case",
+    "clara",
+    "groove",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Clara",
+   "page": 68
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Inside ¾ Mile (1)",
+   "text": "When inside ¾ mile and the ball call has been made, direction from the LSO is based on your deviation from localizer centerline and 3.6-degree glidepath.",
+   "tags": [
+    "case",
+    "groove",
+    "inside",
+    "mile",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Inside ¾ Mile",
+   "page": 69
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Inside ¾ Mile (2)",
+   "text": "• No direction = under 1.7 degrees left or right of localizer and less than 1.5 degrees below and less than 2.5 degrees above optimal glidepath\n• Off centerline = greater than 1.7 degrees left or right of optimal localizer centerline\n• Off glidepath = greater than 1.5 degrees below and greater than 2.5 degrees above optimal glidepath\n• Far off centerline = greater than 2.9 degrees left or right of optimal localizer centerline\n• Far off glidepath = 2.7 degrees or greater below or 4.9 degrees or greater above optimal glidepath",
+   "tags": [
+    "case",
+    "groove",
+    "inside",
+    "mile",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Inside ¾ Mile",
+   "page": 69
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Inside ¾ Mile (3)",
+   "text": "“You’re high” – Aircraft is far above the glidepath. “You’re low, POWER” – Aircraft is far below the glidepath. “You’re lined up left” – Aircraft is far left of centerline. “You’re lined up right” – Aircraft is far right of centerline. “You’re fast” – Angle of attack is too low. “You’re slow” – Angle of attack is too high. “Easy with the nose” – Aircraft has excessive pitch rate. (>5 degrees per second) “Easy with your wings” – Aircraft has excessive roll angle. (>20 degrees) “Easy with it” – Aircraft thrust changes are excessive. (>30% per second)",
+   "tags": [
+    "case",
+    "groove",
+    "inside",
+    "mile",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Inside ¾ Mile",
+   "page": 69
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Inside ½ Mile (1)",
+   "text": "As you approach the carrier’s stern, direction from the LSO becomes more precise.",
+   "tags": [
+    "case",
+    "groove",
+    "inside",
+    "mile",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Inside ½ Mile",
+   "page": 70
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Inside ½ Mile (2)",
+   "text": "“You’re high” or “You’re high, bring it down” or “You’re high, work it down.” – Aircraft is above glideslope more than 3 seconds. “Power” (normal inflection) – Aircraft is below glideslope more than two seconds or aircraft on glideslope but is descending more than 1 degree per second for 2 seconds. If same call is made 2 seconds later: “Power” with more urgent inflection. “power, Power, POWER” – Aircraft is far below glidepath and sinking rapidly. “Easy with it” – Greater than 1 degree per second change in glidepath following a “power” call.",
+   "tags": [
+    "case",
+    "groove",
+    "inside",
+    "mile",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Inside ½ Mile",
+   "page": 70
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Inside ½ Mile (3)",
+   "text": "“Right for lineup” – Aircraft is left of centerline. “Come left” – Aircraft is right of centerline. “Wave off, wave off, wave off” – Two or more of the above conditions are true at the same time for a 2 second or more duration or excessive glidepath and localizer deviation for more than 4 seconds. “Wave off, wave off, wave off, foul deck” – Another aircraft is in the",
+   "tags": [
+    "case",
+    "groove",
+    "inside",
+    "mile",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > In the Groove > Inside ½ Mile",
+   "page": 70
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Landing (1)",
+   "text": "Do not anticipate an arrested landing. When the aircraft touches down, advance the power to max and retract the speed brakes in anticipation of a bolter. Maintain max power until the aircraft comes to a complete stop. Then, release the brakes and allow the aircraft to be pulled back. The arresting wire will release from the hook and you will be free to taxi to a parking location.\n\nThe LSO will grade each landing and display the results at the top right of your screen. The format is [GRADE]: [MAIN ERRORS], [ERROR LOCATION], [WIRE CAUGHT]. A typical landing grade may look like this:",
+   "tags": [
+    "case",
+    "landing",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Landing",
+   "page": 71
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Landing (2)",
+   "text": "Transcription: “No grade. Drifted way right in close. Landed a little left in the wires. Caught number 4 wire.”\n\nGrades:\n• WO - Waveoff\n• OWO - Own Waveoff\n• _OK _ - Perfect pass\n• OK - Reasonable deviations with good corrections\n• (OK) - Fair. Reasonable deviations\n• --- - No-grade. Below average but safe pass\n• C - Cut. Unsafe, gross deviations inside waveoff window\n• B - Bolter",
+   "tags": [
+    "case",
+    "landing",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Landing",
+   "page": 71
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Landing (3)",
+   "text": "Main errors:\n• AFU - All “fouled” up\n• DL - Dri fted left\n• DR - Drifted right\n• EG - Eased gun (did not advance throttles to MIL/AB after touchdown)\n• F - Fast\n• FD - Fouled deck\n• H - High\n• LL - Landed left\n• LO - Low\n\n• LR - Landed right\n• LUL - Lined up left\n• LUR - Lined up right\n• N - Nose\n• NERD - Not enough rate of descent\n• NSU - Not set up\n• P - Power\n• SLO – Slow\n• TMRD – Too much rate of descent\n• W - Wings\n• LLWD - Landed left wing down\n• LRWD - Landed right wing down\n• LNF - Landed nose\n• 3PTS - Landed 3 points",
+   "tags": [
+    "case",
+    "landing",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Landing",
+   "page": 71
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Landing (4)",
+   "text": "Distance marks placed after error:\n• BC - Ball call (before first 1/3 of glideslope)\n• X - At the start (first 1/3 of glideslope)\n• IM - In the middle (middle 1/3 of the glideslope)\n• IC - In close (last 1/3 of glideslope)\n• AR - At the ramp\n• TL - To land (between AR and first wire)\n• IW - In the wires\n• AW – After wires",
+   "tags": [
+    "case",
+    "landing",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Landing",
+   "page": 71
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Landing (5)",
+   "text": "Note 1: Parentheses ( ) around any symbol signifies “a little” (e.g., \"(F)\" means “a little fast”) Note 2: Underline. For emphasis (e.g.\"_H_\" means “very high”) Note 3: A square [ ] around any symbol indicates that a signal was not answered (e.g. “[BC]” means no ball call has been made)\n\nAfter landing, you have the option to taxi to a catapult and take off again immediately. To do so, alert the ground crew by selecting ‘Request Launch’ from the ground crew communications menu. The catapult crew will be ready to hook you up at whatever catapult you taxi to.",
+   "tags": [
+    "case",
+    "landing",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Landing",
+   "page": 71
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Touch and Go & Bolters",
+   "text": "The procedures for touch and go landings and bolters are identical. Continue to fly the ball all the way to touchdown. Upon touchdown, simultaneously advance power to max, retract speed brakes, and rotate to optimum AOA for takeoff. Maintain wings level and verify a positive rate of climb. Once a positive rate of climb is established and your aircraft is forward of the bow, use a shallow right turn to parallel the BRC. Climb to pattern altitude (600 feet) and turn downwind with proper interval with other landing aircraft.",
+   "tags": [
+    "and",
+    "bolters",
+    "case",
+    "operations",
+    "recovery",
+    "touch"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Touch and Go & Bolters",
+   "page": 73
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case I Recovery > Waveoff",
+   "text": "Procedures for a waveoff are the same as touch and go or bolter, except you will depart straight down the angled deck.",
+   "tags": [
+    "case",
+    "operations",
+    "recovery",
+    "waveoff"
+   ],
+   "section": "RECOVERY OPERATIONS > Case I Recovery > Waveoff",
+   "page": 73
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case II Recovery (1)",
+   "text": "Case II recovery occurs during daylight hours when conditions may be poor on the approach but adequate for landing under visual flight rules. The cloud ceiling must be above 1,000 feet and visibility more than 5 nm. This can be thought of as a combination of Case I and Case III. The Case III procedures are used outside 10 nm and Case I procedures are used inside 10 nm. For a CASE II recovery, you will radio “see you at 10” when the aircraft is 10 nm from the carrier just as on a Case I recovery. Radio control is transferred from the approach controller to the tower controller.",
+   "tags": [
+    "case",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case II Recovery",
+   "page": 74
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case II Recovery (2)",
+   "text": "At this point, the pilot performs an overhead break and landing. No Case I holding stack is required.",
+   "tags": [
+    "case",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case II Recovery",
+   "page": 74
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery",
+   "text": "Case III recovery occurs when any cloud celling is below 1,000 feet or when visibility is less than 5 nm regardless of cloud ceiling. All night operations are conducted in Case III.\n\nThis approach starts with an ‘INBOUND’ call to the",
+   "tags": [
+    "case",
+    "iii",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery",
+   "page": 75
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > Marshal",
+   "text": "The first step for a Case II or III recovery is having your flight enter a marshal holding stack behind the carrier. At 50 miles or closer, you will select ‘INBOUND’ from the ATC carrier radio menu. Upon doing so, the following message will be sent from you:\n\n“Marshal, [SIDE NUMBER] holding hands with [FLIGHT MEMBERS], marking mom’s [BEARING FROM SHIP TO PLAYER] for [RANGE], angels [ALTITUDE], low state [REMAINING FUEL].”\n\nMarshal responds with: “[SIDE NUMBER], [SHIP CALLSIGN] marshal, CASE II/III recovery, CV-1",
+   "tags": [
+    "case",
+    "iii",
+    "marshal",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > Marshal",
+   "page": 76
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > Approach (1)",
+   "text": "Shortly after leaving the marshal stack, you will be handed off to the Approach controller. Marshal will transmit: [SIDE NUMBER], switch approach.\n\nYou will acknowledge with [SIDE NUMBER].\n\nAt this point, control will be transferred from marshal to approach, and you must check in with the new controller. From the ATC carrier menu, you will select ‘CHECK IN’. Upon doing so, the following message will be sent: “[SIDE NUMBER], checking in, [DISTANCE TO CARRIER] miles, [FUEL LEVEL].”\n\nApproach replies with: “[SIDE NUMBER], final bearing [BEARING].”\n\nYou acknowledge with: “[SIDE NUMBER].”",
+   "tags": [
+    "approach",
+    "case",
+    "iii",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > Approach",
+   "page": 78
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > Approach (2)",
+   "text": "At 5,000 feet AGL you will select ‘PLATFORM’ from the ATC carrier menu. You will transmit: “[SIDE NUMBER], platform.”\n\nApproach will acknowledge with: “[SIDE NUMBER], roger.”\n\nWhen your aircraft intercepts final landing bearing, approach will transmit: “[SIDE NUMBER] fly bullseye.”\n\nYou will acknowledge with: “[SIDE NUMBER].”",
+   "tags": [
+    "approach",
+    "case",
+    "iii",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > Approach",
+   "page": 78
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > Approach (3)",
+   "text": "‘Bullseye’ refers to the Instrument Carrier Landing System (ICLS) carrier-based aircraft are equipped with. It functions identically to a land-based ILS system, where you will ‘fly the needles’, following the azimuth and glidepath guidance provided on the HUD or instruments. See the aircraft manual for the aircraft you are flying for a complete description of system operation.",
+   "tags": [
+    "approach",
+    "case",
+    "iii",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > Approach",
+   "page": 78
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > Approach (4)",
+   "text": "At 10 nm, you should begin to reduce your speed and at 8 nm, you should configure for landing. At 6 nm, the aircraft should be on-speed. The Long Range Laser Lineup System (LRLLS) should be visible on the stern of the carrier. A steady amber light means you are aligned with the angled deck for landing. A green light means you are lined up right and a red light means you are lined up left. The red and green lights flash at different rates to show how far off centerline you are. Slow flashing means you are slightly off centerline while fast flashing means you are far off centerline.",
+   "tags": [
+    "approach",
+    "case",
+    "iii",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > Approach",
+   "page": 78
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > ACLS Lock (1)",
+   "text": "At 6-8 miles the approach controller will report: “[SIDE NUMBER] final radar contact, [DISTANCE TO CARRIER] miles.”\n\nYou will acknowledge with: “[SIDE NUMBER].”\n\nAt around 6 nm, aircraft equipped with the Automated Carrier Landing System will acquire ACLS lock. Approach will then ask pilot to “say needles” to check ACLS alignment. Pilot responds by reporting how the aircraft must be flown to be centered. That is, if the aircraft is low and left the pilot responds, “up and right.”",
+   "tags": [
+    "acls",
+    "case",
+    "iii",
+    "lock",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > ACLS Lock",
+   "page": 80
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > ACLS Lock (2)",
+   "text": "At ACLS lock on, the approach controller will transmit: [SIDE NUMBER], ACLS lock on [DISTANCE TO CARRIER] miles, say needles.",
+   "tags": [
+    "acls",
+    "case",
+    "iii",
+    "lock",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > ACLS Lock",
+   "page": 80
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > ACLS Lock (3)",
+   "text": "You will reply automatically with: [SIDE NUMBER], [GLIDEPATH] [LOCALIZER]. This is reference to the position of the ACLS circle on the HUD in relation to the velocity vector on the HUD. For example: If ACLS circle is below and to the right of the velocity vector, the message would be: “305, down and right.” If ACLS circle is above and to the left of the velocity vector, the message would be: “305, up and left.” If ACLS circle is level and to the right of the velocity vector, the message would be: “305, on and right.” If ACLS circle is over the velocity vector, the message would be: “305, on an",
+   "tags": [
+    "acls",
+    "case",
+    "iii",
+    "lock",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > ACLS Lock",
+   "page": 80
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > ACLS Lock (4)",
+   "text": "d on.”\n\nApproach will respond with: “[SIDE NUMBER], Concur, Fly Mode 2.”\n\nApproach will advise when you are approaching the final glidepath, usually at 4 miles: “[SIDE NUMBER], approaching glidepath.”\n\nYou acknowledge with: [SIDE NUMBER].",
+   "tags": [
+    "acls",
+    "case",
+    "iii",
+    "lock",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > ACLS Lock",
+   "page": 80
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > In the Groove (1)",
+   "text": "At ¾ nm, the approach controller directs the pilot to “call the ball” with: “[SIDE NDUMBER], [GLIDEPATH LOCATION], [COURSE LOCATION], ¾ mile, call the ball.”\n\nFrom the ATC carrier menu, you will select ‘BALL’. Upon doing so, the following message will be transmitted: “[SIDE NUMBER], [AIRCRAFT TYPE] BALL, [FUEL STATE].”\n\nApproach acknowledges: “Roger ball, [WIND OVER DECK SPEED], [OPTIONAL DIRECTION].”",
+   "tags": [
+    "case",
+    "groove",
+    "iii",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > In the Groove",
+   "page": 81
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > In the Groove (2)",
+   "text": "For example: If the wind over the deck speed is 25 knots and the wind direction is coming from greater than 5-degrees to the right of the landing deck angle: “Roger ball, 25 knots, starboard.” If the wind over the deck speed is 25 knots and the wind direction is coming from greater than 5-degrees to the left of the landing deck angle: “Roger ball, 25 knots, port.” If the wind over the deck speed is 25 knots and the wind direction is coming from greater than 3-degrees to the right of the landing deck angle: “Roger ball, 25 knots, axial.”",
+   "tags": [
+    "case",
+    "groove",
+    "iii",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > In the Groove",
+   "page": 81
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > In the Groove (3)",
+   "text": "This phase will be flown based on the state of the IFLOLS ball and verbal directions from the LSO.\n\nThe LSO may make these calls if your aircraft is not configured for landing: “Wave off, gear” – Your landing gear is not extended. “Wave off, flaps” – Your flaps are not configured for landing.",
+   "tags": [
+    "case",
+    "groove",
+    "iii",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > In the Groove",
+   "page": 81
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Clara (1)",
+   "text": "If you do not have the ball in sight, select ‘CLARA’ from the ATC menu. The LSO will provide the following calls to get you on glidepath if necessary: “You’re high” – You are far above the glidepath. “You’re low, POWER” – You are far below the glidepath. If you are still not within glidepath limits at ½ mile astern of the carrier the LSO will transmit “Wave off, wave off, wave off”. The IFLOLS waveoff lights will also flash red. ‘Clara’ may be transmitted automatically in some cases when you greatly exceed glidepath limits.",
+   "tags": [
+    "case",
+    "clara",
+    "groove",
+    "iii",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Clara",
+   "page": 81
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Clara (2)",
+   "text": "“Ball” will be automatically transmitted once you are back within glidepath limits. The LSO will respond with “Roger ball”.",
+   "tags": [
+    "case",
+    "clara",
+    "groove",
+    "iii",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Clara",
+   "page": 81
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Inside ¾ Mile (1)",
+   "text": "When inside ¾ mile and the ball call has been made, direction from the LSO is based on your deviation from localizer centerline and 3.5-degree glidepath.",
+   "tags": [
+    "case",
+    "groove",
+    "iii",
+    "inside",
+    "mile",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Inside ¾ Mile",
+   "page": 83
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Inside ¾ Mile (2)",
+   "text": "• No direction = under 1.7 degrees left or right of localizer and less than 1.5 degrees below and less than 2.5 degrees above optimal glidepath\n• Off centerline = greater than 1.7 degrees left or right of optimal localizer centerline\n• Off glidepath = greater than 1.5 degrees below and greater than 2.5 degrees above optimal glidepath\n• Far off centerline = greater than 2.9 degrees left or right of optimal localizer centerline\n• Far off glidepath = 2.7 degrees or greater below or 4.9 degrees or greater above optimal glidepath",
+   "tags": [
+    "case",
+    "groove",
+    "iii",
+    "inside",
+    "mile",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Inside ¾ Mile",
+   "page": 83
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Inside ¾ Mile (3)",
+   "text": "“You’re high” – Aircraft is far above the glidepath. “You’re low, POWER” – Aircraft is far below the glidepath. “You’re lined up left” – Aircraft is far left of centerline. “You’re lined up right” – Aircraft is far right of centerline. “You’re fast” – Angle of attack is too low. “You’re slow” – Angle of attack is too high. “Easy with the nose” – Aircraft has excessive pitch rate. (>5 degrees per second) “Easy with your wings” – Aircraft has excessive roll angle. (>20 degrees) “Easy with it” – Aircraft thrust changes are excessive. (>30% per second)",
+   "tags": [
+    "case",
+    "groove",
+    "iii",
+    "inside",
+    "mile",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Inside ¾ Mile",
+   "page": 83
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Inside ½ Mile (1)",
+   "text": "As you approach the carrier’s stern, direction from the LSO becomes more precise.",
+   "tags": [
+    "case",
+    "groove",
+    "iii",
+    "inside",
+    "mile",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Inside ½ Mile",
+   "page": 84
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Inside ½ Mile (2)",
+   "text": "“You’re high” or “You’re high, bring it down” or “You’re high, work it down.” – Aircraft is above glideslope more than 3 seconds. “Power” (normal inflection) – Aircraft is below glideslope more than two seconds or aircraft on glideslope but is descending more than 1 degree per second for 2 seconds. If same call is made 2 seconds later: “Power” with more urgent inflection. “power, Power, POWER” – Aircraft is far below glidepath and sinking rapidly. “Easy with it” – Greater than 1 degree per second change in glidepath following a “power” call.",
+   "tags": [
+    "case",
+    "groove",
+    "iii",
+    "inside",
+    "mile",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Inside ½ Mile",
+   "page": 84
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Inside ½ Mile (3)",
+   "text": "“Right for lineup” – Aircraft is left of centerline. “Come left” – Aircraft is right of centerline. “Wave off, wave off, wave off” – Two or more of the above conditions are true at the same time for a 2 second or more duration or excessive glidepath and localizer deviation for more than 4 seconds. “Wave off, wave off, wave off, foul deck” – Another aircraft is in the",
+   "tags": [
+    "case",
+    "groove",
+    "iii",
+    "inside",
+    "mile",
+    "operations",
+    "recovery",
+    "the"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > In the Groove > Inside ½ Mile",
+   "page": 84
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > Landing (1)",
+   "text": "Do not anticipate an arrested landing. When the aircraft touches down, advance the power to max and retract the speed brakes in anticipation of a bolter. Maintain max power until the aircraft comes to a complete stop. Then, release the brakes and allow the aircraft to be pulled back. The arresting wire will release from the hook and you will be free to taxi to a parking location.\n\nThe LSO will grade each landing and display the results at the top right of your screen. The format is [GRADE]: [MAIN ERRORS], [ERROR LOCATION], [WIRE CAUGHT]. A typical landing grade may look like this:",
+   "tags": [
+    "case",
+    "iii",
+    "landing",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > Landing",
+   "page": 85
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > Landing (2)",
+   "text": "Transcription: “No grade. Drifted way right in close. Landed a little left in the wires. Caught number 4 wire.” Grades:\n• WO - Waveoff\n• OWO - Own Waveoff\n• _OK _ - Perfect pass\n• OK - Reasonable deviations with good corrections\n• (OK) - Fair. Reasonable deviations\n• --- - No-grade. Below average but safe pass\n• C - Cut. Unsafe, gross deviations inside waveoff window\n• B - Bolter",
+   "tags": [
+    "case",
+    "iii",
+    "landing",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > Landing",
+   "page": 85
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > Landing (3)",
+   "text": "Main errors:\n• AFU - All “fouled” up\n• DL - Drifted left\n• DR - Drifted right\n• EG – Eased gun (did not advance throttles to MIL/AB after touchdown)\n• F - Fast\n• FD - Fouled deck\n• H - High\n• LL - Landed left\n• LO - Low\n• LR - Landed right\n• LUL - Lined up left\n\n• LUR - Lined up right\n• N - Nose\n• NERD - Not enough rate of descent\n• NSU - Not set up\n• P - Power\n• SLO – Slow\n• TMRD – Too much rate of descent\n• W - Wings\n• LLWD - Landed left wing down\n• LRWD - Landed right wing down\n• LNF - Landed no se\n• 3PTS - Landed 3 points",
+   "tags": [
+    "case",
+    "iii",
+    "landing",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > Landing",
+   "page": 85
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > Landing (4)",
+   "text": "Distance marks placed after error:\n• BC - Ball call (before first 1/3 of glideslope)\n• X - At the start (first 1/3 of glideslope)\n• IM - In the middle (middle 1/3 of the glideslope)\n• IC - In close (last 1/3 of glideslope)\n• AR - At the ramp\n• TL - To land (between AR and first wire)\n• IW - In the wires\n• AW – After wires",
+   "tags": [
+    "case",
+    "iii",
+    "landing",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > Landing",
+   "page": 85
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > Landing (5)",
+   "text": "Note 1: Parentheses ( ) around any symbol signifies “a little” (e.g., \"(F)\" means “a little fast”) Note 2: Underline. For emphasis (e.g.\"_H_\" means “very high”) Note 3: A square [ ] around any symbol indicates that a signal was not answered (e.g. “[BC]” means no ball call has been made)\n\nAfter landing, you have the option to taxi to a catapult and take off again immediately. To do so, alert the ground crew by selecting ‘Request Launch’ from the ground crew communications menu. The catapult crew will be ready to hook you up at whatever catapult you taxi to.",
+   "tags": [
+    "case",
+    "iii",
+    "landing",
+    "operations",
+    "recovery"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > Landing",
+   "page": 85
+  },
+  {
+   "title": "RECOVERY OPERATIONS > Case III Recovery > Waveoff or Bolter",
+   "text": "In the event of a waveoff or bolter, climb to 1,200 feet at 150 kts and raise the gear to save fuel, leaving flaps down. When instructed by approach, turn downwind. Perform the landing checks on downwind and notify approach with fuel state when abeam the ship. Expect a turn back to final 4-8 NM past abeam for another approach, lowering the landing gear as you start this turn to final.",
+   "tags": [
+    "bolter",
+    "case",
+    "iii",
+    "operations",
+    "recovery",
+    "waveoff"
+   ],
+   "section": "RECOVERY OPERATIONS > Case III Recovery > Waveoff or Bolter",
+   "page": 87
+  },
+  {
+   "title": "LANDING SIGNAL OFFICER (LSO) STATION > Overview",
+   "text": "The DCS: Supercarrier module includes a fully functional Landing Signal Officer (LSO) station for directing players in a multiplayer setting or observing aircraft in a single player setting. You may enter the LSO station with keyboard command [LALT+F9]. You will be transported to the LSO position with the LSO workstation console in front of you. A separate Pilot's Landing Aid Television (PLAT) Camera view will be opened in a separate window. This will be referred to here as the",
+   "tags": [
+    "landing",
+    "lso",
+    "officer",
+    "overview",
+    "signal",
+    "station"
+   ],
+   "section": "LANDING SIGNAL OFFICER (LSO) STATION > Overview",
+   "page": 89
+  },
+  {
+   "title": "LANDING SIGNAL OFFICER (LSO) STATION > LSO Main Screen Window",
+   "text": "The LSO Main Screen window shows a live view from the PLAT camera surrounded by additional information on ship and aircraft status. You may open and close the window by clicking the top left. You may also reposition the window by clicking and dragging it to a new location. The view may be scrolled up and down using your mouse wheel or by clicking and dragging the bar at the right side. The full LSO Main Screen is displayed at the top and a PLAT Camera view is displayed at the bottom. This information is also available on the physical LSO consoles.\n\nLSO Main Screen PLAT Camera View",
+   "tags": [
+    "landing",
+    "lso",
+    "main",
+    "officer",
+    "screen",
+    "signal",
+    "station",
+    "window"
+   ],
+   "section": "LANDING SIGNAL OFFICER (LSO) STATION > LSO Main Screen Window",
+   "page": 90
+  },
+  {
+   "title": "LANDING SIGNAL OFFICER (LSO) STATION > LSO Main Screen Window > LSO Main Screen Display",
+   "text": "The Main screen display shows information used to calibrate the IFLOLS optical landing system for the aircraft on approach. The data displayed here ensures the glidepath information presented to the pilot is accurate. The",
+   "tags": [
+    "display",
+    "landing",
+    "lso",
+    "main",
+    "officer",
+    "screen",
+    "signal",
+    "station",
+    "window"
+   ],
+   "section": "LANDING SIGNAL OFFICER (LSO) STATION > LSO Main Screen Window > LSO Main Screen Display",
+   "page": 91
+  },
+  {
+   "title": "LANDING SIGNAL OFFICER (LSO) STATION > LSO Main Screen Window > PLAT Camera View (1)",
+   "text": "The center of the window shows the view from the PLAT camera. The camera is mounted on the deck and angled up at 3-degrees along the aircraft landing glideslope to the arrestor wires. Information is superimposed over the image to aid in LSO duties.",
+   "tags": [
+    "camera",
+    "landing",
+    "lso",
+    "main",
+    "officer",
+    "plat",
+    "screen",
+    "signal",
+    "station",
+    "view",
+    "window"
+   ],
+   "section": "LANDING SIGNAL OFFICER (LSO) STATION > LSO Main Screen Window > PLAT Camera View",
+   "page": 93
+  },
+  {
+   "title": "LANDING SIGNAL OFFICER (LSO) STATION > LSO Main Screen Window > PLAT Camera View (2)",
+   "text": "Date. The current date. Local Time. The current local time. Crosshairs. These show the proper glideslope and azimuth for arriving aircraft. Waveoff Indicator. A flashing ‘W’ for waveoff will be shown when if the deck is not clear or other conditions for a waveoff are met. Airspeed. True airspeed in knots is displayed if the aircraft is ACLS equipped. Otherwise, all zeros are displayed. Deck Status. This is the readiness state of the landing area. A ‘C’ means the deck clear and the aircraft on approach may land safely.",
+   "tags": [
+    "camera",
+    "landing",
+    "lso",
+    "main",
+    "officer",
+    "plat",
+    "screen",
+    "signal",
+    "station",
+    "view",
+    "window"
+   ],
+   "section": "LANDING SIGNAL OFFICER (LSO) STATION > LSO Main Screen Window > PLAT Camera View",
+   "page": 93
+  },
+  {
+   "title": "LANDING SIGNAL OFFICER (LSO) STATION > LSO Main Screen Window > PLAT Camera View (3)",
+   "text": "A flashing ‘F’ means the deck is foul and the aircraft’s landing zone is obstructed. Carrier Number. This is the hull number of the carrier, in this case CVN 71. Wind Over Deck. This is the wind over deck in knots, accounting for both wind speed and ship speed. Distance: The distance between the carrier and the aircraft is displayed in feet if the aircraft is ACLS equipped. Otherwise, all zeros are displayed. Descent Rate: The rate of descent in feet per second is displayed if the aircraft is ACLS equipped. Otherwise, all zeros are displayed.",
+   "tags": [
+    "camera",
+    "landing",
+    "lso",
+    "main",
+    "officer",
+    "plat",
+    "screen",
+    "signal",
+    "station",
+    "view",
+    "window"
+   ],
+   "section": "LANDING SIGNAL OFFICER (LSO) STATION > LSO Main Screen Window > PLAT Camera View",
+   "page": 93
+  },
+  {
+   "title": "LANDING SIGNAL OFFICER (LSO) STATION > LSO Main Screen Window > PLAT Camera View (4)",
+   "text": "Date Deck Status Local Time Airspeed Carrier Number Distance Descent Rate Wind Over Deck Waveoff Indicator (not shown) Crosshairs\n\nMISSION EDITOR FEATURS",
+   "tags": [
+    "camera",
+    "landing",
+    "lso",
+    "main",
+    "officer",
+    "plat",
+    "screen",
+    "signal",
+    "station",
+    "view",
+    "window"
+   ],
+   "section": "LANDING SIGNAL OFFICER (LSO) STATION > LSO Main Screen Window > PLAT Camera View",
+   "page": 93
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > Overview",
+   "text": "The DCS: Supercarrier module uses the standard mission editor interface. A complete explanation may be found in the DCS: World User Manual located in your DCS World/Docs folder. That should be your first stop when learning to set up missions using these assets.\n\nIn this section, we will briefly highlight some key features it is important to understand when setting up a mission with the Supercarrier.",
+   "tags": [
+    "editor",
+    "features",
+    "mission",
+    "overview"
+   ],
+   "section": "MISSION EDITOR FEATURES > Overview",
+   "page": 95
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > Ship Selection and Placement (1)",
+   "text": "The new ship assets included with the Supercarrier module appear in the TYPE dropdown list. The new Nimitz Class carriers and Arleigh Burke destroyer are available when the COUNTRY is set to USA. The Admiral Kuznetsov carrier is available with the COUNTRY set to Russia. Note that the CVN-70 Carl Vinson and CVN-74 John C. Stennis are the original carrier assets included with DCS: World. They are still available for users who do not own the Supercarrier module.",
+   "tags": [
+    "and",
+    "editor",
+    "features",
+    "mission",
+    "placement",
+    "selection",
+    "ship"
+   ],
+   "section": "MISSION EDITOR FEATURES > Ship Selection and Placement",
+   "page": 96
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > Ship Selection and Placement (2)",
+   "text": "It is best to face the carrier into the wind on launch and recovery to eliminate crosswind and reduce the airspeed required to keep aircraft airborne. The carrier’s speed should be set so that the wind over deck (ship speed plus wind speed) is near 30 knots. It is important to remember the ship’s course in the mission editor is its true heading while Base Recovery Course (BRC) used in carrier operations is magnetic heading. To get the BRC, add or subtract the magnetic variation for the map being used or simply note the BRC shown at the LSO station in the mission.\n\nWind Direction",
+   "tags": [
+    "and",
+    "editor",
+    "features",
+    "mission",
+    "placement",
+    "selection",
+    "ship"
+   ],
+   "section": "MISSION EDITOR FEATURES > Ship Selection and Placement",
+   "page": 96
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > Communications and Navigation Equipment > Radio Frequency (1)",
+   "text": "and NAVAID channels are all set in the mission editor. See the first section of this guide for a description of each system. See the specific aircraft manual for exact system operation in the air and any restrictions that may apply while setting them up on the carrier.",
+   "tags": [
+    "and",
+    "communications",
+    "editor",
+    "equipment",
+    "features",
+    "frequency",
+    "mission",
+    "navigation",
+    "radio"
+   ],
+   "section": "MISSION EDITOR FEATURES > Communications and Navigation Equipment > Radio Frequency",
+   "page": 97
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > Communications and Navigation Equipment > Radio Frequency (2)",
+   "text": "Radio Frequency The ship’s ATC radio frequency and modulation are set by typing in the desired frequency or selecting the desired modulation (AM/FM) from the dropdown menu. All radio functions for the carrier (i.e. Marshal, Approach, Tower, and LSO) will use this single frequency. The channel presets for the aircraft used in the mission should be set to match.",
+   "tags": [
+    "and",
+    "communications",
+    "editor",
+    "equipment",
+    "features",
+    "frequency",
+    "mission",
+    "navigation",
+    "radio"
+   ],
+   "section": "MISSION EDITOR FEATURES > Communications and Navigation Equipment > Radio Frequency",
+   "page": 97
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > Communications and Navigation Equipment > TACAN Channel (1)",
+   "text": "The carrier’s TACAN beacon must be activated by adding an advanced waypoint action. This is usually set at waypoint 0, the ship’s starting location. In this example, TACAN channel and band 71X is used. The callsign is set to TDR. A morse code signal will be audible keying out those letters for identification. This identifier will also be shown on the aircraft’s displays where applicable. You must also select the unit within the group the TACAN signal will originate from. This should always be the carrier.",
+   "tags": [
+    "and",
+    "channel",
+    "communications",
+    "editor",
+    "equipment",
+    "features",
+    "mission",
+    "navigation",
+    "tacan"
+   ],
+   "section": "MISSION EDITOR FEATURES > Communications and Navigation Equipment > TACAN Channel",
+   "page": 98
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > Communications and Navigation Equipment > TACAN Channel (2)",
+   "text": "Note that the carrier’s unit name was changed to CVN-71 to make it easier to identify in the list.",
+   "tags": [
+    "and",
+    "channel",
+    "communications",
+    "editor",
+    "equipment",
+    "features",
+    "mission",
+    "navigation",
+    "tacan"
+   ],
+   "section": "MISSION EDITOR FEATURES > Communications and Navigation Equipment > TACAN Channel",
+   "page": 98
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > Communications and Navigation Equipment > ICLS Channel",
+   "text": "The carrier’s ICLS channel is set by adding an advanced waypoint action in the same way as TACAN. In this example, channel 11 will be used. Compatible aircraft will receive ICLS guidance on that channel. The originating unit is selected as CVN-71.",
+   "tags": [
+    "and",
+    "channel",
+    "communications",
+    "editor",
+    "equipment",
+    "features",
+    "icls",
+    "mission",
+    "navigation"
+   ],
+   "section": "MISSION EDITOR FEATURES > Communications and Navigation Equipment > ICLS Channel",
+   "page": 99
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic (1)",
+   "text": "At mission start, there are 20 possible aircraft spawn locations available: the 16 parking locations listed below and 1 on each catapult. Aircraft assigned \"Takeoff from ramp\" or \"Takeoff from parking hot\" in the mission editor will spawn in one of the 16 parking locations listed based on the sequence it was added to the carrier. In a multiplayer mission, parking spots are assigned based on when a client joins the server. Aircraft assigned \"Takeoff from runway hot\" in the mission editor will spawn on the catapult specified in the mission editor by the mission designer.",
+   "tags": [
+    "aircraft",
+    "and",
+    "editor",
+    "features",
+    "logic",
+    "mission",
+    "parking",
+    "taxi"
+   ],
+   "section": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic",
+   "page": 100
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic (2)",
+   "text": "The number of available parking locations is reduced when a multiplayer server is un-paused. Spots 1-4 are deactivated to clear the taxi route for other launching and recovering aircraft, leaving 16 possible spawn locations: the 12 remaining parking locations and the four catapults. The parking layout for small aircraft like the F/A-18C Hornet is shown below. This layout is also applies to the S3 Viking and E-2 Hawkeye support aircraft, except spots 1-4 are not used. The support aircraft are usually airborne first so consider starting those either on a catapult or on spots 5-8.",
+   "tags": [
+    "aircraft",
+    "and",
+    "editor",
+    "features",
+    "logic",
+    "mission",
+    "parking",
+    "taxi"
+   ],
+   "section": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic",
+   "page": 100
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic (3)",
+   "text": "The F-14 Tomcat is a larger aircraft and requires more ramp space. One parking spot on each of the elevators and one spot on the stern is not available with an F-14 parked on the adjacent spot. Plan your launch sequence accordingly, remembering aircraft occupy parking spots in the order they are added to the carrier. Those unoccupied spots will become available again after aircraft begin to taxi clear.",
+   "tags": [
+    "aircraft",
+    "and",
+    "editor",
+    "features",
+    "logic",
+    "mission",
+    "parking",
+    "taxi"
+   ],
+   "section": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic",
+   "page": 100
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic (4)",
+   "text": "Aircraft that cannot fit on the flight deck are stored below on the hangar deck until a suitable parking spot is free. In a multiplayer setting, this may result in a ‘your flight is delayed to start - please wait’ message until space is available.\n\nWhen an aircraft lands, it requests a taxi route to exit the landing area. Deck control will search for an open parking location by priority order listed below and provide a taxi route to it. First, it determines a free location",
+   "tags": [
+    "aircraft",
+    "and",
+    "editor",
+    "features",
+    "logic",
+    "mission",
+    "parking",
+    "taxi"
+   ],
+   "section": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic",
+   "page": 100
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic (5)",
+   "text": "based on the maximum number of open parking locations. For example, if the parking spot aft of the island is occupied, the next parking spot in priority order will be selected. Next, deck control will check that the chosen parking location is suitable for the landing aircraft type and that there are no taxi route obstructions like other “live” aircraft or static objects. Once these requirements are satisfied, the landing aircraft is routed to the open, unobstructed parking location.",
+   "tags": [
+    "aircraft",
+    "and",
+    "editor",
+    "features",
+    "logic",
+    "mission",
+    "parking",
+    "taxi"
+   ],
+   "section": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic",
+   "page": 100
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic (6)",
+   "text": "Aircraft like the F/A-18C Hornet, S-3 Viking and E-2 Hawkeye have a small deck footprint and will use any of the available parking spots shown above. Large aircraft like the F-14 Tomcat may not be able to use some parking spots or may prevent other aircraft from parking in the adjacent spots. For this reason, it is a good practice to maintain an unobstructed path to elevator 1 and 2, forward of the carrier’s island structure. Aircraft reaching those locations will be transported to the hangar deck below and help keep the deck clear.",
+   "tags": [
+    "aircraft",
+    "and",
+    "editor",
+    "features",
+    "logic",
+    "mission",
+    "parking",
+    "taxi"
+   ],
+   "section": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic",
+   "page": 100
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic (7)",
+   "text": "If, however, a mission is constructed the prohibits landing aircraft from reaching a parking location, the aircraft will be automatically removed from the simulation after landing.",
+   "tags": [
+    "aircraft",
+    "and",
+    "editor",
+    "features",
+    "logic",
+    "mission",
+    "parking",
+    "taxi"
+   ],
+   "section": "MISSION EDITOR FEATURES > AI Aircraft Parking and Taxi Logic",
+   "page": 100
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > Static Object Placement (1)",
+   "text": "A number of new static objects are included with the Supercarrier module that allow you to add more life to the carrier deck, above and beyond the launch crews that are already present by default. The new static objects are available under the headings ‘Airfield and Deck Equipment’ and ‘Personnel’. Of course, all aircraft and other static objects included with DCS: World are compatible and may be used.",
+   "tags": [
+    "editor",
+    "features",
+    "mission",
+    "object",
+    "placement",
+    "static"
+   ],
+   "section": "MISSION EDITOR FEATURES > Static Object Placement",
+   "page": 102
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > Static Object Placement (2)",
+   "text": "Before starting, you should depress the unit icon at the bottom of the mission editor screen. Enabling this option will show the shape of the shape of all objects in the mission editor viewer. This allows placement of objects with much more precision. Then, zoom in so the carrier deck is visible.\n\nWhen an object is placed on the deck, it must be linked to the carrier. Select the carrier from the LINK UNIT dropdown. Once this are set, the static object will be linked to the carrier and remain in position as it moves.",
+   "tags": [
+    "editor",
+    "features",
+    "mission",
+    "object",
+    "placement",
+    "static"
+   ],
+   "section": "MISSION EDITOR FEATURES > Static Object Placement",
+   "page": 102
+  },
+  {
+   "title": "MISSION EDITOR FEATURES > Static Object Placement (3)",
+   "text": "You may find it helpful to add additional objects by copying and pasting an object that is already linked to the carrier, so you do not have to perform this step every time. You may do this by selecting the object, CTRL+C to copy, then CTRL+V to paste. It is important not to place static objects in locations they may interfere with flight operations so test your mission thoroughly to find any problems. To assist with this, visual aids showing suitable locations on the deck are included below.",
+   "tags": [
+    "editor",
+    "features",
+    "mission",
+    "object",
+    "placement",
+    "static"
+   ],
+   "section": "MISSION EDITOR FEATURES > Static Object Placement",
+   "page": 102
+  }
+ ]
+}

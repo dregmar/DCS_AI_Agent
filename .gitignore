@@ -13,3 +13,7 @@ logs/
 .idea/
 Thumbs.db
 desktop.ini
+
+# Written by the program from the loaded DCS mission (common/briefing.py)
+data/mission_briefing.json
+data/user_waypoints.json

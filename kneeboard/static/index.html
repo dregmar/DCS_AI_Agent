@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kneeboard</title>
+<style>
+  :root {
+    --bg: #0b0f14; --panel: #121922; --line: #263342; --text: #e6edf3; --dim: #8b9bb0;
+    --me: #ffffff; --route: #8b9bb0; --named: #4ade80; --outcast: #22d3ee; --flight: #60a5fa;
+    --enemy: #f87171; --ring: rgba(248,113,113,.55); --jtac: #facc15; --pilot: #e6edf3;
+    --george: #a7f3d0; --overlord: #93c5fd; --ok: #4ade80; --bad: #f87171; --unk: #8b9bb0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 20px/1.35 "Segoe UI", system-ui, sans-serif; overflow: hidden; }
+  #tabs { display: flex; height: 56px; border-bottom: 2px solid var(--line); }
+  #tabs button { flex: 1; background: var(--panel); color: var(--dim); border: 0; border-right: 1px solid var(--line);
+    font-family: inherit; font-size: 24px; font-weight: 600; cursor: pointer; }
+  #tabs button.on { color: var(--text); background: #1b2633; box-shadow: inset 0 -4px 0 var(--outcast); }
+  .page { position: absolute; top: 56px; left: 0; right: 0; bottom: 0; display: none; }
+  .page.on { display: block; }
+  #map { width: 100%; height: 100%; display: block; }
+  #mapbar { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 8px; }
+  #mapbar button { width: 64px; height: 56px; font-family: inherit; font-size: 28px; font-weight: 700; color: var(--text);
+    background: rgba(18,25,34,.9); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+  #mapinfo { position: absolute; left: 12px; top: 10px; font-size: 18px; color: var(--dim);
+    background: rgba(11,15,20,.75); padding: 6px 10px; border-radius: 6px; }
+  #legend { position: absolute; left: 12px; bottom: 10px; font-size: 15px; color: var(--dim);
+    background: rgba(11,15,20,.75); padding: 6px 10px; border-radius: 6px; }
+  #legend span { margin-right: 12px; white-space: nowrap; }
+  #comms { height: 100%; overflow-y: auto; padding: 10px 14px 24px; }
+  .msg { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .msg .t { color: var(--dim); font-size: 16px; margin-right: 8px; font-variant-numeric: tabular-nums; }
+  .msg .who { font-weight: 700; margin-right: 6px; }
+  .pilot .who { color: var(--pilot); } .george .who { color: var(--george); } .overlord .who { color: var(--overlord); }
+  mark { background: #3b3410; color: var(--jtac); padding: 0 3px; border-radius: 3px; font-weight: 600; }
+  #status { padding: 14px; }
+  #status table { width: 100%; border-collapse: collapse; }
+  #status td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; margin-right: 10px; vertical-align: -2px; }
+  .empty { color: var(--dim); padding: 20px; }
+  .scroll { height: 100%; overflow-y: auto; padding: 10px 16px 40px; }
+  h2 { font-size: 22px; margin: 18px 0 8px; color: var(--overlord); }
+  .entry { padding: 8px 10px; margin: 0 -10px; border-left: 4px solid transparent; }
+  .entry b { display: block; color: var(--text); }
+  .entry div { color: #cfd8e3; }
+  .entry.hit { border-left-color: var(--jtac); background: #1b2633; }
+  #asked { color: var(--jtac); font-size: 17px; margin: 4px 0 6px; }
+  details summary { cursor: pointer; font-size: 22px; font-weight: 700; color: var(--overlord); margin: 18px 0 8px; }
+  #chkhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 6px 0 10px; }
+  #chkhead h2 { margin: 0; }
+  #chkstate { color: var(--dim); font-size: 18px; }
+  .item { display: flex; gap: 12px; padding: 9px 10px; margin: 0 -10px; border-bottom: 1px solid var(--line); align-items: baseline; }
+  .item .ic { width: 26px; text-align: center; font-weight: 700; flex: none; }
+  .item .tx { flex: 1; }
+  .item .rd { font-size: 17px; white-space: nowrap; }
+  .item.current { background: #3b3410; border-left: 4px solid var(--jtac); }
+  .item.current .tx { color: var(--jtac); font-weight: 700; }
+  .item.done .tx { color: var(--dim); }
+  .item.skipped .tx { color: var(--dim); text-decoration: line-through; }
+  .others { color: var(--dim); font-size: 17px; margin-top: 18px; }
+</style>
+</head>
+<body>
+<div id="tabs">
+  <button data-p="pmap" class="on">Map</button>
+  <button data-p="pbrief">Brief</button>
+  <button data-p="pcheck">Checklist</button>
+  <button data-p="pcomms">Comms</button>
+  <button data-p="pstatus">Status</button>
+</div>
+
+<div id="pmap" class="page on">
+  <canvas id="map"></canvas>
+  <div id="mapinfo">Waiting for DCS…</div>
+  <div id="mapbar">
+    <button id="zin" title="Zoom in">+</button>
+    <button id="zout" title="Zoom out">−</button>
+    <button id="orient" title="North up / track up">N</button>
+  </div>
+  <div id="legend">
+    <span style="color:var(--me)">▲ you</span><span style="color:var(--outcast)">◆ Outcast</span>
+    <span style="color:var(--flight)">● Overlord</span><span style="color:var(--enemy)">■ ground ▲ air</span>
+    <span style="color:var(--jtac)">✛ JTAC</span><span style="color:var(--named)">◇ waypoint</span>
+  </div>
+</div>
+<div id="pbrief" class="page"><div id="brief" class="scroll"><div class="empty">No briefing yet. It arrives when DCS loads a mission
+  (and from data/campaign_briefing.json).</div></div></div>
+<div id="pcheck" class="page"><div id="check" class="scroll"><div class="empty">Waiting for the program…</div></div></div>
+<div id="pcomms" class="page"><div id="comms"><div class="empty">Nothing said yet.</div></div></div>
+<div id="pstatus" class="page"><div id="status"><div class="empty">Waiting for the program…</div></div></div>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------- tabs (remembered per viewer)
+const tabs = document.querySelectorAll("#tabs button");
+function show(id) {
+  tabs.forEach(b => b.classList.toggle("on", b.dataset.p === id));
+  document.querySelectorAll(".page").forEach(p => p.classList.toggle("on", p.id === id));
+  try { localStorage.setItem("kb.tab", id); } catch (e) {}
+  if (id === "pmap") draw();
+  if (id === "pcomms") scrollComms();
+  if (id === "pbrief" && briefPending) { briefPending = false; scrollToHit(); }
+  if (id === "pcheck") scrollToCurrent();
+}
+const isOn = id => document.getElementById(id).classList.contains("on");
+tabs.forEach(b => b.addEventListener("click", () => show(b.dataset.p)));
+
+// ---------------------------------------------------------------- map
+const cv = document.getElementById("map"), ctx = cv.getContext("2d");
+const info = document.getElementById("mapinfo");
+const ZOOMS = [2.5, 5, 10, 20, 40, 80, 160];
+let zoom = 3, trackUp = false, M = null;
+try { zoom = +(localStorage.getItem("kb.zoom") ?? 3); trackUp = localStorage.getItem("kb.trackup") === "1"; } catch (e) {}
+document.getElementById("zin").onclick = () => { zoom = Math.max(0, zoom - 1); save(); draw(); };
+document.getElementById("zout").onclick = () => { zoom = Math.min(ZOOMS.length - 1, zoom + 1); save(); draw(); };
+const orientBtn = document.getElementById("orient");
+orientBtn.onclick = () => { trackUp = !trackUp; save(); draw(); };
+function save() { try { localStorage.setItem("kb.zoom", zoom); localStorage.setItem("kb.trackup", trackUp ? "1" : "0"); } catch (e) {} }
+
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const UNIT_M = () => (M && M.units === "km") ? 1000 : 1852;
+
+function resize() {
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+}
+window.addEventListener("resize", resize);
+
+function draw() {
+  const W = cv.clientWidth, H = cv.clientHeight;
+  ctx.fillStyle = css("--bg"); ctx.fillRect(0, 0, W, H);
+  orientBtn.textContent = trackUp ? "TU" : "N";
+  if (!M || !M.me) { info.textContent = M ? "No position from DCS yet." : "Waiting for DCS…"; return; }
+  const me = M.me, cx = W / 2, cy = H * (trackUp ? 0.62 : 0.5);
+  const radiusU = ZOOMS[zoom], unitM = UNIT_M(), unit = M.units === "km" ? "km" : "nm";
+  const pxPerM = Math.min(W, H) * 0.45 / (radiusU * unitM);
+  const rot = trackUp ? -me.hdg * Math.PI / 180 : 0, cosL = Math.cos(me.lat * Math.PI / 180);
+  const P = (lat, lon) => {
+    const n = (lat - me.lat) * 111320, e = (lon - me.lon) * 111320 * cosL;
+    const x = e * Math.cos(rot) - n * Math.sin(rot), y = e * Math.sin(rot) + n * Math.cos(rot);
+    return [cx + x * pxPerM, cy - y * pxPerM];
+  };
+  // range rings + compass ticks
+  ctx.strokeStyle = css("--line"); ctx.fillStyle = css("--dim"); ctx.lineWidth = 1; ctx.font = "16px Segoe UI, sans-serif";
+  for (const f of [0.5, 1, 1.5]) {
+    const r = radiusU * f * unitM * pxPerM;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.stroke();
+    ctx.fillText(`${+(radiusU * f).toFixed(1)} ${unit}`, cx + r * 0.707 + 4, cy + r * 0.707 + 18);   // south-east
+  }
+  for (let b = 0; b < 360; b += 30) {
+    const a = (b * Math.PI / 180) + rot, r1 = radiusU * unitM * pxPerM, r2 = r1 + 12;
+    ctx.beginPath(); ctx.moveTo(cx + Math.sin(a) * r1, cy - Math.cos(a) * r1); ctx.lineTo(cx + Math.sin(a) * r2, cy - Math.cos(a) * r2); ctx.stroke();
+    const lab = b === 0 ? "N" : b === 90 ? "E" : b === 180 ? "S" : b === 270 ? "W" : String(b / 10).padStart(2, "0");
+    ctx.fillStyle = b % 90 === 0 ? css("--text") : css("--dim");
+    ctx.fillText(lab, cx + Math.sin(a) * (r2 + 14) - 8, cy - Math.cos(a) * (r2 + 14) + 6);
+  }
+  // threat rings
+  for (const g of M.ground) if (g.ring_m) {
+    const [x, y] = P(g.lat, g.lon), r = g.ring_m * pxPerM;
+    if (r < 3) continue;
+    ctx.strokeStyle = css("--ring"); ctx.setLineDash([8, 6]); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // route
+  if (M.route.length) {
+    ctx.strokeStyle = css("--route"); ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.beginPath();
+    M.route.forEach((p, i) => { const [x, y] = P(p.lat, p.lon); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.stroke(); ctx.setLineDash([]);
+    for (const p of M.route) {
+      const [x, y] = P(p.lat, p.lon), next = p.n === M.wp_next;
+      ctx.fillStyle = next ? css("--text") : css("--bg"); ctx.strokeStyle = css("--route");
+      ctx.beginPath(); ctx.arc(x, y, 12, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = next ? css("--bg") : css("--route"); ctx.font = "bold 14px Segoe UI, sans-serif";
+      ctx.fillText(p.n, x - (p.n > 9 ? 8 : 4), y + 5);
+    }
+  }
+  // labels: skipped when they would land on one already drawn (they're drawn most important last)
+  const placed = [];
+  const label = (x, y, text, color, force) => {
+    ctx.font = "15px Segoe UI, sans-serif";
+    const w = ctx.measureText(text).width, bx = x + 12, by = y - 8;
+    const hit = placed.some(p => bx < p[0] + p[2] && bx + w > p[0] && by - 15 < p[1] && by > p[1] - 15);
+    if (hit && !force) return;
+    placed.push([bx, by, w]); ctx.fillStyle = color; ctx.fillText(text, bx, by);
+  };
+  const jtacId = M.jtac ? M.ground.find(g => Math.abs(g.lat - M.jtac.lat) < 1e-5 && Math.abs(g.lon - M.jtac.lon) < 1e-5) : null;
+  if (M.jtac) { const [x, y] = P(M.jtac.lat, M.jtac.lon); label(x + 10, y, "JTAC: " + short(M.jtac.type), css("--jtac"), true); }
+  // named waypoints
+  for (const w of M.named) {
+    const [x, y] = P(w.lat, w.lon); ctx.strokeStyle = css("--named"); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 9, y); ctx.lineTo(x, y + 9); ctx.lineTo(x - 9, y); ctx.closePath(); ctx.stroke();
+    label(x, y, w.name, css("--named"));
+  }
+  // enemy ground
+  for (const g of M.ground) {
+    const [x, y] = P(g.lat, g.lon); if (x < -40 || y < -40 || x > W + 40 || y > H + 40) continue;
+    ctx.fillStyle = css("--enemy"); ctx.fillRect(x - 6, y - 6, 12, 12);
+    if (jtacId && g.id === jtacId.id) continue;
+    const ringTxt = g.ring_m ? ` · ring ~${Math.round(g.ring_m / unitM)} ${unit}` : "";
+    if (g.ad || radiusU <= 10) label(x, y, short(g.type) + ringTxt, css("--enemy"));
+  }
+  // enemy air
+  for (const a of M.air) {
+    const [x, y] = P(a.lat, a.lon); ctx.fillStyle = css("--enemy");
+    ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 8, y + 7); ctx.lineTo(x - 8, y + 7); ctx.closePath(); ctx.fill();
+    label(x, y, `${short(a.type)} ${Math.round(a.alt_ft / 1000)}k`, css("--enemy"));
+  }
+  // Overlord's flights
+  for (const f of M.flights) for (const [i, p] of f.pts.entries()) {
+    const [x, y] = P(p[0], p[1]); ctx.fillStyle = css("--flight");
+    ctx.beginPath(); ctx.arc(x, y, 7, 0, 2 * Math.PI); ctx.fill();
+    if (i === 0) label(x, y, `${f.cs} (${f.kind})`, css("--flight"));
+  }
+  // Outcasts
+  for (const o of M.outcasts) {
+    const [x, y] = P(o.lat, o.lon); ctx.fillStyle = css("--outcast");
+    ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 9, y); ctx.lineTo(x, y + 9); ctx.lineTo(x - 9, y); ctx.closePath(); ctx.fill();
+    label(x, y, `Outcast ${o.n}`, css("--outcast"));
+  }
+  // JTAC target
+  if (M.jtac) {
+    const [x, y] = P(M.jtac.lat, M.jtac.lon); ctx.strokeStyle = css("--jtac"); ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, y, 14, 0, 2 * Math.PI); ctx.moveTo(x - 22, y); ctx.lineTo(x + 22, y); ctx.moveTo(x, y - 22); ctx.lineTo(x, y + 22); ctx.stroke();
+  }
+  // you
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate((me.hdg * Math.PI / 180) + rot);
+  ctx.fillStyle = css("--me"); ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(10, 12); ctx.lineTo(0, 6); ctx.lineTo(-10, 12); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  info.textContent = `${me.ac || "aircraft"} · hdg ${String(Math.round(me.hdg)).padStart(3, "0")} · ${me.alt_ft.toLocaleString()} ft · ${me.kts} kt · ${trackUp ? "track up" : "north up"}`;
+}
+function short(t) { return String(t || "").replace(/_/g, " ").slice(0, 22); }
+
+// ---------------------------------------------------------------- comms
+const commsEl = document.getElementById("comms");
+const WHO = { pilot: "You", george: "Crew", overlord: "Overlord" };
+function esc(s) { return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+function highlight(s) {
+  return esc(s)
+    .replace(/(Grid [0-9]{1,2} [A-Z][a-z]+, [A-Z][a-z]+ [A-Z][a-z]+(?:, [0-9 ]+){0,2})/g, "<mark>$1</mark>")
+    .replace(/((?:North|South) \d+ degrees [\d.]+, (?:East|West) \d+ degrees [\d.]+)/g, "<mark>$1</mark>")
+    .replace(/(\b\d{3}\.\d{1,3}\b(?: (?:AM|FM|MHz))?|\b\d{2}\.\d{1,3} (?:AM|FM|MHz)\b)/g, "<mark>$1</mark>")
+    .replace(/(\b\d{1,2}[C-X] [A-Z]{2} \d{2,5} \d{2,5}\b)/g, "<mark>$1</mark>")
+    .replace(/(\b(?:steer|bearing) \d{3}\b|\bElevation [\d,]+ feet\b|\bangels \d+\b)/g, "<mark>$1</mark>");
+}
+let lastId = 0;                       // a reconnect resends the log: show each line once
+function addComms(list) {
+  list = list.filter(m => m.id > lastId);
+  if (!list.length) return;
+  lastId = list[list.length - 1].id;
+  const empty = commsEl.querySelector(".empty"); if (empty) empty.remove();
+  const atBottom = commsEl.scrollTop + commsEl.clientHeight >= commsEl.scrollHeight - 40;
+  for (const m of list) {
+    const d = document.createElement("div"); d.className = "msg " + m.who;
+    const t = new Date(m.t * 1000).toTimeString().slice(0, 8);
+    d.innerHTML = `<span class="t">${t}</span><span class="who">${WHO[m.who] || m.who}</span>${highlight(m.text)}`;
+    commsEl.appendChild(d);
+  }
+  while (commsEl.children.length > 300) commsEl.firstChild.remove();
+  if (atBottom) scrollComms();
+}
+function scrollComms() { commsEl.scrollTop = commsEl.scrollHeight; }
+
+// ---------------------------------------------------------------- status
+const statusEl = document.getElementById("status");
+function showStatus(s) {
+  const rows = (s.links || []).map(l => {
+    const c = l.ok === true ? "--ok" : l.ok === false ? "--bad" : "--unk";
+    return `<tr><td><span class="dot" style="background:var(${c})"></span>${esc(l.name)}</td><td>${esc(l.detail || "")}</td></tr>`;
+  }).join("");
+  const times = (s.times || []).map(t => `<tr><td>${esc(t.name)}</td><td>${esc(t.value)}</td></tr>`).join("");
+  statusEl.innerHTML = `<table>${rows}</table>` + (times ? `<h3 style="margin:22px 0 6px;color:var(--dim)">Last timings</h3><table>${times}</table>` : "");
+}
+
+// ---------------------------------------------------------------- briefing
+const briefEl = document.getElementById("brief");
+let briefWhen = null, briefPending = false;
+const openSecs = new Set();
+function para(s) { return highlight(String(s || "")).replace(/\n/g, "<br>"); }
+function showBriefing(b) {
+  if (!b.sections || !b.sections.length) {
+    briefEl.innerHTML = `<div class="empty">No briefing yet. It arrives when DCS loads a mission (and from data/campaign_briefing.json).</div>`;
+    return;
+  }
+  briefEl.querySelectorAll("details").forEach(d => d.open ? openSecs.add(d.dataset.k) : openSecs.delete(d.dataset.k));
+  const hits = new Set((b.last && b.last.ids) || []);
+  const top = briefEl.scrollTop;
+  let html = b.last ? `<div id="asked">Last answered: “${esc(b.last.question)}”</div>` : "";
+  for (const sec of b.sections) {
+    const body = sec.entries.map(e => `<div class="entry${hits.has(e.id) ? " hit" : ""}" data-id="${esc(e.id)}">` +
+      (e.title ? `<b>${esc(e.title)}</b>` : "") + `<div>${para(e.text)}</div></div>`).join("");
+    if (sec.closed) {
+      const open = openSecs.has(sec.key) || sec.entries.some(e => hits.has(e.id));
+      html += `<details data-k="${sec.key}"${open ? " open" : ""}><summary>${esc(sec.title)}</summary>${body}</details>`;
+    } else {
+      html += `<h2>${esc(sec.title)}</h2>${body}`;
+    }
+  }
+  briefEl.innerHTML = html;
+  briefEl.scrollTop = top;
+  const when = b.last ? b.last.when : null;
+  if (when !== briefWhen) {            // a new answer: show where it came from
+    briefWhen = when;
+    if (when !== null) { if (isOn("pbrief")) scrollToHit(); else briefPending = true; }
+  }
+}
+function scrollToHit() { const h = briefEl.querySelector(".entry.hit"); if (h) h.scrollIntoView({ block: "center" }); }
+
+// ---------------------------------------------------------------- checklist
+const checkEl = document.getElementById("check");
+const ICON = { seen: ["✓", "--ok"], pilot: ["✓", "--text"], set: ["⚙", "--ok"], skipped: ["–", "--dim"],
+               current: ["▶", "--jtac"], pending: ["○", "--dim"], passed: ["·", "--dim"] };
+let runningWas = undefined;
+function showChecklist(c) {
+  if (c.auto_show && c.running && runningWas !== undefined && c.running !== runningWas) show("pcheck");
+  runningWas = c.running || null;
+  if (!c.lists || !c.lists.length) {
+    checkEl.innerHTML = `<div class="empty">No crew checklists in ${esc(c.aircraft || "this aircraft")}.</div>`;
+    return;
+  }
+  const others = c.lists.filter(l => l.key !== c.shown).map(l => esc(l.title)).join(" · ");
+  if (!c.shown) {
+    checkEl.innerHTML = `<div class="empty">No checklist run yet. Say “before start checklist”, or “show the shutdown checklist”.</div>` +
+      `<div class="others">${esc(c.aircraft)}: ${c.lists.map(l => esc(l.title)).join(" · ")}</div>`;
+    return;
+  }
+  const cur = c.items.findIndex(i => i.state === "current");
+  const state = c.outcome ? c.outcome : c.running && cur >= 0 ? `item ${cur + 1} of ${c.items.length}` : "not running";
+  const rows = c.items.map(i => {
+    const [ic, col] = ICON[i.state] || ICON.pending;
+    const cls = i.state === "current" ? "current" : i.state === "skipped" ? "skipped" : i.state === "pending" ? "" : "done";
+    const rd = (i.state === "current" || i.state === "pending") && i.ok != null
+      ? `<span class="rd" style="color:var(${i.ok ? "--ok" : "--bad"})">reads ${esc(i.seen || "")}</span>`
+      : i.state === "set" ? `<span class="rd" style="color:var(--dim)">set by George</span>`
+      : i.state === "seen" ? `<span class="rd" style="color:var(--dim)">seen</span>` : "";
+    return `<div class="item ${cls}"><span class="ic" style="color:var(${col})">${ic}</span><span class="tx">${esc(i.text)}</span>${rd}</div>`;
+  }).join("");
+  const top = checkEl.scrollTop;
+  checkEl.innerHTML = `<div id="chkhead"><h2>${esc(c.title || c.shown)} · ${esc(c.aircraft)}</h2><span id="chkstate">${esc(state)}</span></div>` +
+    (c.note ? `<div class="others" style="color:var(--bad)">${esc(c.note)}</div>` : "") +
+    rows + (others ? `<div class="others">Other checklists: ${others}</div>` : "");
+  checkEl.scrollTop = top;
+  if (c.running && isOn("pcheck")) scrollToCurrent();
+}
+function scrollToCurrent() { const cur = checkEl.querySelector(".item.current"); if (cur) cur.scrollIntoView({ block: "nearest" }); }
+
+// ---------------------------------------------------------------- voice: "show the briefing", "scroll down"
+const PAGE_ID = { map: "pmap", briefing: "pbrief", checklist: "pcheck", comms: "pcomms", status: "pstatus" };
+const SCROLLER = { pbrief: briefEl, pcheck: checkEl, pcomms: commsEl, pstatus: statusEl };
+let uiSeq = null;
+function applyUi(u) {
+  if (uiSeq === null || u.seq < uiSeq) { uiSeq = u.seq; return; }   // first message (or program restarted): nothing new
+  if (u.seq === uiSeq) return;
+  uiSeq = u.seq;
+  if (u.kind === "page" && PAGE_ID[u.page]) { show(PAGE_ID[u.page]); return; }
+  if (u.kind === "scroll") {
+    const id = Object.keys(SCROLLER).find(isOn); if (!id) return;
+    const el = SCROLLER[id];
+    if (u.by === 0) el.scrollTop = 0;
+    else if (u.by === 99) el.scrollTop = el.scrollHeight;
+    else el.scrollTop += u.by * el.clientHeight * 0.8;
+  }
+}
+
+// ---------------------------------------------------------------- live data (SSE; reconnects by itself)
+function connect() {
+  const es = new EventSource("/events");
+  es.addEventListener("map", e => { M = JSON.parse(e.data); if (document.getElementById("pmap").classList.contains("on")) draw(); });
+  es.addEventListener("comms", e => addComms(JSON.parse(e.data)));
+  es.addEventListener("status", e => showStatus(JSON.parse(e.data)));
+  es.addEventListener("briefing", e => showBriefing(JSON.parse(e.data)));
+  es.addEventListener("checklist", e => showChecklist(JSON.parse(e.data)));
+  es.addEventListener("ui", e => applyUi(JSON.parse(e.data)));
+  es.onerror = () => { info.textContent = "Program not running? Reconnecting…"; };
+}
+resize();
+try { const t = localStorage.getItem("kb.tab"); if (t && document.getElementById(t)) show(t); } catch (e) {}
+connect();
+</script>
+</body>
+</html>

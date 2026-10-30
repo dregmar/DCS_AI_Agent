@@ -4,8 +4,8 @@ UH-1H cockpit switches through DCS-BIOS (commands out on UDP 7778), each confirm
 DCS-BIOS stream (UDP 5010) before George says it's done.
 
 SWITCHES: key -> (DCS-BIOS identifier, {state name: value}, spoken label, assumed)
-`assumed` = the value meaning is inferred, not documented by DCS-BIOS. Check those once with
-huey_probe.py (flip the switch in the cockpit and watch the value) and fix the table if needed.
+`assumed` = the value meaning is inferred and not yet checked in the cockpit. All of these were
+checked with huey_probe.py on 2026-10-11 (inverter and position lights corrected then).
 """
 import time
 from typing import Callable, Dict, Optional, Tuple
@@ -20,20 +20,20 @@ SWITCHES = {
     "search_light": ("SEARCH_LIGHT_SW", {"STOW": 0, "OFF": 1, "ON": 2}, "search light", False),
     "nav_lts":      ("NAV_LTS_SW", {"STEADY": 0, "OFF": 1, "FLASH": 2}, "nav lights", False),
     "main_gen":     ("MAIN_GEN_SW", {"RESET": 0, "OFF": 1, "ON": 2}, "main generator", False),
-    "anticoll":     ("ANTICOLL_LTS_SW", {"OFF": 0, "ON": 1}, "anti-collision light", True),
-    "pos_lts":      ("POS_LTS_SW", {"DIM": 0, "BRIGHT": 1}, "position lights", True),
-    "cm_arm":       ("CM_ARM_SW", {"SAFE": 0, "ARMED": 1}, "flares", True),
-    "starter_gen":  ("STARTER_GEN_SW", {"START": 0, "STBY GEN": 1}, "starter generator", True),
-    "ldg_light":    ("LDG_LIGHT_SW", {"OFF": 0, "ON": 1}, "landing light", True),
-    "pitot":        ("PITOT_HEAT", {"OFF": 0, "ON": 1}, "pitot heat", True),
-    "battery":      ("BAT_SW", {"OFF": 0, "ON": 1}, "battery", True),
-    "main_fuel":    ("MAIN_FUEL_SW", {"OFF": 0, "ON": 1}, "main fuel", True),
-    "force_trim":   ("FORCE_TRIM_SW", {"OFF": 0, "ON": 1}, "force trim", True),
-    "hyd_cont":     ("HYD_CONT_SW", {"OFF": 0, "ON": 1}, "hydraulic control", True),
-    "low_rpm_audio": ("LOW_RPM_AUDIO", {"OFF": 0, "AUDIO": 1}, "low RPM audio", True),
-    "emer_gov":     ("EMER_GOV_SW", {"AUTO": 0, "EMER": 1}, "governor", True),
-    "inverter":     ("INVERTER_SW", {"SPARE": 0, "OFF": 1, "MAIN": 2}, "inverter", True),
-    "chip_det":     (None, {"TAIL ROTOR": 0, "BOTH": 1, "XMSN": 2}, "chip detector", True),
+    "anticoll":     ("ANTICOLL_LTS_SW", {"OFF": 0, "ON": 1}, "anti-collision light", False),
+    "pos_lts":      ("POS_LTS_SW", {"BRIGHT": 0, "DIM": 1}, "position lights", False),
+    "cm_arm":       ("CM_ARM_SW", {"SAFE": 0, "ARMED": 1}, "flares", False),
+    "starter_gen":  ("STARTER_GEN_SW", {"START": 0, "STBY GEN": 1}, "starter generator", False),
+    "ldg_light":    ("LDG_LIGHT_SW", {"OFF": 0, "ON": 1}, "landing light", False),
+    "pitot":        ("PITOT_HEAT", {"OFF": 0, "ON": 1}, "pitot heat", False),
+    "battery":      ("BAT_SW", {"OFF": 0, "ON": 1}, "battery", False),
+    "main_fuel":    ("MAIN_FUEL_SW", {"OFF": 0, "ON": 1}, "main fuel", False),
+    "force_trim":   ("FORCE_TRIM_SW", {"OFF": 0, "ON": 1}, "force trim", False),
+    "hyd_cont":     ("HYD_CONT_SW", {"OFF": 0, "ON": 1}, "hydraulic control", False),
+    "low_rpm_audio": ("LOW_RPM_AUDIO", {"OFF": 0, "AUDIO": 1}, "low RPM audio", False),
+    "emer_gov":     ("EMER_GOV_SW", {"AUTO": 0, "EMER": 1}, "governor", False),
+    "inverter":     ("INVERTER_SW", {"MAIN": 0, "OFF": 1, "SPARE": 2}, "inverter", False),
+    "chip_det":     (None, {"TAIL ROTOR": 0, "BOTH": 1, "XMSN": 2}, "chip detector", False),
 }
 
 # radio key -> (MHz range, step in MHz, spoken name). Tuned by turning the cockpit dials (the
@@ -42,6 +42,7 @@ RADIOS = {
     "uhf":    ((225.0, 399.95), 0.05, "UHF"),
     "vhf_am": ((116.0, 149.975), 0.025, "VHF"),
     "vhf_fm": ((30.0, 75.95), 0.05, "FM"),
+    "vhf_nav": ((108.0, 117.95), 0.05, "NAV"),
 }
 DIAL_STEP_SEC = 0.8          # wait this long for one dial click to show on the stream
 MAX_CLICKS = 45
@@ -116,7 +117,7 @@ class Cockpit:
             if None in d:
                 return None
             return round((d[0] + 3) * 10 + d[1] + d[2] / 10 + d[3] * 0.05, 3)
-        text = decode_string(w, "uhf_dial" if key == "uhf" else "vhf_dial")
+        text = decode_string(w, {"uhf": "uhf_dial", "vhf_nav": "nav_dial"}.get(key, "vhf_dial"))
         try:
             return float(text)
         except (TypeError, ValueError):
@@ -183,6 +184,9 @@ class Cockpit:
             else:
                 parts = (("VHFCOMM_MHZ", lambda x: int(x), int(mhz)),
                          ("VHFCOMM_KHZ", lambda x: int(round((x - int(x)) * 40)), int(round((mhz - int(mhz)) * 40))))
+            if key == "vhf_nav":
+                parts = (("VHFNAV_MHZ", lambda x: int(x), int(mhz)),
+                         ("VHFNAV_KHZ", lambda x: int(round((x - int(x)) * 20)), int(round((mhz - int(mhz)) * 20))))
             ok = True
             for ident, digit, want in parts:
                 def read(digit=digit):

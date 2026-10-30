@@ -1,0 +1,5 @@
+{
+  "_help": "Your campaign briefing, for George, the Huey co-pilot and Overlord. Fill 'entries' by hand (see examples/campaign_briefing.sample.json) or run: python briefing_import.py my_briefing.txt. 'say' is spoken as written; without it the text is read or summarised by the local model.",
+  "campaign": "",
+  "entries": []
+}

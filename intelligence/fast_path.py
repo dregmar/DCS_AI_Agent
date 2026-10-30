@@ -93,7 +93,7 @@ _PRIORITY = [
                 r"consent to fire|fire (?:missile|hellfire|gun|it)|send it|shoot|shoot it)$"),
      "Firing.", None, None),
     ("GEORGE_SET",
-     re.compile(r"\b(?:weapons free|free fire|cleared weapons free)\b"),
+     re.compile(r"\b(?:weapons free|free fire|cleared weapons free|weapons hot|guns hot)\b"),
      "Weapons free.", "roe", "FREE"),
     ("GEORGE_SET",
      re.compile(r"\bweapons (?:hold|tight)\b"),
@@ -103,7 +103,8 @@ _PRIORITY = [
 # (action, regex, speech). Evaluated against the normalised text.
 _PATTERNS = [
     ("STATUS",
-     re.compile(r"\b(?:status|sitrep|sit rep|systems check|report in|give me a report|how are we)\b"),
+     re.compile(r"\b(?:status|sitrep|sit rep|systems check|report in|give me a report|how are we)\b|"
+                r"^(?:fuel|fuel state|fuel check|fuel remaining|how much fuel(?: do we have| have we got)?)$"),
      "Stand by."),
     ("CYCLE_WEAPON",
      re.compile(r"\b(?:cycle|next|switch|change)\b.*\bweapons?\b(?!.*\b(?:type|types|warhead|warheads)\b)"
@@ -141,7 +142,7 @@ _PATTERNS = [
      re.compile(r"\b(?:laser on|laser off|lase|lase it|start lasing|stop lasing|toggle laser|designate)\b"),
      "Laser."),
     ("ZOOM_IN",
-     re.compile(r"\bzoom in\b|\bincrease (?:zoom|magnification)\b"),
+     re.compile(r"\bzoom in\b|^zoom$|\bincrease (?:zoom|magnification)\b"),
      "Zooming in."),
     ("ZOOM_OUT",
      re.compile(r"\bzoom out\b|\bdecrease (?:zoom|magnification)\b"),
@@ -198,7 +199,7 @@ _PILOT_ACTIONS = {"MSL": ("SELECT_HELLFIRE", "Your missiles."), "GUN": ("SELECT_
                   "RKT": ("SELECT_ROCKETS", "Your rockets.")}
 
 # --- George's weapon settings: values ---
-_BURST = re.compile(r"\bburst\b")
+_BURST = re.compile(r"\bbursts?\b")
 _QTY = re.compile(r"\b(?:quantity|qty|salvo|ripple|pairs?)\b")
 _TRAJ = re.compile(r"\b(?:trajectory|trajectories|traj|profile)\b")
 _TRAJ_VALUES = [("HI", re.compile(r"\b(?:high|hi)\b")), ("LO", re.compile(r"\b(?:low|lo)\b")),

@@ -11,6 +11,7 @@ if not exist "dcs_scripts" mkdir "dcs_scripts"
 for %%F in (Export.lua george_export.lua george_ai_export.lua george_huey_export.lua) do (
   if exist "%DCS_SCRIPTS%\%%F" copy /y "%DCS_SCRIPTS%\%%F" "dcs_scripts\%%F" >nul
 )
+if exist "%DCS_SCRIPTS%\Hooks\george_comms_hook.lua" copy /y "%DCS_SCRIPTS%\Hooks\george_comms_hook.lua" "dcs_scripts\george_comms_hook.lua" >nul
 set "MSG=%~1"
 if "%MSG%"=="" set "MSG=Snapshot %DATE% %TIME%"
 git add -A

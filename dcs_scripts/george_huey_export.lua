@@ -8,8 +8,8 @@
 --       lists it.
 --  2. ACCEPTS a short, fixed list of crew commands on UDP 127.0.0.1:5009 and nothing else:
 --       weapon system (device 9) commands 3026, 3028-3030 (game autopilot on/off and modes) and
---       3037-3040 (Crew Status panel, gunner ROE and burst). These are the same commands the
---       game's own key bindings send. Anything else is ignored and noted in the status file.
+--       3037-3040 (Crew Status panel, gunner ROE and burst), and external cargo device 52 command
+--       3005 (cargo unhook). These are the same commands the game's own key bindings send. Anything else is ignored and noted in the status file.
 --
 -- Loaded from Export.lua with:   dofile(lfs.writedir()..[[Scripts\george_huey_export.lua]])
 -- Status file: Saved Games\DCS\Logs\george_huey_export_status.txt
@@ -31,7 +31,8 @@ local GH_ARGS = { 113, 114, 115, 116, 119, 120, 121, 122, 123, 124, 126, 149, 15
 
 -- device id -> allowed command ids
 local GH_ALLOWED = { [9] = { [3026] = true, [3028] = true, [3029] = true, [3030] = true,
-                             [3037] = true, [3038] = true, [3039] = true, [3040] = true } }
+                             [3037] = true, [3038] = true, [3039] = true, [3040] = true },
+                     [52] = { [3005] = true } }      -- external cargo unhook
 
 local function gh_note(key, msg)
     if gh_noted[key] then return end

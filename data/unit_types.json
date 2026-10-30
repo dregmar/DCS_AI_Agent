@@ -1,0 +1,3340 @@
+[
+ {
+  "type": ".Command Center",
+  "display": ".Command Center",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "1L13 EWR",
+  "display": "EWR 1L13",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "Air Defence vehicles",
+   "All",
+   "EWR",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "55G6 EWR",
+  "display": "EWR 55G6",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "Air Defence vehicles",
+   "All",
+   "EWR",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "5p73 s-125 ln",
+  "display": "SAM SA-3 S-125 \"Goa\" LN",
+  "cat": "ground",
+  "attrs": [
+   "AA_missile",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "MR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM LL",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "A-10A",
+  "display": "a-10a",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Battleplanes",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "A-10C",
+  "display": "A-10C",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Battleplanes",
+   "Datalink",
+   "Link16",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "A-10C_2",
+  "display": "A-10C II",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Battleplanes",
+   "Datalink",
+   "Link16",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "AAV7",
+  "display": "APC AAV-7 Amphibious",
+  "cat": "static",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "AH-1W",
+  "display": "ah-1w  super cobra",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Attack helicopters",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits"
+  ]
+ },
+ {
+  "type": "AH-64D",
+  "display": "ah-64d apache longbow",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Attack helicopters",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits"
+  ]
+ },
+ {
+  "type": "AH-64D_BLK_II",
+  "display": "AH-64D_BLK_II",
+  "cat": "helicopter",
+  "attrs": [
+   "AFAPD",
+   "Air",
+   "All",
+   "Attack helicopters",
+   "Datalink",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "ALBATROS",
+  "display": "Corvette 1124M Grisha [CH]",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Armed Air Defence",
+   "Armed Ship",
+   "Armed ships",
+   "Corvettes",
+   "Heavy armed ships",
+   "HeavyArmoredUnits",
+   "Naval",
+   "RADAR_BAND2_FOR_ARM",
+   "Ships"
+  ]
+ },
+ {
+  "type": "AS32-31A",
+  "display": "AS32-31A",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "AS32-32A",
+  "display": "AS32-32A",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "AS32-36A",
+  "display": "AS32-36A",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "AS32-p25",
+  "display": "AS32-p25",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "ATMZ-5",
+  "display": "Refueler ATMZ-5",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "ATZ-10",
+  "display": "Refueler ATZ-10",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "AV8BNA",
+  "display": "AV8BNA",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Bombers",
+   "Datalink",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "An-26B",
+  "display": "an-26b",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Transports"
+  ]
+ },
+ {
+  "type": "B-52H",
+  "display": "b-52h",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Bombers",
+   "Datalink",
+   "Link16",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable",
+   "Strategic bombers"
+  ]
+ },
+ {
+  "type": "BMD-1",
+  "display": "IFV BMD-1",
+  "cat": "ground",
+  "attrs": [
+   "ATGM",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "IFV",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "BMP-1",
+  "display": "IFV BMP-1",
+  "cat": "static",
+  "attrs": [
+   "ATGM",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "IFV",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "BMP-2",
+  "display": "IFV BMP-2",
+  "cat": "ground",
+  "attrs": [
+   "ATGM",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "IFV",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "BRDM-2",
+  "display": "Scout BRDM-2",
+  "cat": "static",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "BTR-80",
+  "display": "APC BTR-80",
+  "cat": "static",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "BTR-82A",
+  "display": "IFV BTR-82A",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Black_Tyre",
+  "display": "Mark Tyre Black",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Black_Tyre_RF",
+  "display": "Mark Tyre with Red Flag",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Bunker",
+  "display": "Bunker 2",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Fortifications",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "HeavyArmoredUnits"
+  ]
+ },
+ {
+  "type": "C-130",
+  "display": "c-130j",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Transports"
+  ]
+ },
+ {
+  "type": "C-17A",
+  "display": "c-17",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable",
+   "Transports"
+  ]
+ },
+ {
+  "type": "CH-47D",
+  "display": "ch-47d chinook",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Transport helicopters"
+  ]
+ },
+ {
+  "type": "CH-53E",
+  "display": "ch-53e super stallion",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Transport helicopters"
+  ]
+ },
+ {
+  "type": "CHAP_9K720_Cluster",
+  "display": "SRBM 9K720 Iskander CM [CH]",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Armed vehicles",
+   "Artillery",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Indirect fire",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "SS_missile",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "CVN_71",
+  "display": "CVN-71 Theodore Roosevelt",
+  "cat": "ship",
+  "attrs": [
+   "ACLS",
+   "Aircraft Carriers",
+   "AircraftCarrier",
+   "AircraftCarrier With Arresting Gear",
+   "AircraftCarrier With Catapult",
+   "All",
+   "Armed Air Defence",
+   "Armed Ship",
+   "Armed ships",
+   "Arresting Gear",
+   "Datalink",
+   "Heavy armed ships",
+   "HeavyArmoredUnits",
+   "Link4",
+   "Naval",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "Ships",
+   "catapult"
+  ]
+ },
+ {
+  "type": "Chemical tank A",
+  "display": "Chemical tank A",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Christen Eagle II",
+  "display": "Christen Eagle II",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Battleplanes",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes"
+  ]
+ },
+ {
+  "type": "Comms tower M",
+  "display": "Comms tower M",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Container brown",
+  "display": "Container brown",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Container white",
+  "display": "Container white",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Dog Ear radar",
+  "display": "MCC-SR Sborka \"Dog Ear\" SR",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM SR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Dry-cargo ship-1",
+  "display": "Bulker Yakushev",
+  "cat": "ship",
+  "attrs": [
+   "All",
+   "HeavyArmoredUnits",
+   "Naval",
+   "Ships",
+   "Unarmed ships"
+  ]
+ },
+ {
+  "type": "Dry-cargo ship-2",
+  "display": "Cargo Ivanov",
+  "cat": "ship",
+  "attrs": [
+   "All",
+   "HeavyArmoredUnits",
+   "Naval",
+   "Ships",
+   "Unarmed ships"
+  ]
+ },
+ {
+  "type": "E-2C",
+  "display": "e-2c hawkeye",
+  "cat": "static",
+  "attrs": [
+   "AWACS",
+   "Air",
+   "All",
+   "Datalink",
+   "Link16",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes"
+  ]
+ },
+ {
+  "type": "E-3A",
+  "display": "e-3a",
+  "cat": "static",
+  "attrs": [
+   "AWACS",
+   "Air",
+   "All",
+   "Datalink",
+   "Link16",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "Electric power box",
+  "display": "Electric power box",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "F-117A",
+  "display": "f-117",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Bombers",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "F-14B",
+  "display": "F-14B",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Datalink",
+   "Fighters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "F-15C",
+  "display": "F-15C",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Datalink",
+   "Fighters",
+   "Link16",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "F-15E",
+  "display": "F-15E",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Datalink",
+   "Fighters",
+   "Link16",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "F-16C bl.52d",
+  "display": "F-16c",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Datalink",
+   "Link16",
+   "Multirole fighters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "F-16C_50",
+  "display": "F-16C_50",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Datalink",
+   "Link16",
+   "Multirole fighters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "F-4E-45MC",
+  "display": "F-4E-45MC",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Fighters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "F-5E-3",
+  "display": "F-5E-3",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Fighters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes"
+  ]
+ },
+ {
+  "type": "F-86F Sabre",
+  "display": "F-86F Sabre",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Battleplanes",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes"
+  ]
+ },
+ {
+  "type": "FA-18C_hornet",
+  "display": "FA-18C_hornet",
+  "cat": "plane",
+  "attrs": [
+   "ACLS",
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Datalink",
+   "Link16",
+   "Link4",
+   "Multirole fighters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "FARP Ammo Dump Coating",
+  "display": "FARP Ammo Storage",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "FARP Fuel Depot",
+  "display": "FARP Fuel Depot",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "FARP Tent",
+  "display": "FARP Tent",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "FPS-117 Dome",
+  "display": "EWR AN/FPS-117 Radar (domed)",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "Air Defence vehicles",
+   "All",
+   "EWR",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "FPS-117 ECS",
+  "display": "EWR AN/FPS-117 ECS",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM CC",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Farm A",
+  "display": "Farm A",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "FireExtinguisher02",
+  "display": "M92 Fire Extinguisher 02",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Fuel tank",
+  "display": "Fuel tank",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "GAZ-66",
+  "display": "Truck GAZ-66",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Garage A",
+  "display": "Garage A",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "GeneratorF",
+  "display": "GeneratorF",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Grad-URAL",
+  "display": "MLRS BM-21 Grad 122mm",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Armed vehicles",
+   "Artillery",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Indirect fire",
+   "LightArmoredUnits",
+   "MLRS",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Grad_FDDM",
+  "display": "Grad MRL FDDM (FC)",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "HEMTT TFFT",
+  "display": "Firefighter HEMMT TFFT",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "HEMTT_C-RAM_Phalanx",
+  "display": "LPWS C-RAM",
+  "cat": "ground",
+  "attrs": [
+   "AAA",
+   "AA_flak",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "C-RAM",
+   "Datalink",
+   "Ground Units",
+   "Ground vehicles",
+   "Mobile AAA",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Rocket Attack Valid AirDefence",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "HL_KORD",
+  "display": "Scout HL with KORD 12.7mm",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "HandyWind",
+  "display": "Bulker Handy Wind",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "HeavyArmoredUnits",
+   "HelicopterCarrier",
+   "Naval",
+   "Ships",
+   "Side approach departure",
+   "Unarmed ships"
+  ]
+ },
+ {
+  "type": "Hangar B",
+  "display": "Hangar B",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Hawk cwar",
+  "display": "SAM Hawk CWAR AN/MPQ-55",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Datalink",
+   "Ground Units",
+   "Ground vehicles",
+   "MR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM SR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Hawk ln",
+  "display": "SAM Hawk LN M192",
+  "cat": "ground",
+  "attrs": [
+   "AA_missile",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Datalink",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM LL",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Hawk pcp",
+  "display": "SAM Hawk Platoon Command Post (PCP)",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM CC",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Hawk sr",
+  "display": "SAM Hawk SR (AN/MPQ-50)",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Datalink",
+   "Ground Units",
+   "Ground vehicles",
+   "MR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM SR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Hawk tr",
+  "display": "SAM Hawk TR (AN/MPQ-46)",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "MR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Hummer",
+  "display": "LUV HMMWV Jeep",
+  "cat": "static",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles",
+   "human_vehicle"
+  ]
+ },
+ {
+  "type": "IL-76MD",
+  "display": "il-76md",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Transports"
+  ]
+ },
+ {
+  "type": "Igla manpad INS",
+  "display": "MANPADS SA-18 Igla \"Grouse\" Ins",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Armed ground units",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "IR Guided SAM",
+   "Infantry",
+   "MANPADS",
+   "New infantry",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Rocket Attack Valid AirDefence",
+   "SAM",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Infantry AK Ins",
+  "display": "Insurgent AKM",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Infantry",
+   "New infantry",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Skeleton_type_A"
+  ]
+ },
+ {
+  "type": "KAMAZ Truck",
+  "display": "Truck KAMAZ 43101",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "KC-135",
+  "display": "kc-135",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Datalink",
+   "Link16",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable",
+   "Tankers"
+  ]
+ },
+ {
+  "type": "KILO",
+  "display": "SSK 877V Kilo",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Armed Air Defence",
+   "Armed ships",
+   "Heavy armed ships",
+   "HeavyArmoredUnits",
+   "NO_SAM",
+   "Naval",
+   "Ships",
+   "Submarines"
+  ]
+ },
+ {
+  "type": "KrAZ6322",
+  "display": "Truck KrAZ-6322 6x6",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles",
+   "human_vehicle"
+  ]
+ },
+ {
+  "type": "Kub 1S91 str",
+  "display": "SAM SA-6 Kub \"Straight Flush\" STR",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "MR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM SR",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Kub 2P25 ln",
+  "display": "SAM SA-6 Kub \"Gainful\" TEL",
+  "cat": "ground",
+  "attrs": [
+   "AA_missile",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM LL",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "L-39C",
+  "display": "L-39C",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Battleplanes",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes"
+  ]
+ },
+ {
+  "type": "LARC-V",
+  "display": "Truck LARC-V",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "LAV-25",
+  "display": "IFV LAV-25",
+  "cat": "static",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "LAZ Bus",
+  "display": "Bus LAZ-695",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "LHA_Tarawa",
+  "display": "LHA-1 Tarawa",
+  "cat": "ship",
+  "attrs": [
+   "Aircraft Carriers",
+   "AircraftCarrier",
+   "AircraftCarrier With Tramplin",
+   "All",
+   "Armed Air Defence",
+   "Armed Ship",
+   "Armed ships",
+   "DetectionByAWACS",
+   "Heavy armed ships",
+   "HeavyArmoredUnits",
+   "Naval",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "Ships",
+   "ski_jump"
+  ]
+ },
+ {
+  "type": "La_Combattante_II",
+  "display": "FAC La Combattante IIa",
+  "cat": "ship",
+  "attrs": [
+   "All",
+   "Armed Air Defence",
+   "Armed Ship",
+   "Armed ships",
+   "Corvettes",
+   "DetectionByAWACS",
+   "Heavy armed ships",
+   "HeavyArmoredUnits",
+   "NO_SAM",
+   "Naval",
+   "Ships"
+  ]
+ },
+ {
+  "type": "Land_Rover_101_FC",
+  "display": "Truck Land Rover 101 FC",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Land_Rover_109_S3",
+  "display": "LUV Land Rover 109",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "M 818",
+  "display": "Truck M939 Heavy",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "M-109",
+  "display": "SPH M109 Paladin 155mm",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Armed vehicles",
+   "Artillery",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Indirect fire",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "M-113",
+  "display": "APC M113",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "M-2 Bradley",
+  "display": "IFV M2A2 Bradley",
+  "cat": "ground",
+  "attrs": [
+   "ATGM",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "IFV",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "M-2000C",
+  "display": "M-2000C",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Multirole fighters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "M1043 HMMWV Armament",
+  "display": "Scout HMMWV",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "M1045 HMMWV TOW",
+  "display": "ATGM HMMWV",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "ATGM",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "M1126 Stryker ICV",
+  "display": "IFV M1126 Stryker ICV",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "M1134 Stryker ATGM",
+  "display": "ATGM Stryker",
+  "cat": "ground",
+  "attrs": [
+   "ATGM",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "IFV",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "M6 Linebacker",
+  "display": "SAM Linebacker - Bradley M6",
+  "cat": "ground",
+  "attrs": [
+   "AA_flak",
+   "AA_missile",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Datalink",
+   "Ground Units",
+   "Ground vehicles",
+   "IR Guided SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM",
+   "SAM related",
+   "SR SAM",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "M978 HEMTT Tanker",
+  "display": "Refueler M978 HEMTT",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "MLRS FDDM",
+  "display": "MRLS FDDM (FC)",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "MQ-9 Reaper",
+  "display": "MQ-9 Reaper",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Battleplanes",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "UAVs"
+  ]
+ },
+ {
+  "type": "MTLB",
+  "display": "APC MTLB",
+  "cat": "static",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Mi-24V",
+  "display": "mi_24w",
+  "cat": "helicopter",
+  "attrs": [
+   "Air",
+   "All",
+   "Attack helicopters",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits"
+  ]
+ },
+ {
+  "type": "Mi-26",
+  "display": "mi-26",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Transport helicopters"
+  ]
+ },
+ {
+  "type": "Mi-8MT",
+  "display": "mi-8mt",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Attack helicopters",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Transport helicopters"
+  ]
+ },
+ {
+  "type": "MiG-29A",
+  "display": "mig-29",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Fighters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes"
+  ]
+ },
+ {
+  "type": "NASAMS_Command_Post",
+  "display": "SAM NASAMS C2",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM CC",
+   "SAM elements",
+   "SAM related",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Nodding_Donkey_Pump",
+  "display": "Nodding Donkey Pump",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "P-51D",
+  "display": "P-51D",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Battleplanes",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes"
+  ]
+ },
+ {
+  "type": "PERRY",
+  "display": "FFG Oliver Hazard Perry",
+  "cat": "ship",
+  "attrs": [
+   "All",
+   "Armed Air Defence",
+   "Armed Ship",
+   "Armed ships",
+   "DetectionByAWACS",
+   "Frigates",
+   "Heavy armed ships",
+   "HeavyArmoredUnits",
+   "HelicopterCarrier",
+   "Naval",
+   "RADAR_BAND1_FOR_ARM",
+   "Ships"
+  ]
+ },
+ {
+  "type": "Paratrooper AKS-74",
+  "display": "Paratrooper AKS",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Infantry",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits"
+  ]
+ },
+ {
+  "type": "Paratrooper RPG-16",
+  "display": "Paratrooper RPG-16",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Infantry",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits"
+  ]
+ },
+ {
+  "type": "Patriot AMG",
+  "display": "SAM Patriot CR (AMG AN/MRC-137)",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM CC",
+   "SAM elements",
+   "SAM related",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Patriot ECS",
+  "display": "SAM Patriot ECS",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM CC",
+   "SAM elements",
+   "SAM related",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Patriot EPP",
+  "display": "SAM Patriot EPP-III",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM CC",
+   "SAM elements",
+   "SAM related",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Patriot cp",
+  "display": "SAM Patriot C2 ICC",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM CC",
+   "SAM elements",
+   "SAM related",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Patriot ln",
+  "display": "SAM Patriot LN",
+  "cat": "ground",
+  "attrs": [
+   "AA_missile",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Datalink",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM LL",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Patriot str",
+  "display": "SAM Patriot STR",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Datalink",
+   "Ground Units",
+   "Ground vehicles",
+   "LR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "SAM SR",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Predator GCS",
+  "display": "MCC Predator UAV CP & GCS",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Predator TrojanSpirit",
+  "display": "MCC-COMM Predator UAV CL",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "RLS_19J6",
+  "display": "SAM SA-5 S-200 ST-68U \"Tin Shield\" SR",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "LR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM SR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "RPC_5N62V",
+  "display": "SAM SA-5 S-200 \"Square Pair\" TR",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "LR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "RQ-1A Predator",
+  "display": "RQ-1A Predator",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "UAVs"
+  ]
+ },
+ {
+  "type": "Railway station",
+  "display": "Railway station",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Roland Radar",
+  "display": "SAM Roland EWR",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM SR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "S-200_Launcher",
+  "display": "SAM SA-5 S-200 \"Gammon\" LN",
+  "cat": "ground",
+  "attrs": [
+   "AA_missile",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "LR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM LL",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "S-3B",
+  "display": "S-3B",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Aux",
+   "Datalink",
+   "Link16",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "S-3B Tanker",
+  "display": "S-3B Tanker",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Aux",
+   "Datalink",
+   "Link16",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable",
+   "Tankers"
+  ]
+ },
+ {
+  "type": "S-60_Type59_Artillery",
+  "display": "AAA S-60 57mm",
+  "cat": "ground",
+  "attrs": [
+   "AAA",
+   "AA_flak",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Rocket Attack Valid AirDefence",
+   "Static AAA",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "SA-11 Buk CC 9S470M1",
+  "display": "SAM SA-11 Buk \"Gadfly\" C2 ",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM CC",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "SA-11 Buk LN 9A310M1",
+  "display": "SAM SA-11 Buk \"Gadfly\" Fire Dome TEL",
+  "cat": "ground",
+  "attrs": [
+   "AA_missile",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "MR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM LL",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "SA-11 Buk SR 9S18M1",
+  "display": "SAM SA-11 Buk \"Gadfly\" Snow Drift SR",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "MR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "SAM SR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "SA-18 Igla comm",
+  "display": "MANPADS SA-18 Igla \"Grouse\" C2",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Armed ground units",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry",
+   "MANPADS AUX",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Rocket Attack Valid AirDefence",
+   "SAM AUX",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "SAU Msta",
+  "display": "SPH 2S19 Msta 152mm",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Armed vehicles",
+   "Artillery",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Indirect fire",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "SH-60B",
+  "display": "sh-60b sea hawk",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Attack helicopters",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits"
+  ]
+ },
+ {
+  "type": "SKP-11",
+  "display": "Truck SKP-11 Mobile ATC",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "SNR_75V",
+  "display": "SAM SA-2 S-75 \"Fan Song\" TR",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "MR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "SON_9",
+  "display": "AAA Fire Can SON-9",
+  "cat": "ground",
+  "attrs": [
+   "AAA",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "Rocket Attack Valid AirDefence",
+   "SAM SR",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "S_75M_Volhov",
+  "display": "SAM SA-2 S-75 \"Guideline\" LN",
+  "cat": "ground",
+  "attrs": [
+   "AA_missile",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "LR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM LL",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Scud_B",
+  "display": "SSM SS-1C Scud-B",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Armed vehicles",
+   "Artillery",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Indirect fire",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "SS_missile",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Shelter B",
+  "display": "Shelter B",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Small werehouse 1",
+  "display": "Small warehouse 1",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Small werehouse 2",
+  "display": "Small warehouse 2",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Soldier AK",
+  "display": "Infantry AK-74",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Infantry",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits"
+  ]
+ },
+ {
+  "type": "Soldier M249",
+  "display": "Infantry M249",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Infantry",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Prone"
+  ]
+ },
+ {
+  "type": "Soldier M4",
+  "display": "Infantry M4",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Infantry",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits"
+  ]
+ },
+ {
+  "type": "Soldier M4 GRG",
+  "display": "Infantry M4 Georgia",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Infantry",
+   "New infantry",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits"
+  ]
+ },
+ {
+  "type": "Soldier RPG",
+  "display": "Infantry RPG",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Infantry",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits"
+  ]
+ },
+ {
+  "type": "Stennis",
+  "display": "CVN-74 John C. Stennis",
+  "cat": "ship",
+  "attrs": [
+   "ACLS",
+   "Aircraft Carriers",
+   "AircraftCarrier",
+   "AircraftCarrier With Arresting Gear",
+   "AircraftCarrier With Catapult",
+   "All",
+   "Armed Air Defence",
+   "Armed Ship",
+   "Armed ships",
+   "Arresting Gear",
+   "Datalink",
+   "Heavy armed ships",
+   "HeavyArmoredUnits",
+   "Link4",
+   "Naval",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "Ships",
+   "catapult"
+  ]
+ },
+ {
+  "type": "Su-25",
+  "display": "su-25",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Battleplanes",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes"
+  ]
+ },
+ {
+  "type": "Su-27",
+  "display": "su-27",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Fighters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes"
+  ]
+ },
+ {
+  "type": "Subsidiary structure 1",
+  "display": "Subsidiary structure 1",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Subsidiary structure 2",
+  "display": "Subsidiary structure 2",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Subsidiary structure A",
+  "display": "Subsidiary structure A",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "T-55",
+  "display": "MBT T-55",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "HeavyArmoredUnits",
+   "Old Tanks",
+   "Tanks",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "T-72B3",
+  "display": "MBT T-72B3",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "HeavyArmoredUnits",
+   "Modern Tanks",
+   "Tanks",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "T-90",
+  "display": "MBT T-90A [CH]",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Datalink",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "HeavyArmoredUnits",
+   "Modern Tanks",
+   "Tanks",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "TICONDEROG",
+  "display": "CG Ticonderoga",
+  "cat": "ship",
+  "attrs": [
+   "All",
+   "Armed Air Defence",
+   "Armed Ship",
+   "Armed ships",
+   "Cruisers",
+   "DetectionByAWACS",
+   "Heavy armed ships",
+   "HeavyArmoredUnits",
+   "HelicopterCarrier",
+   "Naval",
+   "RADAR_BAND1_FOR_ARM",
+   "Ships"
+  ]
+ },
+ {
+  "type": "TPZ",
+  "display": "APC TPz Fuchs ",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "TZ-22_KrAZ",
+  "display": "Refueler TZ-22 Tractor (KrAZ-258B1)",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Tech combine",
+  "display": "Tech combine",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Tech hangar A",
+  "display": "Tech hangar A",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Tigr_233036",
+  "display": "LUV Tigr",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles",
+   "human_vehicle"
+  ]
+ },
+ {
+  "type": "Tor 9A331",
+  "display": "SAM SA-15 Tor \"Gauntlet\"",
+  "cat": "ground",
+  "attrs": [
+   "AA_missile",
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "SAM SR",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "SR SAM",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Type_071",
+  "display": "Type 071 Amphibious Transport Dock",
+  "cat": "ship",
+  "attrs": [
+   "Aircraft Carriers",
+   "AircraftCarrier",
+   "AircraftCarrier With Tramplin",
+   "All",
+   "Armed Air Defence",
+   "Armed Ship",
+   "Armed ships",
+   "DetectionByAWACS",
+   "Heavy armed ships",
+   "HeavyArmoredUnits",
+   "HelicopterCarrier",
+   "NO_SAM",
+   "Naval",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "Ships",
+   "Straight_in_approach_type"
+  ]
+ },
+ {
+  "type": "UAZ-469",
+  "display": "LUV UAZ-469 Jeep",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Cars",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Unarmed vehicles",
+   "Vehicles",
+   "human_vehicle"
+  ]
+ },
+ {
+  "type": "UH-1H",
+  "display": "UH-1H",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Attack helicopters",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Transport helicopters"
+  ]
+ },
+ {
+  "type": "UH-60A",
+  "display": "uh-60a night hawk",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Transport helicopters"
+  ]
+ },
+ {
+  "type": "USS_Arleigh_Burke_IIa",
+  "display": "DDG Arleigh Burke IIa",
+  "cat": "ship",
+  "attrs": [
+   "All",
+   "Armed Air Defence",
+   "Armed Ship",
+   "Armed ships",
+   "Cruisers",
+   "DetectionByAWACS",
+   "Heavy armed ships",
+   "HeavyArmoredUnits",
+   "HelicopterCarrier",
+   "Naval",
+   "RADAR_BAND1_FOR_ARM",
+   "Ships"
+  ]
+ },
+ {
+  "type": "Ural-375",
+  "display": "Truck Ural-4320",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Ural-375 PBU",
+  "display": "Truck Ural-4320 MCC",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Ural-375 ZU-23 Insurgent",
+  "display": "AAA ZU-23 on Ural-4320 Insurgent",
+  "cat": "ground",
+  "attrs": [
+   "AAA",
+   "AA_flak",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "Mobile AAA",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Rocket Attack Valid AirDefence",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Ural-4320 APA-5D",
+  "display": "GPU APA-5D on Ural 4320",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Ural-4320-31",
+  "display": "Truck Ural-4320-31 Arm'd",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Ural-4320T",
+  "display": "Truck Ural-4320T",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "WC",
+  "display": "WC",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "White_Tyre",
+  "display": "Mark Tyre White",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Windsock",
+  "display": "Windsock",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "WingLoong-I",
+  "display": "WingLoong-I",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Battleplanes",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "UAVs"
+  ]
+ },
+ {
+  "type": "Yak-40",
+  "display": "yak-40",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Transports"
+  ]
+ },
+ {
+  "type": "Yak-52",
+  "display": "Yak-52",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "UAVs"
+  ]
+ },
+ {
+  "type": "ZIL-131 KUNG",
+  "display": "Truck ZIL-131 (C2)",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "ZIL-4331",
+  "display": "Truck ZIL-4331",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "ZSU-23-4 Shilka",
+  "display": "SPAAA ZSU-23-4 Shilka \"Gun Dish\"",
+  "cat": "ground",
+  "attrs": [
+   "AAA",
+   "AA_flak",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "Mobile AAA",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "Rocket Attack Valid AirDefence",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "ZU-23 Closed Insurgent",
+  "display": "AAA ZU-23 Insurgent Closed Emplacement",
+  "cat": "ground",
+  "attrs": [
+   "AAA",
+   "AA_flak",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Rocket Attack Valid AirDefence",
+   "Static AAA",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "ZU-23 Emplacement",
+  "display": "AAA ZU-23 Emplacement",
+  "cat": "ground",
+  "attrs": [
+   "AAA",
+   "AA_flak",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Rocket Attack Valid AirDefence",
+   "Static AAA",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "ZU-23 Insurgent",
+  "display": "AAA ZU-23 Insurgent Emplacement",
+  "cat": "ground",
+  "attrs": [
+   "AAA",
+   "AA_flak",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Rocket Attack Valid AirDefence",
+   "Static AAA",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "ZWEZDNY",
+  "display": "Boat Zvezdny type",
+  "cat": "ship",
+  "attrs": [
+   "All",
+   "HeavyArmoredUnits",
+   "Naval",
+   "Ships",
+   "Unarmed ships",
+   "low_reflection_vessel"
+  ]
+ },
+ {
+  "type": "ZiL-131 APA-80",
+  "display": "GPU APA-80 on ZIL-131",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "ammo_cargo",
+  "display": "Ammo",
+  "cat": "static",
+  "attrs": [
+   "Cargos"
+  ]
+ },
+ {
+  "type": "billboard_motorized",
+  "display": "Billboard Motorized",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "f_bar_cargo",
+  "display": "F-shape barrier",
+  "cat": "static",
+  "attrs": [
+   "Cargos"
+  ]
+ },
+ {
+  "type": "house2arm",
+  "display": "Watch tower armed",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Fortifications",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "HeavyArmoredUnits"
+  ]
+ },
+ {
+  "type": "iso_container",
+  "display": "ISO container",
+  "cat": "static",
+  "attrs": [
+   "Cargos"
+  ]
+ },
+ {
+  "type": "m117_cargo",
+  "display": "M117 bombs",
+  "cat": "static",
+  "attrs": [
+   "Cargos"
+  ]
+ },
+ {
+  "type": "oiltank_cargo",
+  "display": "Oiltank",
+  "cat": "static",
+  "attrs": [
+   "Cargos"
+  ]
+ },
+ {
+  "type": "outpost",
+  "display": "Outpost",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Fortifications",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "HeavyArmoredUnits"
+  ]
+ },
+ {
+  "type": "outpost_road",
+  "display": "Road outpost",
+  "cat": "static",
+  "attrs": [
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Fortifications",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "HeavyArmoredUnits"
+  ]
+ },
+ {
+  "type": "p-19 s-125 sr",
+  "display": "SAM SA-2/3/5 P19 \"Flat Face\" SR ",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "MR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM SR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "rapier_fsa_blindfire_radar",
+  "display": "SAM Rapier Blindfire TR",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "SR SAM",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "rapier_fsa_launcher",
+  "display": "SAM Rapier LN",
+  "cat": "ground",
+  "attrs": [
+   "AA_missile",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM LL",
+   "SAM SR",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "SR SAM",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "rapier_fsa_optical_tracker_unit",
+  "display": "SAM Rapier Tracker",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "SAM SR",
+   "SAM elements",
+   "SAM related",
+   "SR SAM",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "snr s-125 tr",
+  "display": "SAM SA-3 S-125 \"Low Blow\" TR",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Ground Units",
+   "Ground vehicles",
+   "MR SAM",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "speedboat",
+  "display": "Boat Armed Hi-speed",
+  "cat": "ship",
+  "attrs": [
+   "All",
+   "Armed Ship",
+   "Armed ships",
+   "Light armed ships",
+   "NO_SAM",
+   "Naval",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Ships",
+   "low_reflection_vessel"
+  ]
+ },
+ {
+  "type": "tetrapod_cargo",
+  "display": "Tetrapod",
+  "cat": "static",
+  "attrs": [
+   "Cargos"
+  ]
+ },
+ {
+  "type": "tt_DSHK",
+  "display": "Scout LC with DSHK 12.7mm",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "us carrier shooter",
+  "display": "us carrier shooter",
+  "cat": "static",
+  "attrs": []
+ }
+]

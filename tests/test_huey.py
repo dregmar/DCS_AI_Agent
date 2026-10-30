@@ -116,6 +116,11 @@ class TestCommands(unittest.TestCase):
                              ("caution lights", "CAUTIONS")):
             self.assertEqual(self.m(text)["action"], action, text)
 
+    def test_llm_needs_related_words(self):
+        self.assertEqual(commands.sanitize({"action": "FLARE"}, "a press board")["action"], "NONE")
+        self.assertEqual(commands.sanitize({"action": "TALKON_START"}, "we're point two")["action"], "NONE")
+        self.assertEqual(commands.sanitize({"action": "FLARE"}, "chaff and flares please")["action"], "FLARE")
+
     def test_sanitize(self):
         self.assertEqual(commands.sanitize({"action": "SWITCH", "key": "battery", "value": "on"})["value"], "ON")
         self.assertEqual(commands.sanitize({"action": "SWITCH", "key": "warp", "value": "ON"})["action"], "NONE")
@@ -272,7 +277,7 @@ class TestCrewChief(HueyCase):
         super().setUp()
         self.said = []
         self.chief = CrewChief(self.said.append, state_store.snapshot, lambda: True,
-                               contact_range_m=1500, contact_gap_sec=0)
+                               contact_range_m=1500, contact_gap_sec=0, talkdown=False)
 
     def gauges(self, **vals):
         for k, v in vals.items():
@@ -350,6 +355,15 @@ class TestProfile(HueyCase):
         st = p.status_report()
         self.assertIn("Gunners free fire.", st)
         self.assertLess(len(st), 160, st)
+        # sling load: talk-on needs the crew chief's TalkDown; release goes over the crew link
+        from huey.talkdown import TalkDown
+        p.talkdown = TalkDown(said.append, calibration_file=None)
+        state_store.update_telemetry({"pos": [0.0, 0.0, 50.0], "cargo": [40.0, 0.0, 45.0], "hdg": 0.0})
+        self.assertEqual(p.execute({"action": "LOAD_REPORT"}), "Load, 12 o'clock, 40 meters.")
+        self.assertTrue(p.execute({"action": "TALKON_START"}).startswith("Talking you on."))
+        self.assertTrue(p.talkdown.talkon)
+        self.assertEqual(p.execute({"action": "RELEASE_LOAD"}), "Load released.")
+        self.assertIn((3005, 1.0), self.game.sent)
         p.handle("something the fast path does not know")
         self.assertTrue(wait_until(lambda: len(said) > 2, 2))
         self.assertEqual(said[2], "Say again.")

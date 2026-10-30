@@ -16,6 +16,8 @@ main.george.shutdown()                        # the real-keyboard driver never g
 SPOKEN = []
 BIOS_SENT = []
 main.speak_george_radio = lambda text, **k: SPOKEN.append(text)
+OVERLORD_SPOKEN = []
+main.speak_overlord = lambda text, **k: OVERLORD_SPOKEN.append(text)
 main.cmd_sender.send_command = lambda ident, arg: (BIOS_SENT.append(f"{ident} {arg}"), True)[1]
 
 

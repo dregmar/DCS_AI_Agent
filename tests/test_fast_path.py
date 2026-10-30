@@ -74,9 +74,14 @@ class CheatSheet(unittest.TestCase):
         phrases = [p for row in re.findall(r"^\| (.+?) \|", md, flags=re.M)
                    for p in re.findall(r"\*\*(.+?)\*\*", row)]
         self.assertGreater(len(phrases), 50)
+        from apache.crew import _CAUTIONS
+        from huey.commands import match_checklist
         for p in phrases:
             with self.subTest(phrase=p):
-                self.assertIsNotNone(match_fast(p, SNAP))
+                # George's wheel phrases (fast path) or his checklist / EUFD phrases (apache/crew.py)
+                handled = (match_fast(p, SNAP) is not None or match_checklist(p, True) is not None
+                           or bool(_CAUTIONS.search(p.lower())))
+                self.assertTrue(handled)
 
 
 if __name__ == "__main__":

@@ -16,10 +16,12 @@ from typing import Any, Callable, Dict, Optional
 import config
 from core.state import clock_position
 from huey import commands
+from intelligence.llm_client import trim_history
 from huey.checklists import ChecklistRunner
 from huey.cockpit import Cockpit, RADIOS, SWITCHES, say_freq, switch_state
 from huey.crew import HueyCrew, describe_crew
 from huey.link import CommandLink
+from common.briefing import is_briefing_question
 
 TELEMETRY_FRESH_SEC = 3.0
 LINK_FRESH_SEC = 3.0
@@ -33,16 +35,23 @@ NOT_IN_FLIGHT = {("main_fuel", "OFF"), ("hyd_cont", "OFF"), ("battery", "OFF"), 
 class HueyProfile:
     def __init__(self, speak: Callable[[str], None], state, bios_sender,
                  llm: Optional[Callable] = None, link: Optional[CommandLink] = None,
-                 crew_step_sec: float = 1.5, readback_sec: float = 2.0):
+                 crew_step_sec: float = 1.5, readback_sec: float = 2.0,
+                 press_keys: Optional[Callable] = None, ask: Optional[Callable[[str], str]] = None,
+                 route: Optional[Callable[[str, str], bool]] = None):
         """speak(text): non-blocking radio speech. state: the state store.
-        bios_sender: core.dcs_bios.cmd_sender. llm(system_prompt, history, text) -> dict."""
-        self.speak, self.state, self.llm = speak, state, llm
-        self.crew = HueyCrew(link or CommandLink(), state.huey_snapshot, step_sec=crew_step_sec)
+        bios_sender: core.dcs_bios.cmd_sender. llm(system_prompt, history, text) -> dict.
+        ask(question) -> answer: the briefing knowledge base (common/briefing.py).
+        route(text, command) -> taken: the model's ROUTE answer (intelligence/router.py)."""
+        self.speak, self.state, self.llm, self.ask, self.route = speak, state, llm, ask, route
+        self.press_keys = press_keys          # (["ctrl_r+shift_r+l"]) -> bool, for the cargo hook key
+        self.talkdown = None                  # huey.talkdown.TalkDown, set by main from the crew chief
+        self.link = link or CommandLink()
+        self.crew = HueyCrew(self.link, state.huey_snapshot, step_sec=crew_step_sec)
         self.cockpit = Cockpit(bios_sender, state.bios_words_snapshot,
                                lambda: state.snapshot()["bios_age"], readback_sec=readback_sec)
         self.checklist = ChecklistRunner(self._switch, self._gauge, self._cautions,
                                          self.cockpit.set_switch)
-        self.history = deque(maxlen=6)
+        self.history = deque()               # trimmed in batches (llm_client.trim_history)
         self._q: "queue.Queue[dict]" = queue.Queue()
         self._worker = threading.Thread(target=self._work, daemon=True, name="huey-worker")
         self._worker.start()
@@ -77,26 +86,46 @@ class HueyProfile:
         return snap.get("agl_ft", -1) > 10 or snap.get("speed_kts", 0) > 30
 
     # ------------------------------------------------------------ entry (voice thread)
-    def handle(self, text: str, captured: float = None) -> None:
+    def handle(self, text: str, captured: float = None, deferred: Optional[Callable[[], None]] = None) -> None:
+        """deferred: speaks the "say again" Overlord or a wingman gave this utterance. The model
+        gets a go at rewriting it (ROUTE) first, and the crew never act on it themselves."""
+        def say_again(default="Say again."):
+            deferred() if deferred else self.speak(default)
+
         t0 = time.perf_counter()
-        cmd = commands.match(text, self.checklist.active)
+        cmd = None if deferred else commands.match(text, self.checklist.active)
         source = "FAST"
+        if cmd is None and not deferred and self.ask is not None and is_briefing_question(text):
+            said = self.ask(text)                    # "what's the ROE in sector Bravo?"
+            print(f"[BRIEFING]: '{said}'")
+            self.speak(said)
+            return
         if cmd is None:
             source = "LLM"
             if self.llm is None:
-                self.speak("Say again.")
+                say_again()
                 return
             try:
-                res = self.llm(commands.llm_prompt(self.state_line(), self._checklist_name()),
-                               list(self.history), text)
+                res = self.llm(commands.llm_system(), list(self.history),
+                               commands.llm_message(self.state_line(), self._checklist_name(), text))
             except Exception as e:
                 print(f"[ERROR] LLM request failed: {type(e).__name__}: {e}")
-                self.speak("Say again, system fault.")
+                say_again("Say again, system fault.")
                 return
-            cmd = commands.sanitize(res)
+            if str(res.get("action") or "").upper() == "ROUTE":
+                if self.route is not None and self.route(text, str(res.get("command") or "")):
+                    print(f"[TIMING] ROUTE {time.perf_counter() - t0:.2f}s")
+                    return
+                say_again()
+                return
+            if deferred:                             # for Overlord / a wingman, not the crew
+                deferred()
+                return
+            cmd = commands.sanitize(res, text)
         self.history.append({"role": "user", "content": text})
         self.history.append({"role": "assistant", "content": json.dumps(
             {k: v for k, v in cmd.items() if k != "source"})})
+        trim_history(self.history)
         print(f"[HUEY]: {cmd}")
         print(f"[TIMING] {source} {time.perf_counter() - t0:.2f}s")
         if cmd["action"] == "CREW_ROE" and cmd.get("value") == "HOLD":
@@ -142,6 +171,9 @@ class HueyProfile:
             if (cmd["key"], cmd["value"]) in NOT_IN_FLIGHT and self._flying(self.state.snapshot()):
                 return f"Negative, not in flight: {SWITCHES[cmd['key']][2]} {cmd['value'].lower()}."
             return self.cockpit.set_switch(cmd["key"], cmd["value"])[1]
+        if a in ("TALKON_START", "TALKON_STOP", "LOAD_REPORT", "HOOK_LOAD", "RELEASE_LOAD",
+                 "CALIBRATE_LOAD", "RESET_LOAD_CAL"):
+            return self.cargo(a)
         if a == "FLARE":
             return self.cockpit.dispense_flare(self._flares, auto_arm=AUTO_ARM_FLARES)[1]
         if a == "RADIO":
@@ -163,6 +195,37 @@ class HueyProfile:
         if a == "CAUTIONS":
             return self.cautions_report()
         return cmd.get("speech") or "Copy."
+
+    # ------------------------------------------------------------ sling load
+    def cargo(self, action: str) -> str:
+        snap = self.state.snapshot()
+        td = self.talkdown
+        if action == "TALKON_START":
+            return td.start_talkon(snap) if td else "Talk-on isn't running."
+        if action == "TALKON_STOP":
+            return td.stop_talkon() if td else "Copy."
+        if action == "CALIBRATE_LOAD":
+            return td.calibrate(snap) if td else "No load data."
+        if action == "RESET_LOAD_CAL":
+            return td.reset_calibration() if td else "Copy."
+        if action == "LOAD_REPORT":
+            return td.load_report(snap) if td else "No load data."
+        if action == "HOOK_LOAD":
+            # DCS's own command for hooking a load you've landed next to (RCtrl+RShift+L)
+            if self.press_keys is None:
+                return "Unable."
+            if not self.press_keys(["ctrl_r+shift_r+l"]):
+                return "DCS not in focus."
+            return "Hooking up."
+        if action == "RELEASE_LOAD":
+            # External Cargo Unhook (EXT_CARGO_EQUIPMENT, device 52, command 3005: down 1, up 0)
+            if not self.crew.live():
+                return "No crew link."
+            self.link.send(3005, 1.0, device=52)
+            time.sleep(0.3)
+            self.link.send(3005, 0.0, device=52)
+            return "Load released."
+        return "Copy."
 
     # ------------------------------------------------------------ reports
     def engine_report(self) -> str:
