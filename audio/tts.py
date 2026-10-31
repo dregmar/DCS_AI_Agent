@@ -9,6 +9,7 @@ Overlord's lines are spoken in George's voice instead (nothing is lost).
 """
 import heapq
 import itertools
+import os
 import queue
 import threading
 import time
@@ -28,6 +29,7 @@ PRIORITY_ROUTINE = 2  # low-importance callouts
 
 GEORGE = "george"
 OVERLORD = "overlord"
+INSTRUCTOR = "instructor"      # Instructor Mode (instructor/): jenny.onnx (Andre, 30 Oct; was bryce-medium)
 
 # Set by main.py while the PTT key is held. Non-pilot callouts wait while it is set,
 # so George never talks over you.
@@ -52,8 +54,22 @@ def _load(path: str, label: str):
         return None
 
 
+def _load_instructor():
+    """The instructor's voice, only if its model is in the project folder (a missing file isn't an
+    error: until it is downloaded the instructor speaks in George's voice)."""
+    import config as _config
+    path = getattr(_config, "INSTRUCTOR_MODEL_PATH", None) or os.path.join(
+        getattr(_config, "BASE_DIR", ""), "jenny.onnx")
+    if not os.path.exists(path):
+        print(f"[AUDIO] Instructor voice not found ({path}): the instructor will use George's voice. "
+              f"Put jenny.onnx and jenny.onnx.json in the project folder.")
+        return None
+    return _load(path, INSTRUCTOR)
+
+
 VOICES = {GEORGE: _load(PIPER_MODEL_PATH, GEORGE),
-          OVERLORD: _load(OVERLORD_MODEL_PATH, OVERLORD)}
+          OVERLORD: _load(OVERLORD_MODEL_PATH, OVERLORD),
+          INSTRUCTOR: _load_instructor()}
 voice = VOICES[GEORGE]            # kept for older code that reads tts.voice
 if VOICES[OVERLORD] is None and voice is not None:
     print("[AUDIO] Overlord will use George's voice.")
@@ -105,6 +121,11 @@ def speak_george_radio(text: str, priority: int = PRIORITY_PILOT, max_age=None) 
 def speak_overlord(text: str, priority: int = PRIORITY_PILOT, max_age=None) -> None:
     """Overlord on the command radio."""
     speak_radio(text, OVERLORD, priority, max_age)
+
+
+def speak_instructor(text: str, priority: int = PRIORITY_PILOT, max_age=None) -> None:
+    """The instructor (same queue, DSP and playback as the others; George's voice until jenny.onnx is there)."""
+    speak_radio(text, INSTRUCTOR, priority, max_age)
 
 
 # Called with (speaker, text) for every transmission actually played (kneeboard comms log), or None.

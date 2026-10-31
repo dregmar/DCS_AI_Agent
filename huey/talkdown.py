@@ -64,6 +64,10 @@ class TalkDown:
         self._talkon_said_t = -1e9
         self._skids_up_t = -1e9
         self._in_range_said = False
+        # True while an instructor exercise is armed or running (main.py sets it): the height countdown
+        # and drift / "Steady" calls are held so the graded hover isn't coached and the instructor
+        # isn't queued behind them (30 Oct flight). "Easy, slow your descent!", skids and talk-on still play.
+        self.quiet: Callable[[], bool] = lambda: False
 
     # ------------------------------------------------------------ geometry
     def _load_calibration(self) -> None:
@@ -212,8 +216,11 @@ class TalkDown:
         talking = self._talk_on(snap, h, gs, now)
 
         slow = gs is not None and gs < 30
+        quiet = self._quiet()
+        if quiet:
+            self._drift_said = ""                   # no stale "Steady." when the exercise ends
         # --- heights on the way down (the talk-on calls take over over a load)
-        if slow and vs < -50 and not talking:
+        if slow and vs < -50 and not talking and not quiet:
             for mark in HEIGHT_CALLS:
                 if h <= mark and mark not in self._called:
                     self._called.update(m for m in HEIGHT_CALLS if m >= mark)
@@ -226,9 +233,15 @@ class TalkDown:
 
         # --- drift in the hover: not while talking you onto a load, not just after lift-off,
         # not while climbing or descending briskly
-        if (not talking and h < 30 and gs is not None and gs < 5 and abs(vs) < 300
+        if (not talking and not quiet and h < 30 and gs is not None and gs < 5 and abs(vs) < 300
                 and now - self._skids_up_t > SKIDS_UP_QUIET_SEC):
             self._drift(vel, hdg, now)
+
+    def _quiet(self) -> bool:
+        try:
+            return bool(self.quiet())
+        except Exception:                           # never let the hook stop the crew chief
+            return False
 
     def _drift(self, vel, hdg, now) -> None:
         bv = body_velocity(vel, hdg)

@@ -3002,6 +3002,20 @@
   ]
  },
  {
+  "type": "UH-60L",
+  "display": "A-10_DAM",
+  "cat": "helicopter",
+  "attrs": [
+   "Air",
+   "All",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Refuelable",
+   "Transport helicopters"
+  ]
+ },
+ {
   "type": "USS_Arleigh_Burke_IIa",
   "display": "DDG Arleigh Burke IIa",
   "cat": "ship",

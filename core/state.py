@@ -164,6 +164,11 @@ class ApacheStateStore:
             "arm_disarmed_warning": False
         }
 
+        # Export.lua's model time of the latest packet (None = not sent), and a count of telemetry packets
+        # received, so a sampler can tell a new packet from the same one read twice (Instructor Mode)
+        self.t_model: Optional[float] = None
+        self.tel_seq = 0
+
         # Freshness (time.monotonic(); 0.0 means "never received")
         self.telemetry_last_rx = 0.0
         self.targets_last_rx = 0.0
@@ -209,6 +214,9 @@ class ApacheStateStore:
             ac = telemetry_data.get("ac")
             if isinstance(ac, str) and ac:
                 self.aircraft = ac
+            t_model = telemetry_data.get("t")
+            self.t_model = float(t_model) if isinstance(t_model, (int, float)) and not isinstance(t_model, bool) else None
+            self.tel_seq += 1
             self.telemetry_last_rx = now
 
             # Targets now come from George's own Target List (set_george_list); the telemetry
@@ -494,6 +502,8 @@ class ApacheStateStore:
                 "highest_threat": dict(self.highest_threat),
                 "constraints": dict(self.constraints),
                 "telemetry_age": self._age(self.telemetry_last_rx, now),
+                "t_model": self.t_model,
+                "tel_seq": self.tel_seq,
                 "bios_age": self._age(self.bios_last_rx, now),
                 "wpn_page_age": self._age(self.wpn_page_rx, now),
                 "george_ui": dict(self.george_ui),

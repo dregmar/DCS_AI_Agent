@@ -47,7 +47,7 @@ from intelligence.threat_engine import evaluate_tactical_environment
 from intelligence.engagement_monitor import EngagementMonitor
 from intelligence.fast_path import match_fast
 from intelligence import router as router_mod
-from audio.tts import (speak_george_radio, speak_overlord, start_speech_worker, ptt_active,
+from audio.tts import (speak_george_radio, speak_overlord, speak_instructor, start_speech_worker, ptt_active,
                        PRIORITY_ALERT, PRIORITY_PILOT)
 from audio import tts as tts_mod
 from kneeboard.comms_log import LOG as COMMS_LOG
@@ -159,6 +159,8 @@ def _on_mission_loaded() -> None:
     TRAINING.forget()                       # training targets went with the old mission
     TRACK.reset()                           # the kneeboard track starts again with the mission
     ALERTS.reset()                          # the last mission's alerts go to the Alerts history
+    if INSTRUCTOR is not None:
+        INSTRUCTOR.on_mission_loaded()      # a running exercise is cancelled (stored, not scored)
 
 
 comms_menu.ON_LOADED = lambda: _on_mission_loaded()
@@ -187,6 +189,14 @@ SPAWNER = training_targets_mod.Spawner(
     lambda text: _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_PILOT)), debrief=DEBRIEF)
 from common.unit_types import TYPES as UNIT_TYPES
 comms_menu.ON_TYPES = UNIT_TYPES.on_types_message   # ... and "TYPES ..." (what each unit type is)
+
+# --- INSTRUCTOR MODE (instructor/, feature 7): "Instructor, hover exercise" / "begin" / "how did I do".
+# Read-only: it reads the state store on its own thread and speaks; it never sends anything to DCS.
+# config.INSTRUCTOR_ENABLED = False turns it off (then "Instructor, ..." goes to George as before).
+from instructor import session as instructor_mod
+INSTRUCTOR = (instructor_mod.build(config, state_store.snapshot, lambda text: _speak_instructor(text),
+                                   mission_name=KB.mission_name)
+              if getattr(config, "INSTRUCTOR_ENABLED", True) else None)
 
 
 def _active_prompt():
@@ -285,6 +295,12 @@ def _speak_overlord(text: str) -> None:
     speak_overlord(text, priority=PRIORITY_PILOT)
 
 
+def _speak_instructor(text: str) -> None:
+    # Alert priority (never dropped as stale): "clock running" and the result are time-critical; on the
+    # 30 Oct flight they waited 8-19 s behind the crew chief's callouts at pilot priority.
+    speak_instructor(text, priority=PRIORITY_ALERT)
+
+
 def _key(name: str):
     """'f5' / 'ctrl_r' / 'shift_r' -> pynput Key; anything else is a character."""
     return getattr(Key, name) if len(name) > 1 and hasattr(Key, name) else name
@@ -351,6 +367,8 @@ def shared_reply(text: str):
         else:
             said = "Overlord, unable, Olympus is turned off in config."
         return said or "", "overlord", "overlord"
+    if INSTRUCTOR is not None and INSTRUCTOR.wanted(text):   # "Instructor, ...": only the instructor answers
+        return INSTRUCTOR.handle(text), "instructor", "instructor"
     page = kb_pages.match(text, bare_scroll=state_store.profile() != "apache") if KNEEBOARD_ON else None
     if page is not None:                             # "show the briefing" / "scroll down": the page answers
         print(f"[KNEEBOARD] {page}")
@@ -413,8 +431,8 @@ def shared_reply(text: str):
 def _speak_as(said: str, speaker: str) -> None:
     if not said:                    # '' = done and nothing to say (wingman orders that went through)
         return
-    print(f"[{'OVERLORD' if speaker == 'overlord' else 'CREW'}]: '{said}'")
-    (_speak_overlord if speaker == "overlord" else _speak_pilot)(said)
+    print(f"[{ {'overlord': 'OVERLORD', 'instructor': 'INSTRUCTOR'}.get(speaker, 'CREW') }]: '{said}'")
+    {"overlord": _speak_overlord, "instructor": _speak_instructor}.get(speaker, _speak_pilot)(said)
 
 
 def handle_shared(text: str, deferred: list = None) -> bool:
@@ -476,6 +494,8 @@ def stt_prompt() -> str:
         base = getattr(config, "JET_STT_PROMPT", STT_PROMPT)
     else:
         base = STT_PROMPT
+    if INSTRUCTOR is not None and state_store.profile() != "other":   # helicopters: the hover exercise (decision 5)
+        base += " Instructor, hover exercise, begin, stop, how did I do."
     ind = wingmen.INDEPENDENTS
     return base + router_mod.stt_hints(ind.numbers() if ind else [], USER_WAYPOINTS.names())
 
@@ -717,6 +737,8 @@ def kneeboard_status() -> dict:
     ]
     links.append(_olympus_link(wingmen.EXECUTOR))
     links.append(TRAINING.link())
+    if INSTRUCTOR is not None:
+        links.append(INSTRUCTOR.link())
     last = ollama_chat.last_call()
     links.append({"name": f"Ollama ({config.LLM_MODEL})", "ok": last.get("ok"),
                   "detail": (f"last call {last['secs']:.2f} s, {age(time.time() - last['when'])}"
@@ -1390,6 +1412,8 @@ if __name__ == "__main__":
     start_huey_link_thread()      # UH-1H gauges, lamps, Crew Status panel (george_huey_export.lua)
     comms_menu.start(comms)       # radio menu text from Scripts/Hooks/george_comms_hook.lua
     threading.Thread(target=watch_profile, daemon=True, name="profile-watch").start()
+    if INSTRUCTOR is not None:
+        INSTRUCTOR.start()        # instructor observer: reads the state store 10x a second, sends nothing
     if wingmen.EXECUTOR:
         threading.Thread(target=olympus_watch, daemon=True, name="olympus-watch").start()
     if getattr(config, "FUEL_CALLS", True):              # jets: "Overlord, joker fuel ..."
@@ -1446,6 +1470,8 @@ if __name__ == "__main__":
                                fuel_burn_lbs_hr=config.HUEY_FUEL_BURN_LBS_HR,
                                reserve_lbs=config.HUEY_FUEL_RESERVE_LBS).start()
         huey.talkdown = crew_chief.talkdown
+        if INSTRUCTOR is not None and crew_chief.talkdown is not None:
+            crew_chief.talkdown.quiet = INSTRUCTOR.busy     # no hover coaching during a graded hover
     print("[WHEEL] Assuming the George wheel is HIDDEN. If it's open, press Ctrl+V once or say 'toggle wheel'.")
     print("[WHEEL] Assuming George starts on NO WEAPON, WEAPONS HOLD, TADS fixed forward "
           "(corrected automatically once the wheel is shown and george_ai_export.lua is running).")
