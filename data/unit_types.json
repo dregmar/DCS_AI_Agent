@@ -2750,6 +2750,25 @@
   ]
  },
  {
+  "type": "T-72B",
+  "display": "MBT T-72B",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "HeavyArmoredUnits",
+   "Modern Tanks",
+   "Tanks",
+   "Vehicles"
+  ]
+ },
+ {
   "type": "T-72B3",
   "display": "MBT T-72B3",
   "cat": "ground",
@@ -3004,7 +3023,7 @@
  {
   "type": "Ural-375",
   "display": "Truck Ural-4320",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Ground Units",

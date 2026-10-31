@@ -45,7 +45,7 @@ _SCROLL = [
 
 # How Whisper heard "kneeboard" in flight (29 Oct): "knee board", "new board", "Niebord"...
 _KNEEBOARD = re.compile(r"\b(?:knee ?board|kneeboards?|new ?board|nie ?bord|nee ?bord|nee ?board|knee ?bored|"
-                        r"neeboard|niebord|neebord)\b")
+                        r"neeboard|niebord|neebord|new ?word|new ?ward|knee ?word)\b")   # 30 Oct: "new word, show status"
 # "kneeboard, zoom in / out": the map (only after "kneeboard": "zoom in" alone is George's TADS)
 _ZOOM = re.compile(r"^kneeboard[\s,]+(?:map[\s,]+)?zoom (in|out)$")
 # "kneeboard, acknowledge" (the newest alert) / "kneeboard, acknowledge all": always after "kneeboard"

@@ -1,0 +1,27 @@
+{
+ "_note": "Training targets you can ask Overlord to spawn (feature 8). 'say': the spoken names (lower case; a final 's' is allowed); 'type': the DCS type exactly as in Olympus's unit database; 'cat': ground / heli / air; 'name': what Overlord calls it; 'live_loadout' (heli / air): the loadout name from Olympus's database for live targets. Checked against Olympus 2.0.5 on Andre's PC, 30 Oct 2026. Add a line to add a type.",
+ "units": [
+  {"say": ["t 72", "t72", "tank"], "type": "T-72B", "cat": "ground", "name": "T-72B"},
+  {"say": ["bmp 2", "bmp2", "bmp"], "type": "BMP-2", "cat": "ground", "name": "BMP-2"},
+  {"say": ["btr 80", "btr80", "btr"], "type": "BTR-80", "cat": "ground", "name": "BTR-80"},
+  {"say": ["ural", "truck"], "type": "Ural-375", "cat": "ground", "name": "Ural truck"},
+  {"say": ["technical"], "type": "HL_DSHK", "cat": "ground", "name": "technical"},
+  {"say": ["infantry", "soldier", "troop"], "type": "Infantry AK", "cat": "ground", "name": "infantry"},
+  {"say": ["shilka", "zsu 23 4", "zsu 23", "zsu"], "type": "ZSU-23-4 Shilka", "cat": "ground", "name": "Shilka"},
+  {"say": ["strela", "sa 13", "sa13"], "type": "Strela-10M3", "cat": "ground", "name": "SA-13 Strela"},
+  {"say": ["osa", "sa 8", "sa8"], "type": "Osa 9A33 ln", "cat": "ground", "name": "SA-8 Osa"},
+  {"say": ["igla", "manpad", "manpads"], "type": "SA-18 Igla manpad", "cat": "ground", "name": "Igla MANPADS"},
+  {"say": ["sa 2 site", "sa 2 battery", "sa2 site"], "type": "SA-2 SAM Battery", "cat": "ground", "name": "SA-2 site"},
+  {"say": ["sa 3 site", "sa 3 battery", "sa3 site"], "type": "SA-3 SAM Battery", "cat": "ground", "name": "SA-3 site"},
+  {"say": ["sa 6 site", "sa 6 battery", "sa6 site", "kub site"], "type": "SA-6 SAM Battery", "cat": "ground", "name": "SA-6 site"},
+  {"say": ["sa 10 site", "sa 10 battery", "sa10 site"], "type": "SA-10 SAM Battery", "cat": "ground", "name": "SA-10 site"},
+  {"say": ["sa 11 site", "sa 11 battery", "sa11 site", "buk site"], "type": "SA-11 SAM Battery", "cat": "ground", "name": "SA-11 site"},
+  {"say": ["mi 24", "mi24", "hind"], "type": "Mi-24V", "cat": "heli", "name": "Mi-24V", "live_loadout": "4x9M114, 80xS-8"},
+  {"say": ["mi 8", "mi8", "hip"], "type": "Mi-8MT", "cat": "heli", "name": "Mi-8", "live_loadout": "2 x UPK +2 x B8"},
+  {"say": ["ka 50", "ka50", "black shark", "hokum"], "type": "Ka-50", "cat": "heli", "name": "Ka-50", "live_loadout": "12x9A4172, 40xS-8"},
+  {"say": ["mig 21", "mig21", "fishbed"], "type": "MiG-21Bis", "cat": "air", "name": "MiG-21", "live_loadout": "Patrol, short range"},
+  {"say": ["mig 29", "mig29", "fulcrum"], "type": "MiG-29S", "cat": "air", "name": "MiG-29", "live_loadout": "R-73*4,R-27R*2"},
+  {"say": ["su 25", "su25", "frogfoot"], "type": "Su-25", "cat": "air", "name": "Su-25", "live_loadout": "RBK-250*4,S-8KOM*80,R-60M*2"},
+  {"say": ["su 27", "su27", "flanker"], "type": "Su-27", "cat": "air", "name": "Su-27", "live_loadout": "R-73*6"}
+ ]
+}

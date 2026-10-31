@@ -359,7 +359,10 @@ class Router:
             self.speak(said, speaker)
         # only a rewrite that was taken is learned: not "say again", "unable" or a refusal ("negative, no
         # targets for you": 30 Oct, a spawn request rewritten as "request target" was learned)
-        if not MISSED.search(said or "") and not re.search(r"\b(?:unable|negative)\b", said or "", re.I):
+        # nor "nothing to do" answers (30 Oct: "end the training" -> "cancel all" got "no flights tasked";
+        # "mark ground training group with smoke" -> "mark target" got "no target to mark": both learned)
+        if (not MISSED.search(said or "") and not re.search(r"\b(?:unable|negative)\b", said or "", re.I)
+                and not re.match(r"^\s*(?:overlord,\s*)?(?:no|nothing)\b", said or "", re.I)):
             self.learn(original, command)
         return True
 

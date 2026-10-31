@@ -33,6 +33,12 @@ def wanted(text: str) -> bool:
     return bool(_ASK.search((text or "").lower()))
 
 
+def _mmss(seconds: float) -> str:
+    """'3 min 12 s' / '45 s'."""
+    s = int(round(seconds))
+    return f"{s // 60} min {s % 60:02d} s" if s >= 60 else f"{s} s"
+
+
 class Debrief:
     def __init__(self, log_dir: str = LOG_DIR):
         self._lock = threading.Lock()
@@ -49,6 +55,7 @@ class Debrief:
         self.shots = Counter()
         self.fuel_start: Optional[str] = None
         self.fuel_now: Optional[str] = None
+        self.training: List[dict] = []         # feature 8: {"what", "units", "kills": [seconds]}
 
     # ------------------------------------------------------------ recording
     def _event(self, kind: str, who: str, what: str = ""):
@@ -69,6 +76,19 @@ class Debrief:
         with self._lock:
             self.launched.append(who)
             self._event("launch", who, what)
+
+    def training_spawn(self, what: str, units: int) -> dict:
+        """A training group spawned (feature 8). Returns its record for training_kill."""
+        rec = {"what": what, "units": int(units), "kills": []}
+        with self._lock:
+            self.training.append(rec)
+            self._event("train", "Training", f"{what} spawned")
+        return rec
+
+    def training_kill(self, rec: dict, seconds: float) -> None:
+        with self._lock:
+            rec["kills"].append(float(seconds))
+            self._event("train", "Training", f"{rec['what']}: unit destroyed after {_mmss(seconds)}")
 
     def shot(self, weapon: str, n: int = 1) -> None:
         with self._lock:
@@ -105,6 +125,15 @@ class Debrief:
                 shots.append(f"{self.shots['gun']} gun burst{'s' if self.shots['gun'] != 1 else ''}")
             if shots:
                 parts.append("Fired " + " and ".join(shots) + ".")
+            if self.training:
+                each = []
+                for r in self.training:
+                    k = len(r["kills"])
+                    got = ("both destroyed" if k == r["units"] == 2 else "destroyed" if k == r["units"] == 1
+                           else f"all {k} destroyed" if k == r["units"] else f"{k} of {r['units']} destroyed")
+                    times = ", ".join(_mmss(s) for s in r["kills"][:4]) + (" ..." if k > 4 else "")
+                    each.append(f"{r['what']}, {got}" + (f" ({times} after spawn)" if k else ""))
+                parts.append("Training: " + "; ".join(each) + ".")
             if self.launched:
                 parts.append(f"Overlord sent {len(self.launched)} flight{'s' if len(self.launched) != 1 else ''}.")
             if self.fuel_now:

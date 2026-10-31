@@ -114,6 +114,14 @@ class TestDispatch(RouterCase):
         self.assertEqual(self.said, [("Overlord, negative, no targets for you.", "overlord")])
         self.assertFalse(os.path.exists(self.file))
 
+    def test_nothing_done_is_not_learned(self):
+        """30 Oct: "Overlord end the training" -> "Overlord, cancel all" answered "no flights tasked"."""
+        for answer in ("Overlord, no flights tasked.", "Overlord, no target to mark. Request a target first.",
+                       "Nothing to confirm."):
+            self.r.shared = lambda text, a=answer: (a, "overlord")
+            self.assertTrue(self.r.dispatch("Overlord end the training", "Overlord, cancel all"))
+            self.assertFalse(os.path.exists(self.file), answer)
+
     def test_no_handler(self):
         self.assertTrue(self.r.dispatch("what's the nearest place to land", "Nearest friendly airfield"))
         self.assertEqual(self.said, [("Say again.", "george")])

@@ -52,7 +52,10 @@ class TestMatch(unittest.TestCase):
             got = pages.match(said)
             self.assertIsNotNone(got, said)
             self.assertEqual(got["page"], page, said)
-        for said in ["that's us", "stats", "comes", "new board"]:
+        for said, page in [("New word, show status.", "status"), ("New ward status.", "status"),
+                           ("New word checklist.", "checklist")]:                     # 30 Oct flight
+            self.assertEqual(pages.match(said)["page"], page, said)
+        for said in ["that's us", "stats", "comes", "new board", "new word"]:
             self.assertIsNone(pages.match(said), said)
 
     def test_zoom_needs_kneeboard(self):

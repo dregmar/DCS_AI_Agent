@@ -243,6 +243,23 @@ class TestVoiceAndClearing(_Base):
         self.assertEqual(t.handle("training mode on"), "Overlord, unable, other players are in the mission.")
         self.assertFalse(t.on)
 
+    def test_flown_phrases_to_end_and_start(self):
+        """30 Oct flight: none of these ended training; "cancel / abort training" went to Overlord's cancel."""
+        self.alone()
+        for said in ("exit training mode", "exit training", "end the training", "cancel training",
+                     "abort training", "stop training", "training mode off"):
+            self.t.on = True
+            self.assertTrue(self.t.wanted(said), said)
+            self.assertIn("training mode off", self.t.handle(said), said)
+            self.assertFalse(self.t.on, said)
+        for said in ("start training mode", "turn on training", "training mode on"):
+            self.t.on = False
+            self.assertTrue(self.t.wanted(said), said)
+            self.t.handle(said)
+            self.assertTrue(self.t.on, said)
+        self.assertFalse(self.t.wanted("how do I end the training?"))      # a question: the briefing
+        self.assertTrue(self.t.wanted("remove training groups"))
+
     def test_not_training_phrases(self):
         for rest in ("requesting SEAD", "status", "cancel all", "picture"):
             self.assertFalse(self.t.wanted(rest), rest)

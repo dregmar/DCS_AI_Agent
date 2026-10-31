@@ -40,7 +40,8 @@ import config
 from core.state import enemy_lists_stale
 
 SPAWNS = frozenset({"spawnGroundUnits", "spawnHelicopters", "spawnAircrafts"})
-UNIT_COMMANDS = frozenset({"deleteUnit", "setROE", "setPath"})
+# setAltitudeType / setAltitude (feature 8): helicopter targets hold 150 m above the ground
+UNIT_COMMANDS = frozenset({"deleteUnit", "setROE", "setPath", "setAltitudeType", "setAltitude"})
 TRAINING_COMMANDS = SPAWNS | UNIT_COMMANDS
 _COALITION = {1: "red", 2: "blue"}
 _ENEMY = {1: 2, 2: 1}
@@ -72,8 +73,13 @@ def template_sizes(path: Optional[str]) -> Optional[Dict[str, int]]:
     return sizes
 
 
-_ON = re.compile(r"\btraining(?: mode)? (?:on|active|start)\b|\bstart training\b")
-_OFF = re.compile(r"\btraining(?: mode)? (?:off|stop|end)\b|\b(?:stop|end) training\b")
+_ON = re.compile(r"\btraining(?: mode)? (?:on|active|start)\b|"
+                 r"\b(?:start|begin|enter|enable|turn on) (?:the )?training\b")
+# 30 Oct flight: "end the training", "exit training (mode)", "cancel training", "abort training" all missed
+_OFF = re.compile(r"\btraining(?: mode)? (?:off|stop|end|over|finished|complete)\b|"
+                  r"\b(?:stop|end|exit|leave|cancel|abort|finish|quit|terminate|disable|turn off) "
+                  r"(?:the |our |my )?training\b")
+_QUESTION = re.compile(r"\?|^(?:how|what|why|when|where|can|could|should|would|is|are|do|does)\b")
 _CLEAR = re.compile(r"\b(?:clear|remove|delete) (?:the |all )?training(?: targets?| groups?)?\b")
 _STATUS = re.compile(r"\btraining status\b|\bstatus,? training\b")
 
@@ -216,6 +222,13 @@ class Training:
             return f"{units} training units alive, {new} more would pass the limit of {self.max_units}"
         return None
 
+    # entries are compared by identity: two identical pending requests are still two groups
+    def _has(self, entry: dict) -> bool:
+        return any(g is entry for g in self._groups)
+
+    def _remove(self, entry: dict) -> None:
+        self._groups = [g for g in self._groups if g is not entry]
+
     def has_groups(self) -> bool:
         with self._lock:
             return bool(self._groups)
@@ -226,13 +239,39 @@ class Training:
 
     # ------------------------------------------------------------ the tracked groups
     def add_group(self, group: Optional[str], units: List[Tuple[str, int]], what: str,
-                  requested: Optional[int] = None) -> None:
-        """Feature 8: a training group it spawned (units [(unit name, id)] once Export.lua shows it)."""
+                  requested: Optional[int] = None) -> dict:
+        """Feature 8: a training group it spawned (units [(unit name, id)] once Export.lua shows it;
+        until then group None and the requested unit count, so the limits already count it).
+        Returns the entry (for bind / drop); entry["ended"] says why it left the list."""
+        entry = {"group": group, "units": [(str(n), int(i)) for n, i in units],
+                 "requested": int(requested if requested is not None else len(units)), "what": str(what),
+                 "ended": None}
         with self._lock:
-            self._groups.append({"group": group, "units": [(str(n), int(i)) for n, i in units],
-                                 "requested": int(requested if requested is not None else len(units)),
-                                 "what": str(what)})
+            self._groups.append(entry)
         self._save()
+        return entry
+
+    def bind(self, entry: dict, group: str, units: List[Tuple[str, int]]) -> bool:
+        """The spawned group appeared in DCS: its name and unit ids. False if the entry already left the
+        list (cleared, or a new mission, before it appeared)."""
+        with self._lock:
+            if entry.get("ended") or not self._has(entry):
+                return False
+            entry["group"], entry["units"] = str(group), [(str(n), int(i)) for n, i in units]
+        self._save()
+        return True
+
+    def drop(self, entry: dict, reason: str) -> None:
+        """A spawn that never appeared: out of the list (nothing to delete)."""
+        with self._lock:
+            self._remove(entry)
+            entry["ended"] = entry.get("ended") or reason
+        self._save()
+
+    def discard(self, group: str, units: List[Tuple[str, int]], what: str) -> None:
+        """A group that appeared after its request was cleared: remove it from DCS too."""
+        entry = self.add_group(group, units, what)
+        self._delete([entry])
 
     @staticmethod
     def new_groups(snap: dict, known: set) -> Dict[str, List[Tuple[str, int]]]:
@@ -262,7 +301,8 @@ class Training:
                 groups += 1
                 units += n
             for g in gone:
-                self._groups.remove(g)
+                self._remove(g)
+                g["ended"] = "destroyed"
         if gone:
             self.printer(f"[TRAINING] {len(gone)} training group(s) destroyed: "
                          + ", ".join(str(g["group"]) for g in gone))
@@ -280,6 +320,9 @@ class Training:
             groups = list(self._groups)
         if not groups:
             return 0, ""
+        return self._delete(groups)
+
+    def _delete(self, groups: List[dict]) -> Tuple[int, str]:
         c = self.client()
         if c is None:
             return 0, "no Game Master login in config"
@@ -294,8 +337,8 @@ class Training:
             if ok_all:
                 removed += 1
                 with self._lock:
-                    if g in self._groups:
-                        self._groups.remove(g)
+                    self._remove(g)
+                    g["ended"] = g.get("ended") or "cleared"
         self.printer(f"[TRAINING] Cleared {removed} of {len(groups)} training group(s)"
                      + (f"; {why}" if why else "."))
         self._save()
@@ -304,6 +347,8 @@ class Training:
     def forget(self) -> None:
         """A new mission loaded: its training groups went with the old one."""
         with self._lock:
+            for g in self._groups:
+                g["ended"] = g.get("ended") or "forgotten"
             had, self._groups, self._recover = len(self._groups), [], None
         if had:
             self.printer(f"[TRAINING] New mission: forgot {had} training group(s).")
@@ -319,7 +364,10 @@ class Training:
 
     # ------------------------------------------------------------ voice (Overlord)
     def wanted(self, rest: str) -> bool:
-        t = (rest or "").lower()
+        """A training order (never a question: "how do I end the training?" goes to the briefing)."""
+        t = (rest or "").lower().strip()
+        if _QUESTION.search(t):
+            return False
         return bool(_ON.search(t) or _OFF.search(t) or _CLEAR.search(t) or _STATUS.search(t))
 
     def handle(self, rest: str) -> Optional[str]:

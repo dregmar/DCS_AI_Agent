@@ -179,6 +179,12 @@ TRAINING = training_mod.Training(state_store.snapshot, _training_client, mission
 comms_menu.ON_PLAYERS = TRAINING.note_players
 TRAINING.on_destroyed = lambda names: _alert_training(names)     # Alerts tab (defined below)
 atexit.register(TRAINING.shutdown)
+# Feature 8: "Overlord, spawn two T-72s 5 km north of me" (common/training_targets.py), through the gate.
+# "Group is up" / "failed to appear" come later, from its own thread, in Overlord's voice.
+from common import training_targets as training_targets_mod
+SPAWNER = training_targets_mod.Spawner(
+    TRAINING, state_store.snapshot,
+    lambda text: _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_PILOT)), debrief=DEBRIEF)
 from common.unit_types import TYPES as UNIT_TYPES
 comms_menu.ON_TYPES = UNIT_TYPES.on_types_message   # ... and "TYPES ..." (what each unit type is)
 
@@ -322,6 +328,10 @@ def shared_reply(text: str):
             if not getattr(config, "OLYMPUS_ENABLED", False):
                 return "Overlord, unable, Olympus is turned off in config.", "overlord", "overlord"
             return TRAINING.handle(rest), "overlord", "overlord"
+        if SPAWNER.wanted(rest):                     # "Overlord, spawn two T-72s 5 km north of me"
+            if not getattr(config, "OLYMPUS_ENABLED", False):
+                return "Overlord, unable, Olympus is turned off in config.", "overlord", "overlord"
+            return SPAWNER.handle(rest), "overlord", "overlord"
         if JTAC.wanted(rest):                        # "Overlord, request target" / "mark target" / "BDA"
             said = JTAC.handle(rest)
             if said is not None:
