@@ -63,6 +63,22 @@ class Pipeline(unittest.TestCase):
                       "4 T-72B at 10 o'clock, and 2 more.", out)
         self.assertEqual(self.say("where is target 4"), ["Target 4, T-72B, 10 o'clock, 5.2 kilometers."])
 
+    def test_urgent_lane_through_the_real_handlers(self):
+        """Step 5: "cease fire" is taken by the fast path (never the model) on the urgent lane; a bare
+        "abort" has no fixed George handler, so it falls back to the queue (and the model)."""
+        from unittest import mock
+        from core import lanes
+
+        def model(*a, **k):                   # what ollama_chat.chat does first on the urgent lane
+            main.LANES.before_model()
+            raise RuntimeError("LLM disabled in tests")
+
+        fresh = lanes.Lanes()
+        with mock.patch.object(main, "LANES", fresh), mock.patch.object(main, "query_qwen", model):
+            self.assertTrue(main.run_urgent("George, cease fire", time.monotonic(), None))
+            self.assertFalse(main.run_urgent("Abort", time.monotonic(), None))
+        self.assertFalse(fresh.handler._lock.locked())
+
     def test_expired_fire_order_is_not_fired(self):
         SPOKEN.clear()
         main.handle_command("send it", time.monotonic() - 5.0)

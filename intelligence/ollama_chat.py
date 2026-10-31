@@ -20,6 +20,9 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
 
+from core.metrics import METRICS
+from core.lanes import LANES
+
 # 127.0.0.1, not "localhost": on Windows "localhost" can try IPv6 (::1) first, where Ollama isn't.
 OLLAMA_BASE = "http://127.0.0.1:11434"
 OLLAMA_CHAT_URL = OLLAMA_BASE + "/api/chat"
@@ -114,20 +117,27 @@ def chat(messages: List[dict], model: str, timeout: float = 8.0, max_tokens: int
     post = post or _post
     payload = build_payload(messages, model, max_tokens, temperature)
     t0 = time.perf_counter()
-    try:
+    # Urgent lane (core/lanes.py, audit step 5): never on the urgent lane (NeedsModel); the handler lock
+    # is free while Ollama thinks, so a safety order can run; afterwards Superseded drops this answer
+    # if a safety order was spoken after the utterance it's for.
+    with LANES.model_call():
         try:
-            resp = post(payload, timeout)
-        except urllib.error.HTTPError as e:
-            # An Ollama too old for the "think" option answers 400: retry without it.
-            if e.code == 400 and "think" in payload:
-                print("[LLM] This Ollama doesn't accept 'think'; update Ollama for the fastest Qwen3.")
-                resp = post(build_payload(messages, model, max_tokens, temperature, send_think=False), timeout)
-            else:
-                raise
-    except Exception as e:
-        _note(False, time.perf_counter() - t0, f"{type(e).__name__}")
-        raise
-    _note(True, time.perf_counter() - t0)
+            try:
+                resp = post(payload, timeout)
+            except urllib.error.HTTPError as e:
+                # An Ollama too old for the "think" option answers 400: retry without it.
+                if e.code == 400 and "think" in payload:
+                    print("[LLM] This Ollama doesn't accept 'think'; update Ollama for the fastest Qwen3.")
+                    resp = post(build_payload(messages, model, max_tokens, temperature, send_think=False), timeout)
+                else:
+                    raise
+        except Exception as e:
+            _note(False, time.perf_counter() - t0, f"{type(e).__name__}")
+            METRICS.model_time(time.perf_counter() - t0)
+            METRICS.count("llm_timeouts" if isinstance(e, TimeoutError) else "llm_errors")
+            raise
+        _note(True, time.perf_counter() - t0)            # counted even when the answer is then dropped
+        METRICS.model_time(time.perf_counter() - t0)
     print(timing_line(resp))
     content = (resp.get("message") or {}).get("content", "")
     return extract_json(content)

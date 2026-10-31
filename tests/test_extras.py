@@ -162,13 +162,29 @@ class FakeHook:
         out[12] = "Exit"
         return out
 
+    def page_text(self) -> str:
+        if not self.open:
+            return "MENU 0\n"
+        return "MENU 1\nCAPTION Main. " + ". ".join(self.path) + "\n" + "".join(
+            f"ITEM {k} F{k}. {v}\n" for k, v in self.items().items())
+
+    def show(self, path):
+        """Test set-up: open the menu at this page at once (no timer), newer than any pending publish."""
+        self.open, self.path = True, list(path)
+        self._seq = getattr(self, "_seq", 0) + 1
+        self.menu.update(comms_menu.parse_menu(self.page_text()))
+
     def publish(self):
         if not self.open:
             text = "MENU 0\n"
         else:
             text = "MENU 1\nCAPTION Main. " + ". ".join(self.path) + "\n" + "".join(
                 f"ITEM {k} F{k}. {v}\n" for k, v in self.items().items())
-        threading.Timer(0.02, lambda: self.menu.update(comms_menu.parse_menu(text))).start()
+        # 29 Oct: two timers started together can fire in either order on Windows (15 ms timer
+        # ticks), so an older page could land last. Only the newest publish is applied.
+        self._seq = getattr(self, "_seq", 0) + 1
+        seq = self._seq
+        threading.Timer(0.02, lambda: seq == self._seq and self.menu.update(comms_menu.parse_menu(text))).start()
 
     def on_command(self, cmd):
         if cmd == "OPEN":
@@ -251,6 +267,21 @@ def put_eufd(lines):
     for i, addr in enumerate(abm.EUFD_LINES):
         text = (lines[i] if i < len(lines) else "").ljust(abm.EUFD_LEN)[:abm.EUFD_LEN]
         set_words({addr + j: ord(text[j]) | (ord(text[j + 1]) << 8) for j in range(0, abm.EUFD_LEN, 2)})
+
+
+class TestMenuFrequencies(unittest.TestCase):
+    """29 Oct: "Nellis" got "say again" against "Nellis (327.000 MHz)", and the next page's caption
+    was read as "7 MHz)"."""
+
+    def test_frequency_tags_dont_count(self):
+        w = comms_menu._words("Nellis")
+        self.assertEqual(comms_menu.score(w, "Nellis (327.000 MHz, 132.550 MHz)"), 1.0)
+        items = {1: "Creech (360.600 MHz)", 2: "Nellis (327.000 MHz)", 3: "Groom Lake [N/A]"}
+        self.assertEqual(comms_menu.best_item(w, items), (2, 1.0))
+
+    def test_readout_head(self):
+        menu = {"caption": "Main. ATC. Nellis (327.000 MHz).", "items": {1: "Inbound", 2: "Request Azimuth"}}
+        self.assertEqual(comms_menu.readout(menu), "Nellis: 1 Inbound, 2 Request Azimuth.")
 
 
 class FakeApacheBios:
@@ -337,12 +368,14 @@ class TestCommonCheatSheet(unittest.TestCase):
         for p in phrases:
             with self.subTest(phrase=p):
                 if p in needs_open:
-                    hook.on_command("OPEN")
-                    hook.path = list(needs_open[p])
-                    hook.publish()
-                    wait_until(lambda: menu.snapshot()[0]["visible"] and
-                               menu.snapshot()[0]["caption"].endswith("/".join(needs_open[p]) or "Main. "), 1)
-                    time.sleep(0.05)
+                    # 29 Oct: set the page directly; through the publish timers it sometimes didn't land
+                    # on the PC (and a pending older timer is now ignored)
+                    time.sleep(0.1)                     # let the last phrase's own publish land first
+                    hook.show(needs_open[p])
+                    want = ("Main. " + ". ".join(needs_open[p])).strip()   # the main page reads "Main."
+                    got = menu.snapshot()[0]
+                    self.assertTrue(got["visible"] and got["caption"] == want,
+                                    f"menu at {got.get('caption')!r}, wanted {want!r} (hook path {hook.path})")
                 from common import wingmen
                 handled = (comms_menu.handle(menu, p) is not None
                            or nav_commands.handle(p, snap(), 500) is not None

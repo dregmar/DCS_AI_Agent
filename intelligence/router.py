@@ -189,6 +189,9 @@ class Router:
         self.understands = understands
         self._recent = None                      # (addressee, when): "outcast 2" / "overlord"
         self._lock = threading.Lock()
+        self._save_lock = threading.Lock()       # one file write at a time; never held with _lock
+        self._version = 0                        # bumped under _lock on every change to phrases / words
+        self._saved_version = 0
         self._pending = None                     # (original, command, expires)
         self.phrases, self.words = {}, {}
         self._load()
@@ -207,17 +210,27 @@ class Router:
             print(f"[ROUTER] Couldn't read {self.file}: {type(e).__name__}: {e}")
 
     def _save(self):
+        """Writes the learned phrases. Call WITHOUT _lock held (audit step 9: the file was written
+        under it, so apply_learned on the voice thread waited on the disk). Copies are taken under
+        _lock; writes are serialised on _save_lock and an older copy never overwrites a newer one."""
         if not self.file:
             return
-        try:
-            os.makedirs(os.path.dirname(self.file), exist_ok=True)
-            tmp = self.file + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump({"_note": "Learned from rewrites that worked. Delete any line that is wrong.",
-                           "phrases": self.phrases, "words": self.words}, f, indent=1, sort_keys=True)
-            os.replace(tmp, self.file)
-        except Exception as e:
-            print(f"[ROUTER] Couldn't save {self.file}: {type(e).__name__}: {e}")
+        with self._lock:
+            version = self._version
+            data = {"_note": "Learned from rewrites that worked. Delete any line that is wrong.",
+                    "phrases": dict(self.phrases), "words": dict(self.words)}
+        with self._save_lock:
+            if version <= self._saved_version:
+                return                           # a newer copy is already on disk
+            try:
+                os.makedirs(os.path.dirname(self.file), exist_ok=True)
+                tmp = self.file + ".tmp"
+                with open(tmp, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=1, sort_keys=True)
+                os.replace(tmp, self.file)
+                self._saved_version = version
+            except Exception as e:
+                print(f"[ROUTER] Couldn't save {self.file}: {type(e).__name__}: {e}")
 
     def apply_learned(self, text: str) -> str:
         """The utterance with what was learned applied (unchanged when nothing applies)."""
@@ -253,14 +266,17 @@ class Router:
                     continue
                 if difflib.SequenceMatcher(None, src.replace(" ", ""), dst).ratio() >= 0.45:
                     self.words[src] = dst
-            self._save()
+            self._version += 1
+        self._save()
         print(f"[ROUTER] Learned '{o}' -> '{c}'.")
 
     def forget(self, text: str) -> bool:
         with self._lock:
             gone = self.phrases.pop(norm(text), None) is not None
             if gone:
-                self._save()
+                self._version += 1
+        if gone:
+            self._save()
         return gone
 
     # ------------------------------------------------------------ confirmation
@@ -341,7 +357,9 @@ class Router:
         said, speaker = got
         if said:
             self.speak(said, speaker)
-        if not MISSED.search(said or "") and not re.search(r"\bunable\b", said or "", re.I):
+        # only a rewrite that was taken is learned: not "say again", "unable" or a refusal ("negative, no
+        # targets for you": 30 Oct, a spawn request rewritten as "request target" was learned)
+        if not MISSED.search(said or "") and not re.search(r"\b(?:unable|negative)\b", said or "", re.I):
             self.learn(original, command)
         return True
 

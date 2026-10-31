@@ -16,6 +16,12 @@ connection: AUTH_VARIANTS x PATHS are tried and the one that works is kept. olym
 what was found.
 
 Blocking calls (2 s timeout): call from a worker thread, never from a telemetry loop.
+
+Health (audit step 2, 29 Oct): no lock is held across HTTP (one connection attempt at a time, on its
+own lock); status() gives the last error and its age, the last success and failure counts by kind
+(unreachable / refused / http) for the kneeboard Status page; every failed command is logged, so
+follow-up orders whose result isn't checked (setROE after a launch, Outcast clean-up) leave a trace.
+No password or header ever goes into an error, a log line or status().
 """
 import base64
 import hashlib
@@ -24,7 +30,8 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from typing import Any, Dict, Optional, Tuple
+from collections import Counter
+from typing import Any, Callable, Dict, Optional, Tuple
 
 # spawnAircrafts: Overlord's SEAD flight only (common/overlord.py). No delete / explosion.
 # cloneUnits / deleteUnit: "two, go independent" only (common/independents.py), never your aircraft.
@@ -42,8 +49,14 @@ class OlympusError(Exception):
 
 class Olympus:
     def __init__(self, url: str = "http://localhost:4512", user: str = "George", password: str = "",
-                 timeout: float = 2.0, opener=None):
+                 timeout: float = 2.0, opener=None, allowed=None,
+                 guard: Optional[Callable[[str, Dict[str, Any]], Tuple[bool, str]]] = None):
+        """allowed: the commands this client may send (default ALLOWED, the Blue commander's list).
+        guard(name, params) -> (ok, why): must approve every command (the training client's fence,
+        common/training.py); None = no extra check."""
         self.url = url.rstrip("/")
+        self.allowed = frozenset(ALLOWED if allowed is None else allowed)
+        self.guard = guard
         self.user = user
         self.timeout = timeout
         self._opener = opener or urllib.request.urlopen
@@ -53,8 +66,12 @@ class Olympus:
         self._auth_name = ""
         self._cmd_path: Optional[str] = None
         self._last_try = -1e9
-        self._lock = threading.Lock()
+        self._lock = threading.Lock()              # state only: never held across HTTP
+        self._connecting = threading.Lock()        # one connection attempt at a time
         self.last_error = ""
+        self._error_at: Optional[float] = None     # time.monotonic() of last_error
+        self._ok_at: Optional[float] = None        # last request Olympus answered 200
+        self._fails = Counter()                    # unreachable / refused / http
         self._claimed = set()          # Olympus-N groups already ours (Overlord flights, Outcasts)
 
     def claim(self, group: str) -> None:
@@ -88,68 +105,141 @@ class Olympus:
         except (urllib.error.URLError, OSError, TimeoutError) as e:
             raise OlympusError(f"Olympus not reachable ({getattr(e, 'reason', e)})") from e
 
+    # ------------------------------------------------------------ health
+    def _ok(self) -> None:
+        with self._lock:
+            self._ok_at = time.monotonic()
+
+    def _fail(self, kind: str, why: str, what: str = "", always: bool = False, drop: bool = False) -> None:
+        """Records a failure; logs it (always for commands, else only when the reason changes)."""
+        with self._lock:
+            new = why != self.last_error
+            self.last_error, self._error_at = why, time.monotonic()
+            self._fails[kind] += 1
+            if drop:
+                self._auth = None                    # reconnect next time
+        if always or new:
+            print(f"[OLYMPUS] {what + ' failed: ' if what else ''}{why}")
+
+    def status(self) -> Dict[str, Any]:
+        """For the Status page: connected, last error and its age, last success age, failure counts."""
+        now = time.monotonic()
+        with self._lock:
+            return {"connected": self._auth is not None, "login": self._auth_name if self._auth else "",
+                    "last_error": self.last_error,
+                    "error_age": None if self._error_at is None else now - self._error_at,
+                    "ok_age": None if self._ok_at is None else now - self._ok_at,
+                    "fails": dict(self._fails)}
+
     # ------------------------------------------------------------ connection
     def connect(self, force: bool = False) -> bool:
-        """Finds a working login. Cheap once connected; retries at most every RETRY_SEC."""
+        """Finds a working login. Cheap once connected; retries at most every RETRY_SEC. Another
+        thread already connecting: False at once (force waits for it)."""
         with self._lock:
             if self._auth and not force:
                 return True
-            now = time.monotonic()
-            if not force and now - self._last_try < RETRY_SEC:
+            if not force and time.monotonic() - self._last_try < RETRY_SEC:
                 return False
-            self._last_try = now
+        if not self._connecting.acquire(blocking=force):
+            return False
+        try:
+            with self._lock:                         # re-check: the other attempt may have finished
+                if self._auth and not force:
+                    return True
+                if not force and time.monotonic() - self._last_try < RETRY_SEC:
+                    return False
+                self._last_try = time.monotonic()
             try:
                 for name, secret in self._auth_variants:
                     auth = self._header(secret)
                     for path in DATA_PATHS:
                         status, _ = self._request("GET", path, None, auth)
                         if status == 200:
-                            self._auth, self._auth_name = auth, name
+                            with self._lock:
+                                self._auth, self._auth_name = auth, name
+                                self._ok_at = time.monotonic()
                             print(f"[OLYMPUS] Connected ({name} password, {path}).")
                             return True
-                        if status == 404:
-                            continue
-                self.last_error = "Olympus refused the password (Blue commander?)"
+                self._fail("refused", "Olympus refused the password (Blue commander?)")
             except OlympusError as e:
-                self.last_error = str(e)
+                self._fail("unreachable", str(e))
             return False
+        finally:
+            self._connecting.release()
 
     @property
     def connected(self) -> bool:
-        return self._auth is not None
+        with self._lock:
+            return self._auth is not None
+
+    def _login(self) -> Tuple[Optional[str], Optional[str]]:
+        with self._lock:
+            return self._auth, self._cmd_path
 
     def get(self, path: str) -> Any:
         if not self.connect():
             raise OlympusError(self.last_error or "Olympus not connected")
-        status, body = self._request("GET", path, None, self._auth)
+        auth, _ = self._login()
+        try:
+            status, body = self._request("GET", path, None, auth)
+        except OlympusError as e:
+            self._fail("unreachable", str(e), f"GET {path}", drop=True)
+            raise
+        if status in (401, 403):
+            self._fail("refused", "Olympus refused the password", f"GET {path}", drop=True)
+            raise OlympusError("Olympus refused the password")
         if status != 200:
+            self._fail("http", f"GET {path}: HTTP {status}")
             raise OlympusError(f"GET {path}: HTTP {status}")
+        self._ok()
         try:
             return json.loads(body.decode("utf-8", errors="replace") or "null")
         except ValueError:
             return body
 
     def command(self, name: str, params: Dict[str, Any]) -> Tuple[bool, str]:
-        """PUT {name: params}. (True, '') when Olympus accepted it, else (False, why)."""
-        if name not in ALLOWED:
+        """PUT {name: params}. (True, '') when Olympus accepted it, else (False, why). Failures are
+        logged here, so callers that don't check the result still leave a trace. The result is also
+        noted for common/orders.py (an order's outcome, audit step 6)."""
+        ok, why = self._command(name, params)
+        from common import orders
+        orders.note_command(name, ok, why)
+        return ok, why
+
+    def _command(self, name: str, params: Dict[str, Any]) -> Tuple[bool, str]:
+        if name not in self.allowed:
             return False, f"{name} isn't allowed"
+        if self.guard is not None:
+            try:
+                ok, why = self.guard(name, params)
+            except Exception as e:                   # a broken guard refuses, never lets through
+                ok, why = False, f"guard error {type(e).__name__}"
+            if not ok:
+                print(f"[OLYMPUS] {name} refused: {why}")
+                return False, why
         if not self.connect():
-            return False, self.last_error or "Olympus not connected"
-        paths = [self._cmd_path] if self._cmd_path else list(COMMAND_PATHS)
+            why = self.last_error or "Olympus not connected"
+            print(f"[OLYMPUS] {name} not sent: {why}")
+            return False, why
+        auth, cmd_path = self._login()
+        paths = [cmd_path] if cmd_path else list(COMMAND_PATHS)
         last = ""
         for path in paths:
             try:
-                status, body = self._request("PUT", path, {name: params}, self._auth)
+                status, body = self._request("PUT", path, {name: params}, auth)
             except OlympusError as e:
-                self._auth = None                    # reconnect next time
+                self._fail("unreachable", str(e), name, always=True, drop=True)
                 return False, str(e)
             if status == 200:
-                if self._cmd_path != path:
+                with self._lock:
                     self._cmd_path = path
+                    self._ok_at = time.monotonic()
                 print(f"[OLYMPUS] {name} {json.dumps(params)}")
                 return True, ""
             if status in (401, 403):
-                self._auth = None
+                self._fail("refused", "Olympus refused the password", name, always=True, drop=True)
                 return False, "Olympus refused the password"
             last = f"HTTP {status}"
-        return False, f"Olympus didn't take {name} ({last})"
+        why = f"Olympus didn't take {name} ({last})"
+        self._fail("http", why, name, always=True)
+        return False, why

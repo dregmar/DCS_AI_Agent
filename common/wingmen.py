@@ -166,6 +166,9 @@ def give_order(comms, snap: dict, who, path: Optional[List[str]]) -> str:
         who = wing[0]["n"]
     target = "Flight" if who == "flight" else f"Wingman {who}"
     ok, why = comms.select_path([target] + path)
+    from common.orders import ORDERS
+    ORDERS.record(_who_say(who), " / ".join(path), "submitted" if ok else "failed",
+                  "radio menu" if ok else f"radio menu: {why}")
     if ok:
         print(f"[WINGMEN] {target}: {' / '.join(path)}")
         return ""
@@ -345,8 +348,13 @@ def _olympus_order(snap: dict, who, kind: str, params: dict) -> Optional[str]:
     seen = [w for w in wing if w["id"] is not None]
     if not seen:
         return f"Unable, I can't see {_who_say(who if who != 'wingman' else wing[0]['n']).lower()}."
+    from common.orders import ORDERS, capture
     if not EXECUTOR.oly.connect():
         if kind == "attack" and params.get("which") == "mine":
             return None                                  # the menu's Engage > My Target
+        ORDERS.record(_who_say(who), kind, "failed", "Olympus isn't running")
         return "Unable, Olympus isn't running."
-    return EXECUTOR.run(kind, params, seen, _who_say(who))
+    with capture() as sent:
+        said = EXECUTOR.run(kind, params, seen, _who_say(who))
+    ORDERS.record_outcome(_who_say(who), kind, sent, said)
+    return said

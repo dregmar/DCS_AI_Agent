@@ -1,3 +1,4 @@
+import atexit
 import os
 import re
 import queue
@@ -16,7 +17,7 @@ from config import PTT_MODE, JOY_NAME_CONTAINS, JOY_DEVICE_INDEX, JOY_BUTTON, JO
 from config import (PTT_KEY, SAMPLE_RATE, KEY_DELAY, MIC_DEVICE, MIN_UTTERANCE_SEC,
                     TRAILING_CAPTURE_SEC, WHISPER_MODEL, WHISPER_CPU_THREADS, STT_PROMPT,
                     READBACK_TIMEOUT_SEC, TELEMETRY_STALE_SEC, UTTERANCE_MAX_AGE_SEC)
-from core.state import state_store
+from core.state import state_store, enemy_lists_stale
 from core.telemetry_listener import start_telemetry_thread
 from core.dcs_bios import start_dcs_bios_thread, cmd_sender
 from core.george_interface import GeorgeInterface, TOGGLE_VK
@@ -50,6 +51,11 @@ from audio.tts import (speak_george_radio, speak_overlord, start_speech_worker, 
                        PRIORITY_ALERT, PRIORITY_PILOT)
 from audio import tts as tts_mod
 from kneeboard.comms_log import LOG as COMMS_LOG
+from core.metrics import METRICS
+from common.orders import ORDERS
+from common import training as training_mod
+from core import lanes
+from core.lanes import LANES
 from kneeboard import pages as kb_pages
 from huey.checklists import CHECKLISTS as HUEY_CHECKLISTS
 from apache.checklists import APACHE_CHECKLISTS
@@ -150,9 +156,29 @@ def _on_mission_loaded() -> None:
     JTAC.reset()
     JET_CHECKLISTS.reset()
     QUIET.end("new mission")
+    TRAINING.forget()                       # training targets went with the old mission
+    TRACK.reset()                           # the kneeboard track starts again with the mission
+    ALERTS.reset()                          # the last mission's alerts go to the Alerts history
 
 
 comms_menu.ON_LOADED = lambda: _on_mission_loaded()
+
+
+# Training targets: the gate (common/training.py, audit step 7). The Game Master client is made on
+# first use, only when Olympus is on and config.py has a Game Master password.
+def _training_client(guard):
+    pw = getattr(config, "OLYMPUS_GM_PASSWORD", "")
+    if not (getattr(config, "OLYMPUS_ENABLED", False) and pw):
+        return None
+    from common import olympus
+    return olympus.Olympus(config.OLYMPUS_URL, getattr(config, "OLYMPUS_GM_USER", "") or config.OLYMPUS_USER,
+                           pw, allowed=training_mod.TRAINING_COMMANDS, guard=guard)
+
+
+TRAINING = training_mod.Training(state_store.snapshot, _training_client, mission_name=KB.mission_name)
+comms_menu.ON_PLAYERS = TRAINING.note_players
+TRAINING.on_destroyed = lambda names: _alert_training(names)     # Alerts tab (defined below)
+atexit.register(TRAINING.shutdown)
 from common.unit_types import TYPES as UNIT_TYPES
 comms_menu.ON_TYPES = UNIT_TYPES.on_types_message   # ... and "TYPES ..." (what each unit type is)
 
@@ -232,6 +258,7 @@ def olympus_watch() -> None:
             tries += 1
             if wingmen.EXECUTOR and not wingmen.EXECUTOR.oly.connected and tries % 15 == 0:
                 wingmen.EXECUTOR.oly.connect()
+            TRAINING.recover()                       # training targets left by a crash (cheap when none)
         except Exception as e:
             print(f"[OLYMPUS] {type(e).__name__}: {e}")
 
@@ -276,7 +303,8 @@ def press_menu_keys(keys) -> bool:
 comms = comms_menu.CommsMenu(speak=_speak_pilot, press_keys=press_menu_keys)
 # Jets: Overlord's joker / bingo calls (common/fuel_watch.py; numbers per type in common/aircraft.py)
 FUEL_WATCH = FuelWatch(state_store.snapshot,
-                       lambda text: _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_ALERT, max_age=30.0)))
+                       lambda text: (_alert_fuel(text),           # the Alerts tab at once, even if speech waits
+                                     _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_ALERT, max_age=30.0))))
 # Supercarrier by voice: "Marshal, inbound" / "commencing" / "platform" pick its radio-menu items
 CARRIER = carrier_mod.CarrierCalls(
     comms, QUIET, is_jet=lambda: aircraft_mod.profile(state_store.snapshot()).kind == "jet",
@@ -290,6 +318,10 @@ def shared_reply(text: str):
     handler takes it. Speaks nothing itself (handle_shared does)."""
     rest = overlord_mod.addressed(text)
     if rest is not None:                             # "Overlord, ...": only Overlord answers
+        if TRAINING.wanted(rest):                    # "Overlord, training mode on" / "clear training targets"
+            if not getattr(config, "OLYMPUS_ENABLED", False):
+                return "Overlord, unable, Olympus is turned off in config.", "overlord", "overlord"
+            return TRAINING.handle(rest), "overlord", "overlord"
         if JTAC.wanted(rest):                        # "Overlord, request target" / "mark target" / "BDA"
             said = JTAC.handle(rest)
             if said is not None:
@@ -312,7 +344,13 @@ def shared_reply(text: str):
     page = kb_pages.match(text, bare_scroll=state_store.profile() != "apache") if KNEEBOARD_ON else None
     if page is not None:                             # "show the briefing" / "scroll down": the page answers
         print(f"[KNEEBOARD] {page}")
-        KB_PAGES.apply(page)
+        if page["kind"] == "ack":                    # "kneeboard, acknowledge (all)": the Alerts tab
+            n = ALERTS.ack_all() if page["all"] else int(ALERTS.ack_newest())
+            print(f"[ALERTS] Acknowledged {n}.")
+        elif page["kind"] == "track":                # "kneeboard, track on / off": this session only
+            TRACK.visible = page["on"]
+        else:
+            KB_PAGES.apply(page)
         return "", "george", "kneeboard"
     m = _JTAC_WAKE.match(text or "")                 # "JTAC, request target": Overlord answers
     if m and JTAC.wanted(m.group(1)):
@@ -502,6 +540,78 @@ from core.state import watch_raw as _watch_raw
 _watch_raw(JET_CHECKLISTS.addresses())
 KNEEBOARD_ON = False                            # set when the server starts
 
+# Alerts tab (kneeboard/alerts.py) and your track on the map (kneeboard/track.py), agreed 30 Oct.
+from kneeboard.alerts import ALERTS, LinkWatch
+from kneeboard.track import Track
+TRACK = Track(state_store.snapshot, visible=getattr(config, "KNEEBOARD_TRACK", True))
+_LINKS = LinkWatch(ALERTS)
+
+
+def _quiet_text(text: str) -> str:
+    """'Overlord, bingo fuel, ...' -> 'Bingo fuel, ...' for the Alerts tab."""
+    t = re.sub(r"^\s*overlord,\s*", "", text or "", flags=re.I).strip()
+    return t[:1].upper() + t[1:]
+
+
+def _alert_fuel(text: str) -> None:
+    t = (text or "").lower()
+    stage = "bingo" if "bingo fuel" in t else "joker" if "joker fuel" in t else None
+    if stage:
+        ALERTS.raise_("fuel", "critical" if stage == "bingo" else "warning", _quiet_text(text),
+                      resolved=lambda: not FUEL_WATCH.stage_active(stage))
+
+
+def _no_close_bandits() -> bool:
+    snap = state_store.snapshot()
+    me = snap.get("my_ll")
+    if not me or enemy_lists_stale(snap):
+        return False                                 # can't tell: keep it
+    close = aircraft_mod.profile(snap).air_close_m or overlord_mod.AirWarning.CLOSE_M
+    return not overlord_mod.bandits_near(snap, (me[0], me[1]), close * 1.5)
+
+
+def _alert_air(text: str) -> None:
+    t = (text or "").lower()
+    if "bandit" in t and "closing" in t:
+        ALERTS.raise_("bandit", "critical", _quiet_text(text), resolved=_no_close_bandits)
+    elif "pop-up group" in t:
+        ALERTS.raise_("popup", "info", _quiet_text(text))
+
+
+_ANNUNCIATOR = None                              # set in main() (the Apache's threat / altitude calls)
+
+
+def _alert_annunciator(text: str) -> None:
+    t = (text or "").lower()
+    a = _ANNUNCIATOR
+    if t.startswith("warning,") and "detected" in t:
+        ALERTS.raise_("airdefence", "critical", text,
+                      resolved=lambda: a is not None and not a.active("priority_air_defense"))
+    elif t.startswith("altitude low"):
+        ALERTS.raise_("lowalt", "warning", text, resolved=lambda: a is not None and not a.active("low_alt"))
+
+
+def _alert_eufd(kind: str, text: str) -> None:
+    from apache.eufd import speakable
+    ALERTS.raise_(f"eufd:{kind}:{text}", "critical" if kind == "warning" else "warning",
+                  f"{'Warning' if kind == 'warning' else 'Caution'}: {speakable(text)}",
+                  resolved=lambda: not apache_crew.monitor.showing(kind, text))
+
+
+def _alert_training(names) -> None:
+    ALERTS.raise_("training", "info", "Training target destroyed: " + ", ".join(names))
+
+
+def alerts_watch() -> None:
+    """Once a second: alerts whose cause is gone clear; lost / restored links (Status page) alert."""
+    while True:
+        time.sleep(1.0)
+        try:
+            ALERTS.tick()
+            _LINKS.update(kneeboard_status()["links"])
+        except Exception as e:
+            print(f"[ALERTS] {type(e).__name__}: {e}")
+
 
 def _checklists_now():
     """(runner, lists, aircraft) of the crew in this aircraft; no runner without a crew."""
@@ -527,6 +637,60 @@ def kneeboard_briefing() -> dict:
     return kb_pages.build_briefing(KB, kb_aircraft())
 
 
+def _latency_rows() -> list:
+    """Status page: median / worst over the last utterances (core/metrics.py), and the counts."""
+    s = METRICS.summary()
+    rows = []
+    for key, name in (("to_audio", "Release to first word"), ("stt", "Speech recognition (measured)"),
+                      ("model", "Model calls"), ("handler", "Handling"), ("synth", "Voice synthesis")):
+        v = s.get(key)
+        if v:
+            rows.append({"name": name, "value": f"median {v['median']:.2f} s, worst {v['max']:.2f} s "
+                                                 f"(last {v['n']})"})
+    counts = {k: n for k, n in (s.get("counts") or {}).items() if n}
+    if counts:
+        rows.append({"name": "Dropped / failed", "value": ", ".join(f"{k.replace('_', ' ')} {n}"
+                                                                     for k, n in sorted(counts.items()))})
+    return rows
+
+
+def _enemy_picture_link(snap: dict) -> dict:
+    """Status page row: how old Export.lua's enemy / air-defence / Olympus lists are (audit step 3)."""
+    from core.state import ENEMY_LIST_STALE_SEC
+    age = snap.get("enemy_lists_age")
+    if age is None:
+        return {"name": "Enemy picture (Export.lua scan)", "ok": None,
+                "detail": "age unknown: copy the new Export.lua to Saved Games\\DCS\\Scripts"}
+    if age == float("inf"):
+        return {"name": "Enemy picture (Export.lua scan)", "ok": False, "detail": "no world scan yet"}
+    ok = age <= ENEMY_LIST_STALE_SEC
+    return {"name": "Enemy picture (Export.lua scan)", "ok": ok,
+            "detail": "fresh" if ok else f"{int(age)} s old: no kill calls or new tasking until it updates"}
+
+
+def order_to_comms_log(r) -> None:
+    """An order's outcome (common/orders.py) as a kneeboard comms log line of kind "order"."""
+    COMMS_LOG.add("order", r.text())
+
+
+def _olympus_link(ex) -> dict:
+    """Status page row for Olympus: up or why not, how long ago, failure counts (audit step 2)."""
+    if ex is None:
+        return {"name": "DCS Olympus", "ok": None, "detail": "off in config"}
+    st = ex.oly.status() if hasattr(ex.oly, "status") else {"connected": ex.oly.connected}
+    ago = lambda a: f"{a:.0f} s ago" if a < 120 else f"{a / 60:.0f} min ago"
+    parts = ["connected" if st["connected"] else "not connected"]
+    err, err_age, ok_age = st.get("last_error"), st.get("error_age"), st.get("ok_age")
+    if err and err_age is not None and (not st["connected"] or ok_age is None or err_age < ok_age):
+        parts.append(f"last error {ago(err_age)}: {err}")       # newer than the last success
+    elif st["connected"] and ok_age is not None:
+        parts.append(f"last answer {ago(ok_age)}")
+    fails = st.get("fails") or {}
+    if fails:
+        parts.append("failures: " + ", ".join(f"{k} {n}" for k, n in sorted(fails.items())))
+    return {"name": "DCS Olympus", "ok": st["connected"], "detail": "; ".join(parts)}
+
+
 def kneeboard_status() -> dict:
     """The status page: which links are up, and the last timings."""
     snap = state_store.snapshot()
@@ -536,13 +700,13 @@ def kneeboard_status() -> dict:
          "detail": f"{snap.get('aircraft') or 'no aircraft'}, last {age(snap['telemetry_age'])}"},
         {"name": "DCS-BIOS", "ok": snap["bios_age"] <= TELEMETRY_STALE_SEC if snap.get("bios_age") is not None else None,
          "detail": f"last {age(snap.get('bios_age', float('inf')))}"},
+        _enemy_picture_link(snap),
         {"name": "Comms hook", "ok": comms.live(), "detail": "radio menu, mission, fuel" if comms.live() else "not heard"},
         {"name": "DCS fuel (hook)", "ok": snap.get("dcs_fuel_age", float("inf")) <= 15.0,
          "detail": f"last {age(snap.get('dcs_fuel_age', float('inf')))}"},
     ]
-    ex = wingmen.EXECUTOR
-    links.append({"name": "DCS Olympus", "ok": (ex.oly.connected if ex else None),
-                  "detail": "connected" if ex and ex.oly.connected else ("off in config" if not ex else "not connected")})
+    links.append(_olympus_link(wingmen.EXECUTOR))
+    links.append(TRAINING.link())
     last = ollama_chat.last_call()
     links.append({"name": f"Ollama ({config.LLM_MODEL})", "ok": last.get("ok"),
                   "detail": (f"last call {last['secs']:.2f} s, {age(time.time() - last['when'])}"
@@ -553,6 +717,7 @@ def kneeboard_status() -> dict:
     with _stats_lock:
         stt = _STATS.get("stt")
     times = [{"name": "Profile", "value": state_store.profile()},
+             *_latency_rows(),
              {"name": "Speech recognition", "value": f"{stt[0]:.2f} s ({WHISPER_MODEL})" if stt else f"not used yet ({WHISPER_MODEL})"},
              {"name": "Carrier quiet window", "value": "on" if QUIET.active() else "off"}]
     return {"links": links, "times": times}
@@ -772,7 +937,10 @@ def handle_command(text: str, captured: float = None) -> None:
         elif overlord_mod.addressed(text) is not None or _JTAC_WAKE.match(text or ""):
             ROUTER.note_addressee("overlord")
     deferred = []                                     # Overlord's / a wingman's "say again"
-    if handle_shared(text, deferred):
+    t_shared = time.perf_counter()
+    taken = handle_shared(text, deferred)
+    METRICS.stage(METRICS.current(), "shared", time.perf_counter() - t_shared)
+    if taken:
         return
     if state_store.profile() == "other":            # not the Apache or Huey: no George, no crew
         if not deferred and (briefing.is_briefing_question(text)       # or "how do I employ the Maverick?"
@@ -1032,7 +1200,9 @@ def voice_worker(stt_model: WhisperModel) -> None:
         age = time.monotonic() - captured
         if age > UTTERANCE_MAX_AGE_SEC:
             print(f"[STT] Dropped stale utterance ({age:.1f}s old).")
+            METRICS.count("utterances_dropped_stale")
             continue
+        uid = METRICS.start(captured)
         try:
             t0 = time.perf_counter()
             prompt = stt_prompt()           # + "Outcast 2, waypoint Alpha" while they exist
@@ -1043,11 +1213,16 @@ def voice_worker(stt_model: WhisperModel) -> None:
             text = " ".join(s.text for s in segments).strip()
             t_stt = time.perf_counter() - t0
 
+            METRICS.stage(uid, "stt", t_stt)
             if not text or text.lower().strip(" .!?,") in _HALLUCINATIONS:
                 print("[STT] No speech detected.")
+                METRICS.count("stt_no_speech")
+                METRICS.forget(uid)
                 continue
             if _repeating(text):            # 28 Oct: "Map, map, map, map, ..." from a long press
                 print(f"[STT] Ignored a repeating transcript: '{text[:60]}...'")
+                METRICS.count("stt_repeating")
+                METRICS.forget(uid)
                 continue
 
             print(f"[PILOT]: '{text}'  (STT {t_stt:.2f}s for {len(audio) / SAMPLE_RATE:.1f}s audio, {WHISPER_MODEL})")
@@ -1057,9 +1232,80 @@ def voice_worker(stt_model: WhisperModel) -> None:
             if fixed:
                 print(f"[STT] Taking '{text}' as '{fixed}'.")
                 text = fixed
-            handle_command(text, captured)
+            METRICS.text(uid, text)
+            if lanes.is_safety_order(text):        # "cease fire" etc.: now, not behind the queue
+                if run_urgent(text, captured, uid):
+                    continue
+            commands.put((captured, text, uid))    # everything else: the command worker, in order
         except Exception as e:
             print(f"[WORKER ERROR] {type(e).__name__}: {e}")   # one bad utterance never kills the pipeline
+            METRICS.count("worker_errors")
+            METRICS.forget(uid)
+
+
+# --- Urgent lane (core/lanes.py, audit step 5) ---
+# The voice thread above only transcribes. Commands run on the command worker, one at a time, in the
+# order spoken. A safety order runs at once on the voice thread (deterministic handlers only) and voids
+# everything spoken before it that isn't done: a model answer in progress, commands still queued.
+commands: "queue.Queue[tuple]" = queue.Queue()
+
+
+def _dropped_by_safety(text: str) -> None:
+    """Decision 4: logged and on the comms log, never spoken."""
+    print(f"[URGENT] Dropped '{text}': a safety order came after it.")
+    METRICS.count("dropped_by_safety_order")
+    try:
+        COMMS_LOG.add("order", f"Dropped after a safety order: '{text}'")
+    except Exception as e:
+        print(f"[URGENT] comms log: {type(e).__name__}: {e}")
+
+
+def run_urgent(text: str, captured: float, uid) -> bool:
+    """Runs a safety order now. False when it needs the model: then it goes to the normal queue
+    (it has still voided everything older)."""
+    LANES.note_safety(captured)
+    print(f"[URGENT] Safety order: '{text}'")
+    t_handle = time.perf_counter()
+    try:
+        with LANES.handler.held(), LANES.working(captured, urgent=True), METRICS.bound(uid):
+            handle_command(text, captured)
+    except lanes.NeedsModel:
+        print(f"[URGENT] No fixed handler for '{text}': queued for the model.")
+        return False
+    METRICS.handled(uid, time.perf_counter() - t_handle)
+    return True
+
+
+def _run_command(captured: float, text: str, uid) -> None:
+    t_handle = time.perf_counter()
+    try:
+        with LANES.handler.held(), LANES.working(captured), METRICS.bound(uid):
+            handle_command(text, captured)
+    except lanes.Superseded:
+        _dropped_by_safety(text)
+    finally:
+        METRICS.handled(uid, time.perf_counter() - t_handle)
+
+
+def command_worker() -> None:
+    while True:
+        captured, text, uid = commands.get()
+        try:
+            age = time.monotonic() - captured
+            if age > UTTERANCE_MAX_AGE_SEC:          # waited too long behind other commands
+                print(f"[STT] Dropped stale command '{text}' ({age:.1f}s old).")
+                METRICS.count("utterances_dropped_stale")
+                METRICS.forget(uid)
+                continue
+            if LANES.superseded(captured):           # spoken before a safety order: void
+                _dropped_by_safety(text)
+                METRICS.forget(uid)
+                continue
+            _run_command(captured, text, uid)
+        except Exception as e:
+            print(f"[WORKER ERROR] {type(e).__name__}: {e}")
+            METRICS.count("worker_errors")
+            METRICS.forget(uid)
 
 
 def lower_process_priority() -> None:
@@ -1140,8 +1386,9 @@ if __name__ == "__main__":
         FUEL_WATCH.start()
     if getattr(config, "OVERLORD_AIR_WARNINGS", True):   # "Overlord, pop-up group ..." on his own
         overlord_mod.AirWarning(state_store.snapshot,
-                                lambda text: _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_ALERT,
-                                                                                         max_age=10.0))).start()
+                                lambda text: (_alert_air(text),
+                                              _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_ALERT,
+                                                                                          max_age=10.0)))).start()
 
     print("[3/5] Loading Faster-Whisper Speech Recognition Model...")
     try:    # use the cached model without contacting huggingface.co (fully local)
@@ -1154,25 +1401,31 @@ if __name__ == "__main__":
 
     print("[4/5] Starting radio speech queue & warming LLM...")
     tts_mod.ON_SPOKEN = lambda who, text: COMMS_LOG.add(who, text)     # kneeboard comms log
+    ORDERS.on_result = order_to_comms_log                                 # order outcomes (audit step 6)
     start_speech_worker()
     if getattr(config, "KNEEBOARD_ENABLED", True):
         try:
             from kneeboard.server import Kneeboard
             Kneeboard(kneeboard_map, kneeboard_status, COMMS_LOG, port=getattr(config, "KNEEBOARD_PORT", 5000),
                       feeds={"briefing": (kneeboard_briefing, 1.0), "checklist": (kneeboard_checklist, 0.5),
-                             "ui": (KB_PAGES.view, 0.2)}).start()
+                             "ui": (KB_PAGES.view, 0.2), "alerts": (ALERTS.view, 0.5),
+                             "track": (TRACK.view, 2.0)}).start()
             KNEEBOARD_ON = True
+            TRACK.start()                                        # your track since mission start
+            threading.Thread(target=alerts_watch, daemon=True, name="kb-alerts").start()
         except OSError as e:
             print(f"[KNEEBOARD] Not started: {e} (another program on port {getattr(config, 'KNEEBOARD_PORT', 5000)}? "
                   f"Change KNEEBOARD_PORT in config.py.)")
     threading.Thread(target=warmup_llm, daemon=True).start()
 
     print("[5/5] Launching Autonomous Flight Safety & Threat Annunciator...")
-    annunciator = AutonomousAnnunciator(tts_callback_func=speak_alert)
+    annunciator = AutonomousAnnunciator(tts_callback_func=lambda text: (_alert_annunciator(text), speak_alert(text)))
+    _ANNUNCIATOR = annunciator
     annunciator.start()
     engagement_monitor = EngagementMonitor(speak_alert)   # missile away / target destroyed callouts
     engagement_monitor.start()
     if config.APACHE_EUFD_CALLOUTS:
+        apache_crew.monitor.on_new = _alert_eufd             # warnings / cautions on the Alerts tab too
         apache_crew.start_callouts(active=lambda: state_store.profile() == "apache")
     crew_chief = None
     if config.HUEY_CALLOUTS:
@@ -1189,6 +1442,7 @@ if __name__ == "__main__":
     for warning in george.bindings_report():
         print(f"[WARN] {warning}")
 
+    threading.Thread(target=command_worker, daemon=True, name="george-commands").start()
     threading.Thread(target=voice_worker, args=(stt_model,), daemon=True, name="george-voice").start()
 
     joystick_ptt = start_joystick_ptt()
@@ -1207,6 +1461,7 @@ if __name__ == "__main__":
         pass
     finally:
         annunciator.stop()
+        TRAINING.shutdown()                          # remove training targets before going
         george.shutdown()
         DEBRIEF.write("(program closed)")
         print("\n[SHUTDOWN] George offline.")

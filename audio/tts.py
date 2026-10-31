@@ -7,6 +7,7 @@ Both Piper voices are loaded into RAM at start-up (CPU only). One worker thread 
 so transmissions never overlap whichever voice they use. If the Overlord voice can't be loaded,
 Overlord's lines are spoken in George's voice instead (nothing is lost).
 """
+import heapq
 import itertools
 import queue
 import threading
@@ -18,6 +19,7 @@ from piper.voice import PiperVoice
 
 from config import PIPER_MODEL_PATH, OVERLORD_MODEL_PATH, AUDIO_OUTPUT_DEVICE
 from audio.dsp import apply_radio_filter, generate_mic_click
+from core.metrics import METRICS
 
 # Lower number = spoken first.
 PRIORITY_ALERT = 0    # unsolicited warnings from the annunciator
@@ -32,6 +34,9 @@ OVERLORD = "overlord"
 ptt_active = threading.Event()
 
 _queue: "queue.PriorityQueue" = queue.PriorityQueue()
+# Backlog cap (audit step 4): past this many waiting transmissions the oldest ROUTINE one is dropped.
+# Pilot replies and alerts are never dropped for room, so the queue only exceeds this with those.
+MAX_QUEUED = 10
 _seq = itertools.count()
 _worker_started = False
 _worker_lock = threading.Lock()
@@ -67,8 +72,29 @@ def speak_radio(text: str, speaker: str = GEORGE, priority: int = PRIORITY_PILOT
     """
     if not text or _voice_for(speaker) is None:
         return
-    _queue.put((priority, next(_seq), time.monotonic(), max_age, speaker, text))
+    uid = METRICS.current()                 # the utterance this replies to (core/metrics.py), or None
+    METRICS.queued(uid)
+    _queue.put((priority, next(_seq), time.monotonic(), max_age, speaker, text, uid))
+    _trim_backlog()
     start_speech_worker()
+
+
+def _trim_backlog() -> None:
+    """Over MAX_QUEUED waiting: drop the oldest routine callout (never a pilot reply or an alert)."""
+    with _queue.mutex:                      # the PriorityQueue's own lock; only list work under it
+        items = _queue.queue
+        if len(items) <= MAX_QUEUED:
+            return
+        routine = [it for it in items if it[0] >= PRIORITY_ROUTINE]
+        if not routine:
+            return
+        oldest = min(routine, key=lambda it: it[1])          # lowest sequence number = queued first
+        items.remove(oldest)
+        heapq.heapify(items)
+        _queue.unfinished_tasks = max(0, _queue.unfinished_tasks - 1)
+    print(f"[RADIO] Speech backlog full, dropped callout: '{oldest[5]}'")
+    METRICS.count("speech_dropped_full")
+    METRICS.dropped(oldest[6])
 
 
 def speak_george_radio(text: str, priority: int = PRIORITY_PILOT, max_age=None) -> None:
@@ -81,7 +107,9 @@ def speak_overlord(text: str, priority: int = PRIORITY_PILOT, max_age=None) -> N
     speak_radio(text, OVERLORD, priority, max_age)
 
 
-# Called with (speaker, text) for every transmission actually played (kneeboard comms log), or None
+# Called with (speaker, text) for every transmission actually played (kneeboard comms log), or None.
+# Called once Piper has produced the audio, just before playback: a line that fails to synthesise or
+# is dropped as stale never reaches the log (audit step 4).
 ON_SPOKEN = None
 
 
@@ -97,21 +125,32 @@ def start_speech_worker() -> None:
 def _worker() -> None:
     """The ONLY thread that ever touches the audio device, so transmissions cannot overlap."""
     while True:
-        priority, _, enqueued, max_age, speaker, text = _queue.get()
+        priority, _, enqueued, max_age, speaker, text, uid = _queue.get()
         try:
             while priority != PRIORITY_PILOT and ptt_active.is_set():
                 time.sleep(0.05)
             if max_age is not None and (time.monotonic() - enqueued) > max_age:
                 print(f"[RADIO] Dropped stale callout: '{text}'")
+                METRICS.count("speech_dropped_stale")
+                METRICS.dropped(uid)
                 continue
-            if ON_SPOKEN is not None:          # kneeboard comms log (never blocks: a deque append)
-                try:
-                    ON_SPOKEN(speaker, text)
-                except Exception as e:
-                    print(f"[TTS] comms log: {e}")
-            _play(text, speaker)
+            started = []
+
+            def on_start(synth, speaker=speaker, text=text, uid=uid, enqueued=enqueued):
+                started.append(METRICS.playing(uid, enqueued, synth, time.monotonic()))
+                if ON_SPOKEN is not None:      # kneeboard comms log (never blocks: a deque append)
+                    try:
+                        ON_SPOKEN(speaker, text)
+                    except Exception as e:
+                        print(f"[TTS] comms log: {e}")
+
+            _play(text, speaker, on_start=on_start)
+            if not started:                    # no audio came out of Piper: nothing was played
+                METRICS.dropped(uid)
         except Exception as e:
             print(f"[TTS ERROR] Failed during speech playback: {e}")
+            METRICS.count("speech_errors")
+            METRICS.dropped(uid)
 
 
 def _synthesize(text: str, v):
@@ -147,13 +186,20 @@ def _build_transmission(speech_float: np.ndarray, sample_rate: int) -> np.ndarra
     return np.concatenate([click_on, pad_gap, speech_with_noise, pad_gap, click_off, dithered_tail])
 
 
-def _play(text: str, speaker: str = GEORGE) -> None:
+def _play(text: str, speaker: str = GEORGE, on_start=None) -> None:
+    """on_start(seconds spent synthesising): called just before playback (latency metrics only)."""
     print(f"[RADIO OUT {speaker.upper()}]: '{text}'")
+    t_synth = time.monotonic()
     speech_float, sample_rate = _synthesize(text, _voice_for(speaker))
     if speech_float is None:
         return
     full = _build_transmission(speech_float, sample_rate)
     total_duration = len(full) / sample_rate
+    if on_start is not None:
+        try:
+            on_start(time.monotonic() - t_synth)
+        except Exception as e:
+            print(f"[TTS] metrics: {e}")
 
     if AUDIO_OUTPUT_DEVICE is not None:
         sd.play(full, samplerate=sample_rate, device=AUDIO_OUTPUT_DEVICE)

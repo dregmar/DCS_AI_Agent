@@ -49,9 +49,15 @@ class EufdMonitor:
 
     def __init__(self, speak, settle_sec: float = 5.0, burst_limit: int = 6):
         self.speak = speak
+        self.on_new = None              # on_new(kind, text) before each call (kneeboard alerts)
         self.settle_sec, self.burst_limit = settle_sec, burst_limit
         self._seen = None
         self._since = None
+
+    def showing(self, kind: str, text: str) -> bool:
+        """Whether this warning / caution is still on the EUFD (False once DCS-BIOS stops)."""
+        seen = self._seen
+        return seen is not None and (kind, text) in seen
 
     def check(self, lines: List[Optional[str]], now: float) -> None:
         msgs = messages(lines)
@@ -67,4 +73,9 @@ class EufdMonitor:
         if not new or now - self._since < self.settle_sec or len(new) >= self.burst_limit:
             return
         for kind, text in sorted(new, key=lambda kt: (KINDS.index(kt[0]), kt[1])):
+            if self.on_new is not None:
+                try:
+                    self.on_new(kind, text)
+                except Exception as e:
+                    print(f"[EUFD] alert: {type(e).__name__}: {e}")
             self.speak(f"{'Warning' if kind == 'warning' else 'Caution'}, {speakable(text)}.")

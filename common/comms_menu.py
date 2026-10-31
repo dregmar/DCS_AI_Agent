@@ -125,7 +125,9 @@ def _words(text: str) -> List[str]:
 
 def score(utter_words: List[str], item: str) -> float:
     """Share of the item's words that were said (0..1); 'ATC' said for 'ATC' = 1."""
-    iw = _words(item)
+    # 29 Oct: "Nellis" scored 1 of 4 against "Nellis (327.000 MHz)": frequencies and tags don't count
+    bare = re.sub(r"\[[^\]]*\]|\([^)]*\)", " ", item)
+    iw = _words(bare) or _words(item)
     if not iw:
         return 0.0
     hit = sum(1 for w in iw if w in utter_words or any(u.startswith(w) or w.startswith(u)
@@ -148,7 +150,8 @@ def readout(menu: dict, limit: int = 8) -> str:
     items = [(n, name) for n, name in sorted(menu["items"].items()) if n < 11]
     if not items:
         return "Menu's empty."
-    parts = [p.strip() for p in (menu.get("caption") or "").split(".") if p.strip() and not p.strip().isdigit()]
+    caption = re.sub(r"\([^)]*\)", " ", menu.get("caption") or "")      # "Nellis (327.000 MHz)" has dots
+    parts = [p.strip() for p in caption.split(".") if p.strip() and not p.strip().isdigit()]
     head = parts[-1] if parts else "Radio"
     # spoken: without "[N/A]" tags and "(116 MHz)" frequency lists
     say = lambda name: re.sub(r"\s+", " ", re.sub(r"\[[^\]]*\]|\([^)]*\)", " ", name)).strip() or name
@@ -466,6 +469,7 @@ def parse_fuel(text: str):
 ON_BRIEF = None
 ON_TYPES = None
 ON_AIRBASES = None
+ON_PLAYERS = None          # "PLAYERS n mp|sp": people connected (common/training.py refuses multiplayer)
 ON_LOADED = None            # "LOADED n": a mission was loaded or restarted (unit ids start again)
 
 
@@ -496,6 +500,10 @@ def listen(menu: CommsMenu) -> None:
             if text.startswith("LOADED"):             # mission (re)loaded: its flights and clones are gone
                 if ON_LOADED is not None:
                     ON_LOADED()
+                continue
+            if text.startswith("PLAYERS"):            # who's connected (george_comms_hook.lua, audit step 7)
+                if ON_PLAYERS is not None:
+                    ON_PLAYERS(text)
                 continue
             if text.startswith("FUEL "):              # your fuel straight from DCS (george_comms_hook.lua)
                 got = parse_fuel(text)

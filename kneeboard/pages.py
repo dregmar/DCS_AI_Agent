@@ -6,6 +6,8 @@ kneeboard/pages.py - which page the kneeboard shows, and the Briefing and Checkl
                          checklist", "page down / up", "next / previous page", "scroll to the top",
                          "scroll down / up" (in the Apache only after "kneeboard": George's list uses it)
                          -> {"kind": "page", "page": ..., "checklist": ...} | {"kind": "scroll", "by": ...} | None
+                         also (30 Oct) "show alerts", "kneeboard, acknowledge (all)" -> {"kind": "ack", "all": ...},
+                         "kneeboard, track on / off" -> {"kind": "track", "on": ...}, "kneeboard, zoom in / out"
     build_briefing(kb, aircraft)                     the Briefing page's data
     build_checklist(runner, lists, aircraft, chosen) the Checklist page's data (the running list with
                                                      its current step, done items, and what George sees)
@@ -19,15 +21,16 @@ import re
 import threading
 from typing import Dict, List, Optional
 
-PAGES = ("map", "briefing", "checklist", "comms", "status")
+PAGES = ("map", "briefing", "checklist", "comms", "status", "alerts")
 
 _LEAD = r"^(?:(?:george|kneeboard|knee board|hey|okay|ok)[\s,]+)*"
 _SHOW = r"(?:show(?: me)?|open|display|bring up|pull up|go to|switch to|page|kneeboard|knee board)"
 _PAGE_WORDS = [
     ("map", r"(?:moving |tactical |the )?map"),
     ("briefing", r"(?:mission )?(?:briefing|brief)|manual"),
-    ("comms", r"(?:comms?|coms|radio|com) ?(?:log)?|log"),
-    ("status", r"(?:system |systems )?status|systems"),
+    ("comms", r"(?:comms?|coms|comes|radio|com) ?(?:log)?|log"),     # 29 Oct: "knee board comes"
+    ("status", r"(?:system |systems )?status|systems|stats|that s us"),  # 29 Oct: "Niebord, that's us"
+    ("alerts", r"alerts?|warnings?"),
 ]
 _PAGE_RX = [(p, re.compile(_LEAD + _SHOW + r"[\s,]+(?:the |my )?(?:" + w + r")(?:\s+(?:page|tab))?$"))
             for p, w in _PAGE_WORDS]
@@ -40,8 +43,20 @@ _SCROLL = [
 ]
 
 
+# How Whisper heard "kneeboard" in flight (29 Oct): "knee board", "new board", "Niebord"...
+_KNEEBOARD = re.compile(r"\b(?:knee ?board|kneeboards?|new ?board|nie ?bord|nee ?bord|nee ?board|knee ?bored|"
+                        r"neeboard|niebord|neebord)\b")
+# "kneeboard, zoom in / out": the map (only after "kneeboard": "zoom in" alone is George's TADS)
+_ZOOM = re.compile(r"^kneeboard[\s,]+(?:map[\s,]+)?zoom (in|out)$")
+# "kneeboard, acknowledge" (the newest alert) / "kneeboard, acknowledge all": always after "kneeboard"
+_ACK = re.compile(r"^kneeboard[\s,]+(?:acknowledged?|acknowledging)(?:[\s,]+(all|everything|all alerts))?$")
+# "kneeboard, track on / off" / "kneeboard, show / hide the track": this session only
+_TRACK = re.compile(r"^kneeboard[\s,]+(?:(?:the )?track (on|off)|(show|hide) (?:the |my )?track)$")
+
+
 def _norm(text: str) -> str:
     t = re.sub(r"[^a-z0-9\s,]", " ", (text or "").lower())
+    t = _KNEEBOARD.sub("kneeboard", re.sub(r"\s+", " ", t))
     return re.sub(r"\s+", " ", t).strip(" ,")
 
 
@@ -55,6 +70,15 @@ def match(text: str, bare_scroll: bool = True) -> Optional[dict]:
     t = _norm(text)
     if not t:
         return None
+    z = _ZOOM.match(t)
+    if z:
+        return {"kind": "zoom", "by": -1 if z.group(1) == "in" else 1}
+    a = _ACK.match(t)
+    if a:
+        return {"kind": "ack", "all": bool(a.group(1))}
+    tr = _TRACK.match(t)
+    if tr:
+        return {"kind": "track", "on": (tr.group(1) or tr.group(2)) in ("on", "show")}
     for page, rx in _PAGE_RX:
         if rx.match(t):
             return {"kind": "page", "page": page}

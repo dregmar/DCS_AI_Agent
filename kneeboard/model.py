@@ -97,4 +97,15 @@ def build_map(snap: dict, ctx) -> Dict:
         "ground": ground[:MAX_GROUND],
         "air": air,
         "jtac": ctx.jtac(snap),
+        "enemy_age": enemy_age(snap),
     }
+
+
+def enemy_age(snap: dict) -> Optional[int]:
+    """None while the enemy lists are fresh (or Export.lua is too old to say); else their age in
+    seconds rounded down to 5 (so the feed changes every 5 s, not every frame), -1 = never scanned."""
+    from core.state import enemy_lists_stale
+    if not enemy_lists_stale(snap):
+        return None
+    age = snap["enemy_lists_age"]
+    return -1 if age == float("inf") else int(age // 5 * 5)

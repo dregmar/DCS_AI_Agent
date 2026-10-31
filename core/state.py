@@ -1,7 +1,7 @@
 import math
 import threading
 import time
-from typing import Dict, List, Any
+from typing import Any, Dict, List, Optional
 
 INF = float("inf")
 
@@ -10,6 +10,26 @@ TARGET_STALE_SEC = 5.0
 # George's Target List stays usable this long after it was last seen on the wheel, so
 # "lock target 2" still works after the pilot closes the list.
 GEORGE_LIST_STALE_SEC = 120.0
+# Export.lua rescans the enemy / air-defence / Olympus lists once a second; a failed scan keeps sending
+# the previous lists. Past this age (model seconds since the last scan + time since the packet) they're
+# stale: no kill calls or new tasking from them (audit step 3). An old Export.lua sends no scan time:
+# then the age is None and nothing changes.
+ENEMY_LIST_STALE_SEC = 5.0
+
+
+def enemy_lists_stale(snap: Dict[str, Any]) -> bool:
+    age = snap.get("enemy_lists_age")
+    return age is not None and age > ENEMY_LIST_STALE_SEC
+
+
+def stale_reason(snap: Dict[str, Any]) -> Optional[str]:
+    """"my picture is 12 seconds old" / "I have no picture from DCS" when stale, else None."""
+    if not enemy_lists_stale(snap):
+        return None
+    age = snap["enemy_lists_age"]
+    if age == INF:
+        return "I have no picture from DCS"
+    return f"my picture is {int(age)} seconds old"
 # George's list shows classifications, not types, until he has identified a contact.
 _GENERIC_NAMES = {"GROUND", "ARMORED", "AAA", "AIR", "HELICOPTER", "NAVAL", "UNKNOWN", "TRACKED", ""}
 
@@ -91,11 +111,14 @@ class ApacheStateStore:
         # first, and the units of AI flights DCS Olympus spawned [(group, unit, id, lat, lon, alt_m)]
         self.air_defence: List[Any] = []
         self.olympus_units: List[Any] = []
+        self.olympus_enemy: List[Any] = []       # enemy-side "Olympus-" units: training targets (step 7)
         # ... and for CAP / escort / CAS: enemy aircraft [(type, id, lat, lon, alt_m)] within 120 km
         # and enemy ground units [(type, id, lat, lon)] within 40 km, nearest first
         self.coalition = 0                  # your coalition (Export.lua CoalitionID: 1 red, 2 blue)
         self.enemy_air: List[Any] = []
         self.enemy_ground: List[Any] = []
+        self.scan_lag: Optional[float] = None    # model s from Export.lua's last world scan to its packet
+        self.scan_rx = 0.0                       # when that packet arrived
         self.cargo = None                   # nearest sling-load cargo (north_m, east_m, alt_m) or None
         self.fuel_raw = None                # (internal, external) from LoGetEngineInfo: kg, or 0..1
         self.dcs_fuel = None                # (fraction, max internal kg, unit name) from the comms hook
@@ -213,6 +236,9 @@ class ApacheStateStore:
             oly = telemetry_data.get("oly")
             if isinstance(oly, list):
                 self.olympus_units = [tuple(o) for o in oly if isinstance(o, list) and len(o) == 6]
+            olyx = telemetry_data.get("olyx")
+            if isinstance(olyx, list):
+                self.olympus_enemy = [tuple(o) for o in olyx if isinstance(o, list) and len(o) == 6]
             if isinstance(telemetry_data.get("coal"), (int, float)) and telemetry_data["coal"] > 0:
                 self.coalition = int(telemetry_data["coal"])
             air = telemetry_data.get("air")
@@ -221,6 +247,10 @@ class ApacheStateStore:
             gnd = telemetry_data.get("gnd")
             if isinstance(gnd, list):
                 self.enemy_ground = [tuple(g) for g in gnd if isinstance(g, list) and len(g) in (4, 5)]  # + alt (m)
+            t, scan_t = telemetry_data.get("t"), telemetry_data.get("scan_t")
+            if isinstance(t, (int, float)) and isinstance(scan_t, (int, float)):
+                self.scan_lag = INF if scan_t < 0 else max(0.0, float(t) - float(scan_t))
+                self.scan_rx = now
             flight = telemetry_data.get("flight")
             if isinstance(flight, list):
                 self.flight_alive = [str(n) for n in flight]
@@ -445,9 +475,12 @@ class ApacheStateStore:
                 "wing": list(self.wing),
                 "air_defence": list(self.air_defence),
                 "olympus_units": list(self.olympus_units),
+                "olympus_enemy": list(self.olympus_enemy),
                 "enemy_air": list(self.enemy_air),
                 "coalition": self.coalition,
                 "enemy_ground": list(self.enemy_ground),
+                "enemy_lists_age": (None if self.scan_lag is None
+                                    else self.scan_lag + (now - self.scan_rx)),
                 "flight_units": list(self.flight_units),
                 "flight_alive": list(self.flight_alive) if self.flight_alive is not None else None,
                 "flight_alive_age": self._age(self.flight_alive_rx, now),

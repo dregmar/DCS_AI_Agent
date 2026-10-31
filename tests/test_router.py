@@ -5,6 +5,7 @@ import os
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 from tests.fakes import wait_until, send_telemetry, DEFAULT_CONTACTS, state_store
 from intelligence import router as R
@@ -103,6 +104,14 @@ class TestDispatch(RouterCase):
     def test_failed_rewrite_is_not_learned(self):
         self.assertTrue(self.r.dispatch("Ocast 2, dance", "Outcast 2, do a barrel roll"))
         self.assertEqual(self.said, [("Outcast 2, say again.", "george")])
+        self.assertFalse(os.path.exists(self.file))
+
+    def test_refused_rewrite_is_not_learned(self):
+        """30 Oct: "Overlord spawn 1, MiG-21, 10 km north" -> "Overlord, request target" answered
+        "negative, no targets for you" and was learned; a refusal can't prove the rewrite was right."""
+        self.r.shared = lambda text: ("Overlord, negative, no targets for you.", "overlord")
+        self.assertTrue(self.r.dispatch("Overlord spawn 1, MiG-21, 10 kilometers, north.", "Overlord, request target"))
+        self.assertEqual(self.said, [("Overlord, negative, no targets for you.", "overlord")])
         self.assertFalse(os.path.exists(self.file))
 
     def test_no_handler(self):

@@ -1,4 +1,5 @@
 """Parsers and pure functions, checked against text captured from DCS."""
+from tests import fakes  # noqa: F401  (unit types isolated from this PC's learned data)
 import os
 import unittest
 

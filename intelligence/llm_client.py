@@ -423,6 +423,10 @@ class AutonomousAnnunciator:
         }
         self._last_priority_id = None
 
+    def active(self, name: str) -> bool:
+        """Whether a warning ("low_alt", "priority_air_defense", ...) is still in force (kneeboard alerts)."""
+        return bool(self._alert_states.get(name))
+
     def _monitor_loop(self):
         while self._running:
             time.sleep(self.check_interval)

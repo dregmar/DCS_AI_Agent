@@ -152,6 +152,11 @@ class FuelWatch:
         self.speak(said)
         return said
 
+    def stage_active(self, stage: str) -> bool:
+        """Whether a "joker" / "bingo" call still stands (cleared by refuelling or a new mission)."""
+        with self._lock:
+            return stage in self._called
+
     def wanted(self, text: str) -> bool:
         return bool(_ASK.search(text or ""))
 

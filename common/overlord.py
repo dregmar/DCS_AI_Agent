@@ -43,6 +43,8 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from common import geo
 from common.debrief import DEBRIEF
+from common.orders import ORDERS
+from core.state import enemy_lists_stale, stale_reason
 from intelligence.threat_engine import threat_weight
 
 # ------------------------------------------------------------------ wake word
@@ -130,7 +132,8 @@ _CAS = re.compile(r"\b(?:cas|c\s?a\s?s|kass|cass|kaz|close\s?air\s?support|air\s
 _CAP = re.compile(r"\b(?:cap|c\s?a\s?p|caps|combat\s?air\s?patrol|air\s?patrol|barcap)\b")
 _ESCORT = re.compile(r"\b(?:escorts?|escorting|fighter\s?cover|top\s?cover|air\s?cover|cover\s?me|"
                      r"fighter\s?escort)\b")
-_CANCEL = re.compile(r"\b(?:cancel|abort|scrub|call off|knock it off|rtb|return to base|send .* home)\b")
+# 29 Oct: "Overlord, cancer escort" was taken as an escort request
+_CANCEL = re.compile(r"\b(?:cancel\w*|cancer|abort|scrub|call off|knock it off|rtb|return to base|send .* home)\b")
 _ALL = re.compile(r"\b(?:all|everything|everyone|every flight|all flights)\b")
 _PICTURE = re.compile(r"\b(?:picture|bogey\s?dope|bogeys?|bandits?|air\s?threats?|anything\s+in\s+the\s+air|"
                       r"enemy\s+(?:air|aircraft|helicopters?))\b")
@@ -350,7 +353,9 @@ def bandits_near(snap: dict, point: Tuple[float, float], radius: float) -> List[
 
 
 def target_state(snap: dict, tgt: dict) -> str:
-    """'alive', 'dead' or 'unknown' (outside what Export.lua lists, so we can't tell)."""
+    """'alive', 'dead' or 'unknown' (outside what Export.lua lists, or the lists are stale)."""
+    if enemy_lists_stale(snap):                  # a frozen picture can't say what's dead
+        return "unknown"
     key = tgt.get("src", "air_defence")
     rows = snap.get(key) or []
     for r in rows:
@@ -433,12 +438,17 @@ class Overlord:
             said = position.handle(t, self.snapshot(), lambda: position.olympus_bullseye(self.oly))
             return f"Overlord, {said[0].lower() + said[1:] if said.startswith('Unable') else said}"
         if _PICTURE.search(t) and not named:            # "Overlord, what's the picture?" (AWACS-style)
-            return self.picture()
+            why = stale_reason(self.snapshot())
+            return f"Overlord, unable, {why}. Say again in a moment." if why else self.picture()
         if _STATUS.search(t) and not _DIST.search(t) and parse_direction(t) is None:
             return self.status()
         if is_question(t) and self.ask is not None:
             return self.ask(t)
         t = t.rstrip("?")
+        if named:                                       # no new tasking from a frozen picture
+            why = stale_reason(self.snapshot())
+            if why:
+                return f"Overlord, unable, {why}. Say again in a moment."
         if "SEAD" in named:
             return self.request_sead(t)
         if "CAS" in named:
@@ -453,6 +463,10 @@ class Overlord:
     def _kinds_named(t: str) -> List[str]:
         named = [k for k, rx in (("SEAD", _SEAD), ("CAS", _CAS), ("CAP", _CAP), ("ESCORT", _ESCORT))
                  if rx.search(t)]
+        # by callsign (29 Oct: "Overlord, cancel Shield flight" got "say which")
+        for k, rx in (("CAP", r"\beagles?\b"), ("ESCORT", r"\bshields?\b")):
+            if re.search(rx, t) and k not in named:
+                named.append(k)
         if "CAP" in named and "ESCORT" in named:     # "CAP escort flight over point alpha" is a CAP
             named.remove("ESCORT")
         return named
@@ -600,11 +614,14 @@ class Overlord:
     # -------------------------------------------------------------- spawning
     def _launch(self, k: Kind, snap: dict, point, where: str, targets: List[dict]) -> Optional[str]:
         """Spawns the flight and starts its thread. What to say on failure, else None."""
+        who = f"{k.callsign} flight"
         if not self.oly.connect():
+            ORDERS.record(who, k.key, "failed", "Olympus isn't running")
             return "Overlord, unable, Olympus isn't running."
         cost = k.size * COST_PER_AIRCRAFT
         why = self._budget_problem(cost)
         if why:
+            ORDERS.record(who, k.key, "failed", why)
             return f"Overlord, unable, {why}."
         me = snap.get("my_ll") or point
         d_me, brg_me = dist_brg(point, me)
@@ -626,7 +643,9 @@ class Overlord:
             "coalition": "blue", "country": "", "airbaseName": "", "immediate": True,
             "spawnPoints": cost, "units": units})
         if not ok:
+            ORDERS.record(who, k.key, "failed", f"spawnAircrafts: {why}")
             return f"Overlord, unable, {why}."
+        ORDERS.record(who, k.key, "accepted", f"spawning {k.size} {k.unit_type}")
         m = Mission(k, point, where, targets, spawn, known)
         DEBRIEF.launch(f"{k.callsign} flight", k.key)
         with self._lock:
@@ -693,6 +712,7 @@ class Overlord:
         if not m.group:
             if not m.cancel.is_set():
                 m.state = "failed"
+                ORDERS.record(f"{m.cs} flight", m.kind.key, "failed", "failed to launch: no group appeared")
                 self.speak(f"Overlord, {m.cs} flight failed to launch. Check Olympus.")
             return False
         flight = self._flight(self.snapshot(), m)
@@ -703,7 +723,12 @@ class Overlord:
         if m.cancel.is_set():
             self._send_home(m)
             return False
-        self.oly.command("setROE", {"ID": m.lead_id, "ROE": 0})          # weapons free
+        ok, why = self.oly.command("setROE", {"ID": m.lead_id, "ROE": 0})          # weapons free
+        if m.cancel.is_set():                            # cancelled while it was being tasked
+            self._send_home(m)
+            return False
+        ORDERS.record(f"{m.cs} flight", m.kind.key, "submitted",
+                      f"{m.group} on task" + ("" if ok else f"; setROE: {why}"))
         m.state = "engaging"
         return True
 
@@ -722,6 +747,7 @@ class Overlord:
         flight = self._flight(snap, m)
         if not flight:
             m.state = "lost"
+            ORDERS.record(f"{m.cs} flight", m.kind.key, "failed", "flight down")
             DEBRIEF.loss(f"{m.cs} flight")
             self.speak(f"Overlord, {m.cs} flight is down.")
             return False
@@ -749,6 +775,7 @@ class Overlord:
                 m.targets = [r for r in m.targets if target_state(snap, r) != "dead"]
                 if not m.targets:
                     m.state = "home"
+                    ORDERS.record(f"{m.cs} flight", m.kind.key, "completed", "area clear, returning to base")
                     self.speak(f"Overlord, {m.cs} reports the area clear. Returning to base.")
                     self._send_home(m)
                     return
@@ -756,10 +783,12 @@ class Overlord:
                 ok, why = self.oly.command("attackUnit", {"ID": m.lead_id, "targetID": m.current["id"]})
                 if not ok:
                     m.state = "failed"
+                    ORDERS.record(f"{m.cs} flight", m.kind.key, "failed", f"attackUnit: {why}")
                     self.speak(f"Overlord, {m.cs} can't be tasked, {why}.")
                     return
             if time.monotonic() - m.started > MISSION_TIMEOUT_S:
                 m.state = "home"
+                ORDERS.record(f"{m.cs} flight", m.kind.key, "completed", "out of time on station, returning to base")
                 self.speak(f"Overlord, {m.cs} is out of time on station. Returning to base.")
                 self._send_home(m)
                 return
@@ -793,6 +822,7 @@ class Overlord:
             if not self._check_flight(snap, m):
                 return
             me = snap.get("my_ll")
+            stale = enemy_lists_stale(snap)              # no commit / break-off from a frozen picture
             centre = (me[0], me[1]) if escort and me else m.station
             if (escort and me and m.current is None and dist_brg(m.station, centre)[0] > ESCORT_MOVE_M
                     and not self._escort_follows(m)):
@@ -807,11 +837,11 @@ class Overlord:
                     self.speak(f"Overlord, {m.cs} reports splash one {say_type(m.current['type'])}.")
                     m.current = None
                     self._goto_station(m)
-                elif now is not None and now["d"] > radius + BREAK_OFF_M:
+                elif not stale and now is not None and now["d"] > radius + BREAK_OFF_M:
                     self.speak(f"Overlord, {m.cs} breaking off, back on station.")
                     m.current = None
                     self._goto_station(m)
-            if m.current is None:
+            if m.current is None and not stale:
                 bandits = bandits_near(snap, centre, radius)
                 if bandits:
                     b = bandits[0]
@@ -872,7 +902,9 @@ class Overlord:
 
     def _active(self) -> List[Mission]:
         with self._lock:
-            return [m for m in self._missions if m.state in ("launching", "engaging")]
+            # cancel flag too: a cancel landing while _join tasks the flight could be overwritten
+            # by its state = "engaging" (seen 29 Oct as an intermittent test_cancel_which failure)
+            return [m for m in self._missions if m.state in ("launching", "engaging") and not m.cancel.is_set()]
 
     def _status_of(self, m: Mission) -> str:
         task = m.kind.said + (" " + m.where if m.kind.key != "ESCORT" else "")
@@ -905,6 +937,7 @@ class Overlord:
         for m in act:
             m.cancel.set()
             m.state = "cancelled"
+            ORDERS.record(f"{m.cs} flight", m.kind.key, "completed", "cancelled, returning to base")
             self._send_home(m)
         names = _say_list([f"{m.cs} flight" for m in act])
         return f"Overlord copies. {names}, mission cancelled, returning to base."

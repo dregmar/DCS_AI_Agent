@@ -128,6 +128,77 @@ class TestClient(OlympusCase):
         self.assertIn("refused", bad.last_error)
 
 
+class TestHealth(OlympusCase):
+    """Audit step 2: no lock across HTTP, last error / counts for the Status page, failures logged."""
+
+    def test_state_lock_free_during_a_slow_connect(self):
+        started, release = threading.Event(), threading.Event()
+
+        def slow(req, timeout):
+            started.set()
+            release.wait(5)
+            raise OSError("timed out")
+
+        o = olympus.Olympus("http://127.0.0.1:1", "George", PW, opener=slow)
+        t = threading.Thread(target=o.connect, kwargs={"force": True})
+        t.start()
+        self.assertTrue(started.wait(2))
+        t0 = time.monotonic()
+        o.claim("Olympus-3")
+        self.assertEqual(o.claimed(), {"Olympus-3"})
+        self.assertFalse(o.connected)
+        self.assertFalse(o.connect())                 # another attempt running: no wait
+        o.status()
+        self.assertLess(time.monotonic() - t0, 0.5)
+        release.set()
+        t.join(5)
+        st = o.status()
+        self.assertEqual(st["fails"], {"unreachable": 1})
+        self.assertIn("not reachable", st["last_error"])
+        self.assertIsNotNone(st["error_age"])
+
+    def test_counts_success_and_no_secret(self):
+        bad = olympus.Olympus(self.oly.url, "George", "hunter2-secret")
+        self.assertFalse(bad.connect(force=True))
+        st = bad.status()
+        self.assertEqual(st["fails"], {"refused": 1})
+        self.assertNotIn("hunter2", repr(st))
+        self.assertNotIn(hashlib.sha256(b"hunter2-secret").hexdigest(), repr(st))
+        self.assertTrue(self.oly.connect(force=True))
+        self.assertIsNotNone(self.oly.get("/olympus/mission"))
+        st = self.oly.status()
+        self.assertTrue(st["connected"])
+        self.assertEqual(st["login"], "sha256")
+        self.assertIsNotNone(st["ok_age"])
+        self.assertEqual(st["fails"], {})
+
+    def test_failed_commands_are_logged(self):
+        """overlord / independents send follow-ups without checking the result: the client logs them."""
+        from unittest import mock
+        self.assertTrue(self.oly.connect(force=True))
+        with mock.patch("builtins.print") as pr:
+            FakeOlympus.up = True
+            with mock.patch.object(FakeOlympus, "do_PUT", lambda h: h._reply(500)):
+                ok, why = self.oly.command("setROE", {"ID": 1, "ROE": 0})
+        self.assertFalse(ok)
+        self.assertIn("HTTP 500", why)
+        lines = " ".join(str(c.args[0]) for c in pr.call_args_list)
+        self.assertIn("setROE failed", lines)
+        self.assertEqual(self.oly.status()["fails"], {"http": 1})
+        self.assertTrue(self.oly.connected)           # HTTP 500 isn't a lost connection
+
+    def test_unreachable_drops_the_login(self):
+        self.assertTrue(self.oly.connect(force=True))
+        self.oly.url = "http://127.0.0.1:1"
+        self.oly.timeout = 0.3
+        ok, why = self.oly.command("smoke", {"color": "red", "location": {"lat": 1, "lng": 2}})
+        self.assertFalse(ok)
+        self.assertFalse(self.oly.connected)
+        with self.assertRaises(olympus.OlympusError):
+            self.oly.get("/olympus/mission")          # within RETRY_SEC: no new attempt
+        self.assertEqual(self.oly.status()["fails"], {"unreachable": 1})
+
+
 class TestOrders(OlympusCase):
     def test_attack(self):
         self.assertEqual(self.say("two, attack my target"), "")              # the tank on the nose

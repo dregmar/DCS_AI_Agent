@@ -354,6 +354,19 @@ local function send_route(now)
     end
 end
 
+-- "PLAYERS <n> <mp|sp>" every 5 s: how many people are connected (training targets are refused in a
+-- mission with other human players, audit step 7)
+local function send_players(now)
+    if now < (gch.players_t or 0) then return end
+    gch.players_t = now + 5.0
+    local n, mp = 0, false
+    local okl, list = pcall(net.get_player_list)
+    if okl and type(list) == "table" then n = #list end
+    pcall(function() mp = DCS.isMultiplayer() and true or false end)
+    gch.out:send(string.format("PLAYERS %d %s", n, mp and "mp" or "sp"))
+    note("players" .. n .. tostring(mp), string.format("players: %d (%s)", n, mp and "multiplayer" or "single player"))
+end
+
 local function frame()
     local now = DCS.getRealTime()
     if now < gch.next_t then return end
@@ -369,6 +382,7 @@ local function frame()
     send_brief(now)
     send_types(now)
     send_fuel(now)
+    send_players(now)
     local state = find_state(now)
     if not state then return end
     if gch.inp then
@@ -407,7 +421,7 @@ end
 
 DCS.setUserCallbacks({
     onMissionLoadEnd = function()            -- new mission (or the same one restarted): send at once
-        gch.route_t, gch.brief_t, gch.types_t, gch.fuel_t = 0, 0, 0, 0
+        gch.route_t, gch.brief_t, gch.types_t, gch.fuel_t, gch.players_t = 0, 0, 0, 0, 0
         gch.loaded = (gch.loaded or 0) + 1      -- the program forgets this mission's flights and clones
     end,
     onSimulationFrame = function()

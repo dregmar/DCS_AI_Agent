@@ -60,8 +60,20 @@ JET_STT_PROMPT = ("Hornet and A-10 radio calls: Marshal, inbound, established, c
 OVERLORD_AIR_WARNINGS = True
 OLYMPUS_ENABLED = True
 OLYMPUS_URL = "http://localhost:4512"     # "localhost", not 127.0.0.1: that's the name Olympus listens on
-OLYMPUS_USER = "George"
+OLYMPUS_USER = "Pilot"
 OLYMPUS_PASSWORD = "thor"                 # Blue commander
+
+# --- Training targets (audit step 7; feature 8 spawns them). Off unless you turn it on here or say
+# "Overlord, training mode on". Training uses a SECOND Olympus login, as Game Master, which may only
+# spawn enemy units near you while training is on and only touch the units it spawned. Fill in the
+# Game Master password (from the Olympus Manager) here only; it never goes anywhere else.
+TRAINING_MODE = False             # start with training mode on
+TRAINING_VOICE_SWITCH = True      # allow "Overlord, training mode on / off"
+OLYMPUS_GM_USER = "Pilot"              # Game Master login name ("" = same as OLYMPUS_USER)
+OLYMPUS_GM_PASSWORD = "zeus"          # Game Master password; empty = no training
+TRAINING_MAX_GROUPS = 6           # training groups alive at once
+TRAINING_MAX_UNITS = 24           # training units alive at once
+TRAINING_MAX_RANGE_KM = 50        # spawn points must be this close to you
 
 # --- LLM ---
 # When no fixed phrase catches an order (or Overlord / an Outcast says "say again"), the crew's
@@ -74,6 +86,7 @@ ROUTER_ENABLED = True
 KNEEBOARD_ENABLED = True
 KNEEBOARD_PORT = 5000             # change if another program uses 5000
 KNEEBOARD_AUTO_CHECKLIST = True   # the kneeboard turns to the Checklist page when a checklist starts
+KNEEBOARD_TRACK = True            # your track on the map ("kneeboard, track on / off" for this session)
 DCS_BIOS_JSON_DIR = None          # None = Saved Games\DCS\Scripts\DCS-BIOS\doc\json (jet checklists read it)
 
 # --- Jets (A-10C, F/A-18C...): common/aircraft.py has the numbers per type ---

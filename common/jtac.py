@@ -27,6 +27,7 @@ from common import aircraft
 from common.overlord import (dist_brg, compass, say_type, ground_near, radars_near, is_big_sam,
                              parse_direction, target_state)
 from common.position import to_mgrs, NATO
+from core.state import stale_reason
 
 FT_PER_M = 3.28084
 THREAT_RADIUS_M = 10_000            # air defence this close to the target is called as a threat
@@ -130,6 +131,9 @@ class Jtac:
         snap = self.snapshot()
         if not snap.get("my_ll"):
             return "Overlord, unable, I don't have your position."
+        why = stale_reason(snap)                 # no target from a frozen picture (audit step 3)
+        if why:
+            return f"Overlord, unable, {why}. Say again in a moment."
         cands = self.candidates(snap, text)
         with self._lock:
             given = set(self._given) | ({self.current["id"]} if skip_given and self.current else set())
@@ -208,6 +212,9 @@ class Jtac:
             tgt = self.current
         if tgt is None:
             return "Overlord, no target assigned."
+        why = stale_reason(snap)
+        if why:
+            return f"Overlord, unable to assess, {why}."
         st = target_state(snap, tgt)
         if st == "dead":
             with self._lock:

@@ -56,8 +56,9 @@ class TestRequests(unittest.TestCase):
 class TestRouting(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from tests import test_pipeline
-        cls.tp, cls.main = test_pipeline, test_pipeline.main
+        from tests.fakes import pipeline_module
+        tp = pipeline_module()
+        cls.tp, cls.main = tp, tp.main
 
     def setUp(self):
         self.tp.SPOKEN.clear()

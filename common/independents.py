@@ -30,6 +30,8 @@ from typing import Callable, Dict, List, Optional
 
 from common import geo
 from common.olympus_orders import FOLLOW_DEFAULT, ROE
+from common.orders import ORDERS, capture
+from core.state import enemy_lists_stale, stale_reason
 
 CALLSIGN = "Outcast"
 NUM_SAY = {2: "two", 3: "three", 4: "four", 5: "five", 6: "six"}
@@ -151,6 +153,8 @@ class Independents:
         """wing: [{'n', 'name', 'id', 'lat', 'lon'}] (alive AI wingmen of your flight, seen by Export.lua).
         Starts one thread per wingman; returns what George says now."""
         if not self.ex.oly.connect():
+            for w in wing:
+                ORDERS.record(self._say(w["n"]), "go independent", "failed", "Olympus isn't running")
             return "Unable, Olympus isn't running."
         me = snap.get("self_id", -1)
         go, already = [], []
@@ -163,6 +167,7 @@ class Independents:
                 continue
             with self._lock:
                 self._by_n[w["n"]] = {"group": None, "name": w["name"], "state": "cloning"}
+            ORDERS.record(self._say(w["n"]), "go independent", "accepted", "cloning through Olympus")
             go.append(w)
             threading.Thread(target=self._detach_one, args=(w,), daemon=True,
                              name=f"independent-{w['n']}").start()
@@ -175,11 +180,19 @@ class Independents:
 
     def _detach_one(self, w: dict) -> None:
         n = w["n"]
-        try:
-            ok = self._clone(w)
-        except Exception as e:
-            print(f"[OUTCAST] {n}: {type(e).__name__}: {e}")
-            ok = False
+        err = ""
+        with capture() as sent:
+            try:
+                ok = self._clone(w)
+            except Exception as e:
+                print(f"[OUTCAST] {n}: {type(e).__name__}: {e}")
+                ok, err = False, f"{type(e).__name__}: {e}"
+        bad = next((s for s in sent if not s[1]), None)
+        if ok:
+            ORDERS.record(self._say(n), "go independent", "completed", "clone up, original removed")
+        else:
+            ORDERS.record(self._say(n), "go independent", "failed",
+                          err or (f"{bad[0]}: {bad[2]}" if bad else "no clone appeared"))
         if not ok:
             with self._lock:
                 self._by_n.pop(n, None)
@@ -250,7 +263,14 @@ class Independents:
 
     # ------------------------------------------------------------ orders
     def order(self, n: int, rest: str) -> str:
-        """An order to Outcast n. '' = done (George stays quiet), else what to say."""
+        """An order to Outcast n. '' = done (George stays quiet), else what to say. Its outcome is
+        recorded in common/orders.py (audit step 6); the answer is unchanged."""
+        with capture() as sent:
+            said = self._order(n, rest)
+        ORDERS.record_outcome(self._say(n), rest.strip(" .,")[:40], sent, said)
+        return said
+
+    def _order(self, n: int, rest: str) -> str:
         r = self.known(n)
         if r is None:
             return f"{self._say(n)} isn't independent. Say {NUM_SAY.get(n, n)}, go independent."
@@ -335,6 +355,9 @@ class Independents:
         """Says at once what he's going after, or that there's nothing near him (24 Oct: the
         order was silent for a minute, then "no more air defences")."""
         snap = self.snapshot()
+        why = stale_reason(snap)                 # no hunt from a frozen picture (audit step 3)
+        if why:
+            return f"{self._say(n)}, unable, {why}."
         unit = self._unit(snap, n)
         cands = self._hunt_targets(snap, unit, air_defence) if unit is not None else []
         what = "air defences" if air_defence else "targets"
@@ -388,7 +411,9 @@ class Independents:
                 from common.debrief import DEBRIEF
                 DEBRIEF.kill(self._say(n), say_type(current["type"]))
                 current = None
-            if current is None:
+            if current is None and enemy_lists_stale(snap):
+                idle_since = time.monotonic()    # wait for a fresh picture; don't rejoin "for no targets"
+            elif current is None:
                 cands = self._hunt_targets(snap, unit, air_defence)
                 if cands:
                     current, idle_since = cands[0], time.monotonic()

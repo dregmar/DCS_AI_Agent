@@ -22,6 +22,7 @@ from huey.cockpit import Cockpit, RADIOS, SWITCHES, say_freq, switch_state
 from huey.crew import HueyCrew, describe_crew
 from huey.link import CommandLink
 from common.briefing import is_briefing_question
+from core.metrics import METRICS
 
 TELEMETRY_FRESH_SEC = 3.0
 LINK_FRESH_SEC = 3.0
@@ -130,12 +131,14 @@ class HueyProfile:
         print(f"[TIMING] {source} {time.perf_counter() - t0:.2f}s")
         if cmd["action"] == "CREW_ROE" and cmd.get("value") == "HOLD":
             self._drain()                               # cease fire goes first
+        cmd["_uid"] = METRICS.current()                 # latency: the worker's reply belongs to it
+        METRICS.queued(cmd["_uid"])
         self._q.put(cmd)
 
     def _drain(self):
         try:
             while True:
-                self._q.get_nowait()
+                METRICS.release(self._q.get_nowait().get("_uid"))
         except queue.Empty:
             pass
 
@@ -146,13 +149,16 @@ class HueyProfile:
     def _work(self):
         while True:
             cmd = self._q.get()
-            try:
-                sentence = self.execute(cmd)
-                if sentence:
-                    self.speak(sentence)
-            except Exception as e:
-                print(f"[HUEY ERROR] {type(e).__name__}: {e}")
-                self.speak("Say again, system fault.")
+            uid = cmd.pop("_uid", None)
+            with METRICS.bound(uid):
+                try:
+                    sentence = self.execute(cmd)
+                    if sentence:
+                        self.speak(sentence)
+                except Exception as e:
+                    print(f"[HUEY ERROR] {type(e).__name__}: {e}")
+                    self.speak("Say again, system fault.")
+            METRICS.release(uid)
 
     def execute(self, cmd: Dict[str, Any]) -> str:
         """Runs one command and returns what George says. Blocking; worker thread (or tests)."""

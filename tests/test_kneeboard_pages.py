@@ -44,6 +44,24 @@ class TestMatch(unittest.TestCase):
         self.assertEqual(pages.match("page down", bare_scroll=False)["by"], 1)
         self.assertEqual(pages.match("next page", bare_scroll=False)["by"], 1)
 
+    def test_flight_sound_alikes(self):
+        """29 Oct flight: how Whisper heard "kneeboard" and the page names."""
+        for said, page in [("New board comms.", "comms"), ("Knee board comes.", "comms"),
+                           ("Niebord, that's us.", "status"), ("Neebord, map", "map"),
+                           ("Knee board, stats", "status")]:
+            got = pages.match(said)
+            self.assertIsNotNone(got, said)
+            self.assertEqual(got["page"], page, said)
+        for said in ["that's us", "stats", "comes", "new board"]:
+            self.assertIsNone(pages.match(said), said)
+
+    def test_zoom_needs_kneeboard(self):
+        """ "zoom in" alone is George's TADS in the Apache."""
+        self.assertEqual(pages.match("Knee board, zoom out."), {"kind": "zoom", "by": 1})
+        self.assertEqual(pages.match("kneeboard map zoom in"), {"kind": "zoom", "by": -1})
+        self.assertIsNone(pages.match("zoom in"))
+        self.assertIsNone(pages.match("George, zoom out"))
+
     def test_not_page_commands(self):
         """Orders meant for others are left alone (whole utterances only)."""
         for said in ["show the comms menu", "comms", "status", "show me the wheel", "before start checklist",

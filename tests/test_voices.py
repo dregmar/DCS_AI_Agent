@@ -74,9 +74,9 @@ class TestRouting(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from tests import test_pipeline       # imports main with the real driver shut down
-        cls.tp = test_pipeline
-        cls.main = test_pipeline.main
+        from tests.fakes import pipeline_module   # main with the real driver shut down
+        cls.tp = pipeline_module()
+        cls.main = cls.tp.main
 
     def setUp(self):
         self.tp.SPOKEN.clear()
@@ -112,8 +112,9 @@ class TestBriefingRouting(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from tests import test_pipeline
-        cls.tp, cls.main = test_pipeline, test_pipeline.main
+        from tests.fakes import pipeline_module
+        cls.tp = pipeline_module()
+        cls.main = cls.tp.main
 
     def setUp(self):
         self.tp.SPOKEN.clear()

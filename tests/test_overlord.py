@@ -1,5 +1,6 @@
 """Overlord: "Overlord, ..." requests only, SEAD through Olympus spawnAircrafts + attackUnit.
 A fake Olympus client and a fake DCS (the snapshot) stand in; nothing leaves this process."""
+from tests import fakes  # noqa: F401  (unit types isolated from this PC's learned data)
 import threading
 import time
 import unittest
@@ -257,6 +258,17 @@ class TestMoreFlights(_Base):
         self.assertIn("Hog flight, mission cancelled", self.o.handle("Overlord, cancel CAS"))
         self.assertIn("Weasel", self.o.handle("Overlord, status"))
         self.assertIn("Weasel flight, mission cancelled", self.o.handle("Overlord, cancel all"))
+
+    def test_cancel_sound_alike_and_callsign(self):
+        """29 Oct: "cancer escort" was taken as a new escort request; "cancel, Shield flight" got "say which"."""
+        self.world.kill_on_attack = False
+        self.world.gnd = [("T-72B", 701, *east(3))]
+        self.o.handle("Overlord, SEAD north of me")
+        self.o.handle("Overlord, CAS 3 km east of me")
+        self.assertIn("Weasel flight, mission cancelled", self.o.handle("Overlord, cancer Weasel."))
+        self.assertIn("Hog flight, mission cancelled", self.o.handle("Overlord, cancel, hog flight"))
+        self.assertEqual(ov.Overlord._kinds_named("cancel shield flight"), ["ESCORT"])
+        self.assertEqual(ov.Overlord._kinds_named("cancel eagle"), ["CAP"])
 
     def test_questions_go_to_the_briefing(self):
         asked = []

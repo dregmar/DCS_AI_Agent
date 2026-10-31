@@ -37,6 +37,10 @@ end
 -- give the middleware ranges for the names George reports. Never raises.
 local george_contacts_cache = {}
 local george_contacts_next = 0
+-- Model time of the last world scan that completed (-1: none yet). Sent as "scan_t" with the packet's
+-- model time "t": a failed scan leaves the previous lists in every packet, and this shows how old
+-- they are (audit step 3, 29 Oct).
+local george_scan_t = -1
 local GEORGE_CONTACT_RANGE_M = 15000
 local GEORGE_CONTACT_MAX = 20
 local GEORGE_CARGO_RANGE_M = 500
@@ -54,6 +58,9 @@ local GEORGE_AD_WORDS = { "shilka", "zsu-23", "tunguska", "2s6", "pantsir", "tor
 local GEORGE_AIR_RANGE_M, GEORGE_AIR_MAX = 120000, 20
 local GEORGE_GND_RANGE_M, GEORGE_GND_MAX = 40000, 40
 george_ad, george_oly, george_air, george_gnd = "[]", "[]", "[]", "[]"
+-- Enemy-side "Olympus-" groups (training targets spawned by the program's Game Master login, audit
+-- step 7): [group, unit name, id, lat, lon, alt], so it can find what it spawned and remove only that.
+george_olyx = "[]"
 local function george_is_ad(name)
     local n = string.lower(name or "")
     for _, w in ipairs(GEORGE_AD_WORDS) do
@@ -120,7 +127,7 @@ local function george_contacts(now)
     local mx, mz = me.Position.x, me.Position.z
     local cargo, cargo_d = nil, GEORGE_CARGO_RANGE_M
     george_cargo_seen = 0
-    local ad, oly, air, gnd = {}, {}, {}, {}
+    local ad, oly, air, gnd, olyx = {}, {}, {}, {}, {}
     for id, o in pairs(objs) do
         if type(o) == "table" and o.Position and o.LatLongAlt and o.CoalitionID ~= my_coal
            and type(o.Type) == "table" and (o.Type.level1 == 1 or o.Type.level1 == 2) then
@@ -145,7 +152,12 @@ local function george_contacts(now)
                 local ll = o.LatLongAlt
                 oly[#oly + 1] = string.format('["%s","%s",%d,%.6f,%.6f,%.0f]', george_json_str(gname),
                     george_json_str(o.UnitName), tonumber(id) or -1, ll.Lat or 0, ll.Long or 0, ll.Alt or 0)
-            elseif o.CoalitionID ~= my_coal and type(o.Type) == "table" and o.Type.level1 == 2
+            elseif o.CoalitionID ~= my_coal and gname:sub(1, 8) == "Olympus-" and #olyx < GEORGE_OLY_MAX then
+                local ll = o.LatLongAlt
+                olyx[#olyx + 1] = string.format('["%s","%s",%d,%.6f,%.6f,%.0f]', george_json_str(gname),
+                    george_json_str(o.UnitName), tonumber(id) or -1, ll.Lat or 0, ll.Long or 0, ll.Alt or 0)
+            end
+            if o.CoalitionID ~= my_coal and type(o.Type) == "table" and o.Type.level1 == 2
                    and george_is_ad(o.Name) then
                 local adx, adz = o.Position.x - me.Position.x, o.Position.z - me.Position.z
                 local add = math.sqrt(adx * adx + adz * adz)
@@ -198,6 +210,7 @@ local function george_contacts(now)
     for i = 1, math.min(#ad, GEORGE_AD_MAX) do ads[i] = ad[i].s end
     george_ad = "[" .. table.concat(ads, ",") .. "]"
     george_oly = "[" .. table.concat(oly, ",") .. "]"
+    george_olyx = "[" .. table.concat(olyx, ",") .. "]"
     local function nearest(list, max)
         table.sort(list, function(a, b) return a.d < b.d end)
         local o = {}
@@ -216,6 +229,7 @@ local function george_contacts(now)
     george_tel_note("contacts", string.format("contacts from LoGetWorldObjects: %d within %d m%s",
         #out, GEORGE_CONTACT_RANGE_M, #out > 0 and (", e.g. " .. out[1].type .. " at " .. out[1].dist_m .. " m") or ""))
     george_contacts_cache = out
+    george_scan_t = now
     return out
 end
 
@@ -314,11 +328,12 @@ local function george_send_telemetry()
     local route, wp_next = george_route(now)
     local cargo = george_cargo and string.format("[%.1f,%.1f,%.1f]", george_cargo[1], george_cargo[3], george_cargo[2]) or "null"
     local payload = string.format(
-        '{"ac":"%s","alt_ft":%.0f,"agl_ft":%.0f,"vs_fpm":%.0f,"speed_kts":%.0f,"pitch":%.1f,"roll":%.1f,"yaw":%.1f,"hdg":%.1f,"ammo":[%d,%d,%d],"contacts":[%s],"pos":%s,"vel":%s,"route":%s,"wp":%d,"cargo":%s,"fuel":%s,"flight":%s,"group":"%s","unit":"%s","wing":%s,"self_id":%d,"ll":%s,"ad":%s,"oly":%s,"air":%s,"gnd":%s,"coal":%d}',
+        '{"ac":"%s","alt_ft":%.0f,"agl_ft":%.0f,"vs_fpm":%.0f,"speed_kts":%.0f,"pitch":%.1f,"roll":%.1f,"yaw":%.1f,"hdg":%.1f,"ammo":[%d,%d,%d],"contacts":[%s],"pos":%s,"vel":%s,"route":%s,"wp":%d,"cargo":%s,"fuel":%s,"flight":%s,"group":"%s","unit":"%s","wing":%s,"self_id":%d,"ll":%s,"ad":%s,"oly":%s,"air":%s,"gnd":%s,"coal":%d,"t":%.2f,"scan_t":%.2f,"olyx":%s}',
         ac, alt * 3.28084, agl, vs, ias * 1.94384,
         (pitch or 0) * rad, (roll or 0) * rad, (yaw or 0) * rad, hdg, msl, rkt, gun,
         table.concat(items, ","), pos, vel, route, wp_next, cargo, fuel, george_flight or "null", george_my_group or "", george_my_unit or "",
-        george_wing or "null", george_self_id or -1, george_ll(me_ll), george_ad or "[]", george_oly or "[]", george_air or "[]", george_gnd or "[]", george_coal or 0)
+        george_wing or "null", george_self_id or -1, george_ll(me_ll), george_ad or "[]", george_oly or "[]", george_air or "[]", george_gnd or "[]", george_coal or 0,
+        now or 0, george_scan_t or -1, george_olyx or "[]")
 
     local ok, err = pcall(udp.send, udp, payload)
     if ok then

@@ -25,6 +25,8 @@ config.GEORGE_UI_SETTLE_S = 0.2
 config.GEORGE_KEY_MFI = ("f",)
 config.GEORGE_KEY_STORE_TARGET = ("g",)
 config.GEORGE_IDLE_CLOSE_MAIN_S = None          # tests that need auto-hide set it themselves
+config.TRAINING_LIST_PATH = None                # never read or write the PC's logs/training_groups.json
+config.OLYMPUS_GM_PASSWORD = ""                 # tests never use a real Game Master login
 
 from core.state import state_store              # noqa: E402  (after the config overrides)
 from core.george_ui import parse_indication     # noqa: E402
@@ -249,3 +251,29 @@ DEFAULT_CONTACTS = [
     {"id": 14, "type": "LARC-V", "dist_m": 5000, "brg": 0},
     {"id": 15, "type": "T-72B", "dist_m": 5200, "brg": 45},
 ]
+
+
+def pipeline_module():
+    """tests/test_pipeline.py, imported once whatever name it was loaded under. `python -m unittest
+    discover tests` loads it as "test_pipeline", `-s tests -t .` as "tests.test_pipeline"; importing it
+    a second time under the other name would point main's speech at a second SPOKEN list (29 Oct:
+    seven failures on the PC)."""
+    import importlib
+    import sys
+    for name in ("test_pipeline", "tests.test_pipeline"):
+        if name in sys.modules:
+            return sys.modules[name]
+    return importlib.import_module("tests.test_pipeline")
+
+
+def isolate_unit_types():
+    """Tests never read or write the unit types DCS taught this PC (data/unit_types.json): the
+    threat ranking and SEAD target tests assume only the built-in name rules (29 Oct: the PC's
+    learned types made "Kub 2P25 ln" a launcher, correctly, and failed two tests)."""
+    from common import unit_types
+    with unit_types.TYPES._lock:
+        unit_types.TYPES.cache_file = None
+        unit_types.TYPES._by_key.clear()
+
+
+isolate_unit_types()
