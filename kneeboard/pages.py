@@ -9,6 +9,8 @@ kneeboard/pages.py - which page the kneeboard shows, and the Briefing and Checkl
                          also (30 Oct) "show alerts", "kneeboard, acknowledge (all)" -> {"kind": "ack", "all": ...},
                          "kneeboard, track on / off" -> {"kind": "track", "on": ...}, "kneeboard, zoom in / out"
                          also (Instructor Mode) "show the instructor / scores / training"
+                         also (tactical picture, T5) "kneeboard, contact 42" / "kneeboard, show contact
+                         tango four two" -> {"kind": "contact", "n": 42}; "kneeboard, close contact" -> n None
     build_briefing(kb, aircraft)                     the Briefing page's data
     build_checklist(runner, lists, aircraft, chosen) the Checklist page's data (the running list with
                                                      its current step, done items, and what George sees)
@@ -56,6 +58,47 @@ _ACK = re.compile(r"^kneeboard[\s,]+(?:acknowledged?|acknowledging)(?:[\s,]+(all
 _TRACK = re.compile(r"^kneeboard[\s,]+(?:(?:the )?track (on|off)|(show|hide) (?:the |my )?track)$")
 
 
+# "kneeboard, contact 42" / "kneeboard, show track T42" / "kneeboard, contact tango four two": the map's
+# detail panel for that track (always after "kneeboard"); "kneeboard, close / hide contact" closes it
+_CONTACT = re.compile(r"^kneeboard[\s,]+(?:show |open )?(?:the )?(?:contact|track)(?: number)?[\s,]+(.+)$")
+_CONTACT_CLOSE = re.compile(r"^kneeboard[\s,]+(?:close|hide|clear)(?: the)? (?:contact|track|panel)(?: panel)?$")
+_UNITS = {"zero": 0, "oh": 0, "one": 1, "two": 2, "to": 2, "too": 2, "three": 3, "four": 4, "for": 4, "five": 5,
+          "six": 6, "seven": 7, "eight": 8, "ate": 8, "nine": 9, "niner": 9}
+_TEENS = {"ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+          "seventeen": 17, "eighteen": 18, "nineteen": 19}
+_TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80,
+         "ninety": 90}
+
+
+def contact_number(words: str) -> Optional[int]:
+    """"42", "t42", "tango 42", "four two", "forty two", "one hundred and five" -> the number, else None."""
+    toks = [w for w in re.split(r"[\s,]+", words.strip()) if w and w not in ("tango", "t", "number", "and")]
+    if toks and re.fullmatch(r"t\d+", toks[0]):
+        toks[0] = toks[0][1:]
+    if not toks:
+        return None
+    if all(t.isdigit() for t in toks):
+        return int("".join(toks))
+    if all(t in _UNITS for t in toks):                 # spoken digit by digit: "four two"
+        return int("".join(str(_UNITS[t]) for t in toks))
+    total, cur = 0, 0
+    for t in toks:
+        if t in _UNITS:
+            cur += _UNITS[t]
+        elif t in _TEENS:
+            cur += _TEENS[t]
+        elif t in _TENS:
+            cur += _TENS[t]
+        elif t == "hundred":
+            cur = max(cur, 1) * 100
+        elif t.isdigit():
+            cur += int(t)
+        else:
+            return None
+    total += cur
+    return total if total > 0 else None
+
+
 def _norm(text: str) -> str:
     t = re.sub(r"[^a-z0-9\s,]", " ", (text or "").lower())
     t = _KNEEBOARD.sub("kneeboard", re.sub(r"\s+", " ", t))
@@ -81,6 +124,13 @@ def match(text: str, bare_scroll: bool = True) -> Optional[dict]:
     tr = _TRACK.match(t)
     if tr:
         return {"kind": "track", "on": (tr.group(1) or tr.group(2)) in ("on", "show")}
+    if _CONTACT_CLOSE.match(t):
+        return {"kind": "contact", "n": None}
+    c = _CONTACT.match(t)
+    if c:
+        n = contact_number(c.group(1))
+        if n is not None:
+            return {"kind": "contact", "n": n}
     for page, rx in _PAGE_RX:
         if rx.match(t):
             return {"kind": "page", "page": page}
@@ -115,11 +165,14 @@ class PageControl:
         self._last: dict = {}
         self._checklist: Optional[str] = None
         self._jet: Optional[str] = None
+        self._contact: Optional[int] = None
 
     def apply(self, cmd: dict) -> None:
         with self._lock:
             self._seq += 1
             self._last = dict(cmd)
+            if cmd.get("kind") == "contact":
+                self._contact = cmd.get("n")
             if cmd.get("kind") == "page" and cmd.get("page") == "checklist":
                 if cmd.get("checklist") or cmd.get("jet_checklist"):     # a named list replaces both
                     self._checklist, self._jet = cmd.get("checklist"), cmd.get("jet_checklist")
@@ -129,6 +182,15 @@ class PageControl:
         "takeoff checklist" is the Huey's before_takeoff but the Hornet's takeoff)."""
         with self._lock:
             return (self._jet or self._checklist) if jet else self._checklist
+
+    def contact(self) -> Optional[int]:
+        """The track number whose detail panel the map shows ("kneeboard, contact 42"), or None."""
+        with self._lock:
+            return self._contact
+
+    def clear_contact(self) -> None:
+        with self._lock:
+            self._contact = None
 
     def clear_checklist(self) -> None:
         with self._lock:

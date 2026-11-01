@@ -27,6 +27,14 @@
     background: rgba(18,25,34,.9); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
   #mapinfo { position: absolute; left: 12px; top: 10px; font-size: 18px; color: var(--dim);
     background: rgba(11,15,20,.75); padding: 6px 10px; border-radius: 6px; }
+  #mapnote { position: absolute; left: 12px; top: 52px; font-size: 16px; color: var(--george, #a3e635);
+    background: rgba(11,15,20,.75); padding: 4px 10px; border-radius: 6px; display: none; max-width: 70%; }
+  #panel { position: absolute; right: 10px; bottom: 56px; width: 50%; max-height: 45%; overflow-y: auto; font-size: 17px;
+    background: rgba(18,25,34,.95); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: none; }
+  #panel h3 { margin: 0 0 6px; font-size: 20px; color: var(--text); }
+  #panel td { padding: 3px 6px 3px 0; vertical-align: top; color: var(--text); }
+  #panel td.k { color: var(--dim); white-space: nowrap; }
+  #panel .hint { color: var(--dim); font-size: 14px; margin-top: 6px; }
   #legend { position: absolute; left: 12px; bottom: 10px; font-size: 15px; color: var(--dim);
     background: rgba(11,15,20,.75); padding: 6px 10px; border-radius: 6px; }
   #legend span { margin-right: 12px; white-space: nowrap; }
@@ -37,6 +45,7 @@
   .pilot .who { color: var(--pilot); } .george .who { color: var(--george); } .overlord .who { color: var(--overlord); }
   .msg.order { color: var(--dim); font-size: .9em; } .order .who { color: var(--dim); }
   .msg.order.failed { color: var(--bad); }
+  .msg.picture { color: var(--dim); font-size: .9em; } .picture .who { color: var(--enemy); }
   mark { background: #3b3410; color: var(--jtac); padding: 0 3px; border-radius: 3px; font-weight: 600; }
   #status { padding: 14px; }
   #status table { width: 100%; border-collapse: collapse; }
@@ -110,6 +119,8 @@
 <div id="pmap" class="page on">
   <canvas id="map"></canvas>
   <div id="mapinfo">Waiting for DCS…</div>
+  <div id="mapnote"></div>
+  <div id="panel"></div>
   <div id="mapbar">
     <button id="zin" title="Zoom in">+</button>
     <button id="zout" title="Zoom out">−</button>
@@ -117,7 +128,7 @@
   </div>
   <div id="legend">
     <span style="color:var(--me)">▲ you</span><span style="color:var(--me);opacity:.6">— your track</span><span style="color:var(--outcast)">◆ Outcast</span>
-    <span style="color:var(--flight)">● Overlord</span><span style="color:var(--enemy)">■ ground ▲ air</span>
+    <span style="color:var(--flight)">● Overlord</span><span style="color:var(--enemy)">■ ground ▲ air □ last known</span>
     <span style="color:var(--jtac)">✛ JTAC</span><span style="color:var(--named)">◇ waypoint</span>
   </div>
 </div>
@@ -243,7 +254,9 @@ function draw() {
     if (hit && !force) return;
     placed.push([bx, by, w]); ctx.fillStyle = color; ctx.fillText(text, bx, by);
   };
-  const jtacId = M.jtac ? M.ground.find(g => Math.abs(g.lat - M.jtac.lat) < 1e-5 && Math.abs(g.lon - M.jtac.lon) < 1e-5) : null;
+  // the JTAC target: by its track number when the picture has one (it follows a moving target), else by position
+  const jtacId = M.jtac ? (M.jtac.tid ? M.ground.find(g => g.tid === M.jtac.tid)
+                                      : M.ground.find(g => Math.abs(g.lat - M.jtac.lat) < 1e-5 && Math.abs(g.lon - M.jtac.lon) < 1e-5)) : null;
   if (M.jtac) { const [x, y] = P(M.jtac.lat, M.jtac.lon); label(x + 10, y, "JTAC: " + short(M.jtac.type), css("--jtac"), true); }
   // named waypoints
   for (const w of M.named) {
@@ -252,19 +265,27 @@ function draw() {
     label(x, y, w.name, css("--named"));
   }
   ctx.globalAlpha = staleEnemy ? 0.35 : 1;
-  // enemy ground
+  // enemy ground: filled = in the latest scan; hollow = last known position (out of coverage / lost), with its age
+  const sel = M.panel ? M.panel.tid : null;
   for (const g of M.ground) {
     const [x, y] = P(g.lat, g.lon); if (x < -40 || y < -40 || x > W + 40 || y > H + 40) continue;
-    ctx.fillStyle = css("--enemy"); ctx.fillRect(x - 6, y - 6, 12, 12);
-    if (jtacId && g.id === jtacId.id) continue;
+    const old = isOld(g), col = g.neutral ? css("--dim") : css("--enemy");
+    ctx.globalAlpha = (staleEnemy ? 0.35 : 1) * (old ? 0.6 : 1);
+    if (old) { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(x - 6, y - 6, 12, 12); }
+    else { ctx.fillStyle = col; ctx.fillRect(x - 6, y - 6, 12, 12); }
+    if (g.tid && g.tid === sel) { ctx.strokeStyle = css("--text"); ctx.lineWidth = 2; ctx.strokeRect(x - 11, y - 11, 22, 22); }
+    if (jtacId && g === jtacId) continue;
     const ringTxt = g.ring_m ? ` · ring ~${Math.round(g.ring_m / unitM)} ${unit}` : "";
-    if (g.ad || radiusU <= 10) label(x, y, short(g.type) + ringTxt, css("--enemy"));
+    if (g.ad || radiusU <= 10 || g.george || g.tid === sel) label(x, y, short(g.type) + ringTxt + tags(g, radiusU), col);
   }
   // enemy air
   for (const a of M.air) {
-    const [x, y] = P(a.lat, a.lon); ctx.fillStyle = css("--enemy");
-    ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 8, y + 7); ctx.lineTo(x - 8, y + 7); ctx.closePath(); ctx.fill();
-    label(x, y, `${short(a.type)} ${Math.round(a.alt_ft / 1000)}k`, css("--enemy"));
+    const [x, y] = P(a.lat, a.lon), old = isOld(a), col = a.neutral ? css("--dim") : css("--enemy");
+    ctx.globalAlpha = (staleEnemy ? 0.35 : 1) * (old ? 0.6 : 1);
+    ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 8, y + 7); ctx.lineTo(x - 8, y + 7); ctx.closePath();
+    old ? ctx.stroke() : ctx.fill();
+    label(x, y, `${short(a.type)} ${Math.round(a.alt_ft / 1000)}k` + tags(a, 0), col);
   }
   ctx.globalAlpha = 1;
   // Overlord's flights
@@ -288,14 +309,38 @@ function draw() {
   ctx.save(); ctx.translate(cx, cy); ctx.rotate((me.hdg * Math.PI / 180) + rot);
   ctx.fillStyle = css("--me"); ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(10, 12); ctx.lineTo(0, 6); ctx.lineTo(-10, 12); ctx.closePath(); ctx.fill();
   ctx.restore();
+  // George's entries the picture can't place (a class only, or no unit fits): listed, never drawn
+  note.style.display = (M.george && M.george.length) ? "block" : "none";
+  note.textContent = (M.george && M.george.length) ? "George: " + M.george.join(" · ") : "";
+  showPanel(M.panel);
   info.textContent = `${me.ac || "aircraft"} · hdg ${String(Math.round(me.hdg)).padStart(3, "0")} · ${me.alt_ft.toLocaleString()} ft · ${me.kts} kt · ${trackUp ? "track up" : "north up"}`
     + (staleEnemy ? (M.enemy_age < 0 ? " · no enemy picture" : ` · enemy picture ${M.enemy_age}+ s old`) : "");
 }
 function short(t) { return String(t || "").replace(/_/g, " ").slice(0, 22); }
+const isOld = u => u.status === "out_of_coverage" || u.status === "lost";
+function ago(s) { return s < 60 ? `${s} s` : `${Math.round(s / 60)} min`; }
+// what a marker's label adds from the tactical picture: George's list number, the track number when
+// zoomed in, and how old a last-known position is
+function tags(u, radiusU) {
+  let t = "";
+  if (u.george) t += ` · G${u.george}`;
+  if (u.tid && radiusU <= 10) t += ` · ${u.tid}`;
+  if (isOld(u) && u.age_s !== null && u.age_s !== undefined) t += ` · ${ago(u.age_s)} ago`;
+  return t;
+}
+const note = document.getElementById("mapnote"), panelEl = document.getElementById("panel");
+function showPanel(p) {        // "kneeboard, contact 42": the track's details, from the picture only
+  if (!p) { panelEl.style.display = "none"; return; }
+  panelEl.innerHTML = `<h3>${esc(p.tid)} · ${esc(p.title)}</h3><table>`
+    + p.rows.map(r => `<tr><td class="k">${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("")
+    + `</table><div class="hint">"Kneeboard, close contact" to close</div>`;
+  panelEl.style.display = "block";
+}
 
 // ---------------------------------------------------------------- comms
 const commsEl = document.getElementById("comms");
-const WHO = { pilot: "You", george: "Crew", overlord: "Overlord", order: "Order", instructor: "Instructor" };
+const WHO = { pilot: "You", george: "Crew", overlord: "Overlord", order: "Order", instructor: "Instructor",
+              picture: "Picture" };
 function esc(s) { return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
 function highlight(s) {
   return esc(s)
@@ -484,6 +529,7 @@ function applyUi(u) {
   if (u.seq === uiSeq) return;
   uiSeq = u.seq;
   if (u.kind === "page" && PAGE_ID[u.page]) { show(PAGE_ID[u.page]); return; }
+  if (u.kind === "contact") { if (!isOn("pmap")) show("pmap"); else draw(); return; }   // the panel comes with the map feed
   if (u.kind === "zoom") {             // "kneeboard, zoom in / out": the map's range
     zoom = Math.max(0, Math.min(ZOOMS.length - 1, zoom + u.by)); save();
     if (!isOn("pmap")) show("pmap"); else draw();

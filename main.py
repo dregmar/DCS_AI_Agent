@@ -163,6 +163,7 @@ def _on_mission_loaded() -> None:
         INSTRUCTOR.on_mission_loaded()      # a running exercise is cancelled (stored, not scored)
     if TACTICAL is not None:
         TACTICAL.mission_loaded()           # unit ids start again: a new picture, new track numbers
+    KB_PAGES.clear_contact()                # the last mission's track numbers mean nothing now
 
 
 comms_menu.ON_LOADED = lambda: _on_mission_loaded()
@@ -388,6 +389,40 @@ def _tactical_hints(snap: dict, attacks: dict):
 
 
 TACTICAL = None
+PICTURE_MAX_AGE_S = 5.0                         # the map uses the picture only while it's this fresh
+# Comms log "Picture" lines (step T5): kills and losses of enemy units always; new / lost / back only for
+# units that matter (air defence, aircraft, threat weight >= this), so a busy mission doesn't flood it
+PICTURE_LOG_WEIGHT = 70
+
+
+def _picture_events(events) -> None:
+    """New picture events (tactical/events.py) -> kneeboard comms log lines of kind "picture". Runs on the
+    tactical thread; never speaks."""
+    from kneeboard.model import short_tid
+    from tactical.models import Affiliation, Category
+    from tactical.sources import dist_m, true_bearing
+    pic = TACTICAL.picture() if TACTICAL is not None else None
+    me = state_store.snapshot().get("my_ll")
+    imperial = aircraft_mod.profile(state_store.snapshot()).imperial
+    for e in events:
+        if e.track_id is None:                           # the picture as a whole: stale, current, new mission
+            COMMS_LOG.add("picture", e.text)
+            continue
+        t = pic.track(e.track_id) if pic is not None else None
+        if t is None or t.affiliation == Affiliation.FRIENDLY:
+            continue                                     # own flights are reported by whoever leads them
+        if e.kind in ("new", "lost", "reappeared"):
+            threat = next((a for a in pic.threats if a.track_id == t.track_id), None)
+            air = t.category in (Category.AIR, Category.AIR_FIXED, Category.AIR_ROTARY)
+            if not (air or "air_defence" in t.tags or (threat is not None and threat.weight >= PICTURE_LOG_WEIGHT)):
+                continue
+        text = e.text.replace(f"({t.track_id})", f"({short_tid(t.track_id)})")
+        if e.kind in ("new", "reappeared") and me and t.position is not None:
+            d = dist_m((me[0], me[1]), (t.position.lat, t.position.lon))
+            b = true_bearing((me[0], me[1]), (t.position.lat, t.position.lon))
+            dist = f"{d / 1852:.0f} nm" if imperial else f"{d / 1000:.0f} km"
+            text = text.rstrip(".") + f", {dist} {overlord_mod.compass(b)} of you."
+        COMMS_LOG.add("picture", text)
 if getattr(config, "TACTICAL_ENABLED", True):
     from tactical.service import TacticalService
     from tactical.tracks import Thresholds as _TacticalThresholds
@@ -395,6 +430,7 @@ if getattr(config, "TACTICAL_ENABLED", True):
                                thresholds=_TacticalThresholds.from_config(config))
     if getattr(config, "OLYMPUS_ENABLED", False):
         olympus.ON_COMMAND = TACTICAL.note_command
+    TACTICAL.on_events = _picture_events            # picture changes on the kneeboard comms log (T5)
 
 
 def _bullseye():
@@ -691,6 +727,21 @@ class _KneeboardContext:
     def jtac(snap: dict):
         t = JTAC.current
         return {"type": t["type"], "lat": t["lat"], "lon": t["lon"]} if t else None
+
+    @staticmethod
+    def picture():
+        """The tactical picture (tactical/, step T5) while its service keeps it current, else None:
+        the map then falls back to Export.lua's lists as before."""
+        if TACTICAL is None or TACTICAL.last_tick_mono is None:
+            return None
+        if time.monotonic() - TACTICAL.last_tick_mono > PICTURE_MAX_AGE_S:
+            return None
+        return TACTICAL.picture()
+
+    @staticmethod
+    def contact():
+        """The track whose details the map shows ("kneeboard, contact 42"), or None."""
+        return KB_PAGES.contact()
 
 
 _KB_CTX = _KneeboardContext()
