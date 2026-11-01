@@ -58,18 +58,29 @@ class TestExportLua(unittest.TestCase):
         path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dcs_scripts", "Export.lua")
         with open(path, encoding="utf-8") as f:
             lua = f.read()
-        fmt = re.search(r"local payload = string\.format\(\s*'([^']*)',(.*?)\n\n", lua, re.S)
-        self.assertIsNotNone(fmt)
-        self.assertIn('"t":%.2f,"scan_t":%.2f,"olyx":%s}', fmt.group(1))      # + step 7's enemy Olympus list
-        specs = len(re.findall(r"%[-0-9.]*[dfs]", fmt.group(1)))
-        args = fmt.group(2).rsplit(")", 1)[0]
-        depth, n = 0, 1
-        for ch in args:
-            depth += ch in "([{"
-            depth -= ch in ")]}"
-            n += ch == "," and depth == 0
-        self.assertEqual(specs, n)
-        self.assertTrue(args.strip().endswith('george_scan_t or -1, george_olyx or "[]"'))
+        # every packet format (Phase 3: the 10 Hz flight block is a second one): its specs and arguments line up
+        fmts = []
+        for m in re.finditer(r"local payload = string\.format\(\s*'([^']*)',", lua):
+            depth, n, i, args = 1, 1, m.end(), ""
+            while depth:                                   # the arguments, up to string.format's own ")"
+                ch = lua[i]
+                if ch == '"':                              # skip string literals ("%.1f", "[]")
+                    j = lua.index('"', i + 1)
+                    args += lua[i:j + 1]
+                    i = j + 1
+                    continue
+                depth += ch in "([{"
+                depth -= ch in ")]}"
+                n += ch == "," and depth == 1
+                args += ch if depth else ""
+                i += 1
+            fmts.append((m.group(1), args, n))
+        self.assertEqual(len(fmts), 2)
+        for spec, args, n in fmts:
+            self.assertEqual(len(re.findall(r"%[-0-9.]*[dfs]", spec)), n, spec[:40])
+        full = next(f for f in fmts if '"olyx"' in f[0])
+        self.assertIn('"t":%.2f,"scan_t":%.2f,"olyx":%s,"g":%s}', full[0])     # + step 7's Olympus list, Phase 3's g
+        self.assertTrue(full[1].strip().endswith('george_scan_t or -1, george_olyx or "[]", george_num(george_g(), "%.2f")'))
         self.assertIn("george_scan_t = now", lua)                         # set only when a scan completes
 
 

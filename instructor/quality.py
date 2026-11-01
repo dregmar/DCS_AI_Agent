@@ -27,6 +27,11 @@ GETTERS: Dict[str, Callable[[Sample], Optional[float]]] = {
     "vs_fpm": lambda s: s.vs_fpm,
     "hdg": lambda s: s.hdg,
     "ias_kt": lambda s: s.ias_kt,
+    "pitch": lambda s: s.pitch,
+    "roll": lambda s: s.roll,
+    "g": lambda s: s.gmax if s.gmax is not None else s.g,
+    "ll": lambda s: s.ll,
+    "fuel_lbs": lambda s: s.fuel_lbs,
 }
 
 
@@ -76,4 +81,5 @@ def _resolution_note(samples: List[Sample], signal: str) -> str:
 
 def _name(signal: str) -> str:
     return {"pos": "position", "agl_ft": "height", "hdg": "heading", "vel": "velocity",
-            "vs_fpm": "vertical speed", "ias_kt": "airspeed"}.get(signal, signal)
+            "vs_fpm": "vertical speed", "ias_kt": "airspeed", "ll": "position", "fuel_lbs": "fuel",
+            "g": "g", "pitch": "pitch", "roll": "bank"}.get(signal, signal)

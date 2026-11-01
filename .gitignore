@@ -19,3 +19,7 @@ config.py
 data/mission_briefing.json
 data/user_waypoints.json
 data/manuals/
+
+# Claude Code: personal approvals and hook state (the shared .claude/settings.json is versioned)
+.claude/settings.local.json
+.claude/hooks/state/

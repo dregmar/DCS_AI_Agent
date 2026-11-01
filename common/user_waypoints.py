@@ -37,7 +37,16 @@ _WPW = r"(?:(?:the\s+)?(?:waypoint|way point|point|mark)\s+)?"
 _MARK = re.compile(r"\b(?:mark|save|store|set|record|remember|drop)\b.*?\b(?:position|location|here|this spot|"
                    r"this point)\b.*?\bas\s+(?:the\s+)?" + _WPW + NAME + r"\b|"
                    r"\b(?:mark|set|save|drop)\s+(?:the\s+)?" + _WPW + NAME + r"\s+(?:here|at\s+(?:our|my|the)\s+"
-                   r"(?:current\s+)?(?:position|location))\b")
+                   r"(?:current\s+)?(?:position|location))\b|"
+                   # no "as" (31 Oct: "Mark position, waypoint Zulu" / "mark position waypoint Zulu")
+                   r"\b(?:mark|save|store|set|record|drop)\b.*?\b(?:position|location)\s+(?:the\s+)?"
+                   r"(?:waypoint|way point)\s+" + NAME + r"\b")
+# a mark order whose name wasn't a NATO word: asked again rather than left to the crew model
+_MARK_ANY = re.compile(r"\b(?:mark|save|store|set|record|drop)\b.*?\b(?:position|location|here)\b.*?"
+                       r"(?:\bas\s+(?:the\s+)?(?:waypoint|way point|point)?|\b(?:waypoint|way point))\s*([a-z]+)?\s*$")
+# Whisper's versions of names (31 Oct: "Zulu" heard as "Zolo"); whole words, mark / grid / where orders
+_ALIKE = {"zolo": "zulu", "zoolu": "zulu", "zoolo": "zulu", "sulu": "zulu", "zulo": "zulu", "julu": "zulu",
+          "alfa": "alpha", "brava": "bravo", "charley": "charlie", "foxtrott": "foxtrot", "yanky": "yankee"}
 _GRID_AS = re.compile(r"\bgrid\b(.*?)\bas\s+(?:the\s+)?" + _WPW + NAME + r"\b")
 _NAME_GRID = re.compile(r"\b(?:set|make|put|mark)?\s*(?:the\s+)?" + _WPW + NAME + r"\s+(?:at|to|is|on)?\s*(?:grid\b)(.*)$")
 _OBJ_WP = re.compile(r"\bobjective\s+(?:is\s+)?(?:at\s+)?(?:waypoint|way point|wp)\s+(\d+|[a-z]+)\b|"
@@ -159,6 +168,7 @@ class UserWaypoints:
         """What to say, or None if this isn't about named waypoints."""
         t = re.sub(r"[^a-z0-9' -]+", " ", (text or "").lower())
         t = re.sub(r"\s+", " ", t).strip()
+        t = " ".join(_ALIKE.get(w, w) for w in t.split())
         me = snap.get("my_ll")
         m = _OBJ_WP.search(t)
         if m:
@@ -191,12 +201,15 @@ class UserWaypoints:
             return said + (" " + rep.split(", ", 1)[1] if ", " in rep else "")
         m = _MARK.search(t)
         if m:
-            name = canon(m.group(1) or m.group(2))
+            name = canon(next(g for g in m.groups() if g))
             if not me or snap.get("telemetry_age", 0.0) > 10.0:
                 return "Unable, no position."
             grid = position.mgrs_text(me[0], me[1], 5)
             self.set(name, {"ll": [me[0], me[1]], "grid": grid})
             return f"Waypoint {name} marked. " + position.say_mgrs(me[0], me[1])
+        m = _MARK_ANY.search(t)
+        if m and not re.search(r"\d", t):
+            return "Say again the waypoint name, Alpha to Zulu."
         if _CLEAR.search(t):
             n = self.clear()
             return f"{n} waypoint{'s' if n != 1 else ''} cleared." if n else "No named waypoints."

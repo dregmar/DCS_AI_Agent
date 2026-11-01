@@ -6,6 +6,8 @@ DCS-BIOS, Olympus or the comms hook.
     python instructor_probe.py                 Export.lua (UDP 5005) + comms hook (UDP 5011)
     python instructor_probe.py --axes          ... and your joystick axes (item I2, needs pygame)
     python instructor_probe.py --seconds 600   stop by itself (default: Ctrl+C)
+    python instructor_probe.py --fast          ask Export.lua for the 10 Hz flight block (Phase 3, I5) the
+                                               way an exercise does (the flag file), and check it and g (I1)
 
 A useful session, in the UH-1H and again in the AH-64D:
   1. Sit on the ground, still, for 10 s           (learns the skid height)
@@ -36,8 +38,8 @@ SEGMENT_GAP_S = 5.0          # model time jumping more than this (pause, reload)
 
 # Export.lua fields the instructor would use, and how a "good" value looks
 FIELDS = ("ac", "t", "pos", "vel", "agl_ft", "vs_fpm", "speed_kts", "alt_ft",
-          "pitch", "roll", "yaw", "hdg", "cargo", "fuel", "ll", "scan_t")
-NOT_SENT = ("g / normal acceleration", "control positions", "touchdown / weight on wheels",
+          "pitch", "roll", "yaw", "hdg", "cargo", "fuel", "ll", "scan_t", "g")
+NOT_SENT = ("control positions", "touchdown / weight on wheels",
             "shot / hit / kill / land events", "runway geometry")
 
 
@@ -90,7 +92,10 @@ class AircraftStats:
         self.model: List[float] = []
         self.dup_t = 0
         self.present = {f: 0 for f in FIELDS}
-        self.values: Dict[str, List[float]] = {f: [] for f in ("pitch", "roll", "yaw", "speed_kts", "hdg")}
+        self.values: Dict[str, List[float]] = {f: [] for f in ("pitch", "roll", "yaw", "speed_kts", "hdg", "g")}
+        self.full = 0                                   # 4 Hz full packets (field shares are of these)
+        self.fast = 0                                   # 10 Hz flight-block packets ("k": "f")
+        self.gmax: List[float] = []
         self.ias_minus_gs: List[float] = []
         self.crab: List[float] = []
         self.ground_since: Optional[float] = None
@@ -109,9 +114,15 @@ class AircraftStats:
     def add(self, p: Dict[str, Any], wall: float) -> None:
         self.n += 1
         self.wall.append(wall)
-        for f in FIELDS:
-            if valid(f, p.get(f)):
-                self.present[f] += 1
+        if p.get("k") == "f":
+            self.fast += 1
+            if _num(p.get("gmax")):
+                self.gmax.append(float(p["gmax"]))
+        else:
+            self.full += 1
+            for f in FIELDS:
+                if valid(f, p.get(f)):
+                    self.present[f] += 1
         t = p.get("t")
         if _num(t):
             t = float(t)
@@ -138,7 +149,10 @@ class AircraftStats:
         gs = math.hypot(vel[0], vel[1]) * KT_PER_MS if _vec(vel) else None
         if gs is not None and valid("speed_kts", p.get("speed_kts")) and gs > 40:
             self.ias_minus_gs.append(float(p["speed_kts"]) - gs)
-        if gs is not None and gs > 20 and valid("hdg", p.get("hdg")):
+        # forward flight only (IAS > 40 kt): at 20 kt ground speed a sling carry or sideways / backward
+        # hover-taxi gave a 166 deg 95th percentile (30 Oct)
+        ias = p.get("speed_kts")
+        if gs is not None and gs > 20 and valid("speed_kts", ias) and ias > 40 and valid("hdg", p.get("hdg")):
             track = math.degrees(math.atan2(vel[1], vel[0])) % 360     # vel = north, east, up
             self.crab.append(_angle_diff(float(p["hdg"]), track))
         if _num(t) and gs is not None and _num(vs) and valid("agl_ft", agl):
@@ -192,7 +206,7 @@ class AircraftStats:
         return [b - a for a, b in zip(self.wall, self.wall[1:])]
 
     def share(self, f: str) -> float:
-        return self.present[f] / self.n if self.n else 0.0
+        return self.present[f] / self.full if self.full else 0.0
 
     def varies(self, f: str, spread: float = 0.5) -> bool:
         xs = self.values.get(f) or []
@@ -206,8 +220,14 @@ class AircraftStats:
             out.append({"item": "I5 rate", "verdict": "unknown", "why": "no model time 't' in the packets"})
         else:
             need = rate < HOVER_RATE_HZ
-            out.append({"item": "I5 rate", "verdict": "needed" if need else "not needed",
-                        "why": f"{rate:.2f} distinct packets per model second (hover scoring wants >= {HOVER_RATE_HZ:.0f})"})
+            if self.fast:
+                out.append({"item": "I5 rate", "verdict": "10 Hz block working" if not need else "10 Hz block too slow",
+                             "why": f"{rate:.2f} distinct packets per model second, {self.fast} of {self.n} from the "
+                                    f"flight block (hover scoring wants >= {HOVER_RATE_HZ:.0f})"})
+            else:
+                out.append({"item": "I5 rate", "verdict": "needed" if need else "not needed",
+                            "why": f"{rate:.2f} distinct packets per model second (hover scoring wants >= "
+                                   f"{HOVER_RATE_HZ:.0f}); no flight-block packets (run with --fast)"})
         hdg = self.share("hdg")
         out.append({"item": "I1 heading", "verdict": "present" if hdg >= 0.9 else "missing",
                     "why": f"valid in {hdg:.0%} of packets"})
@@ -221,7 +241,15 @@ class AircraftStats:
         att = [f for f in ("pitch", "roll") if self.varies(f)]
         out.append({"item": "I1 attitude", "verdict": "present" if len(att) == 2 else "check",
                     "why": "pitch and roll change" if len(att) == 2 else f"changing: {att or 'none'} (fly a turn)"})
-        out.append({"item": "I1 g", "verdict": "needed", "why": "Export.lua sends no acceleration"})
+        gs = self.values.get("g") or []
+        if self.share("g") >= 0.9 and gs:
+            why = f"valid in {self.share('g'):.0%} of full packets, {min(gs):.2f} to {max(gs):.2f} g"
+            if self.gmax:
+                why += f"; peak between 10 Hz packets up to {max(self.gmax):.2f} g"
+            out.append({"item": "I1 g", "verdict": "present", "why": why})
+        else:
+            out.append({"item": "I1 g", "verdict": "missing",
+                        "why": f"valid in {self.share('g'):.0%} of full packets (old Export.lua, or the module gives none)"})
         whole = [f for f, frac in sorted(self.fraction_seen.items()) if not frac]
         if whole:
             out.append({"item": "resolution", "verdict": "whole numbers",
@@ -246,7 +274,7 @@ class AircraftStats:
     def summary_lines(self) -> List[str]:
         gaps = self.wall_gaps()
         rate = self.rate_hz()
-        lines = [f"== {self.ac or '(no aircraft name)'}: {self.n} packets, "
+        lines = [f"== {self.ac or '(no aircraft name)'}: {self.n} packets ({self.fast} from the 10 Hz block), "
                  f"{('%.2f Hz' % rate) if rate else 'rate unknown'} (model time), "
                  f"{self.dup_t} repeated 't', {len(self.segments)} model-time segment(s)"]
         if gaps:
@@ -380,13 +408,31 @@ def _open_axes():
         return None, []
 
 
+def fast_flag_path(config) -> Optional[str]:
+    """Same file as main._fast_flag_path (Export.lua sends the 10 Hz block while it exists)."""
+    p = getattr(config, "INSTRUCTOR_FAST_FLAG", None)
+    if p:
+        return p
+    scripts = os.path.join(os.path.expanduser("~"), "Saved Games", "DCS", "Scripts")
+    return os.path.join(scripts, "george_fast_telemetry.flag") if os.path.isdir(scripts) else None
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Instructor Mode Phase 0 probe (listen only)")
     ap.add_argument("--seconds", type=float, default=0.0, help="stop after this long (0 = Ctrl+C)")
     ap.add_argument("--axes", action="store_true", help="also read joystick axes (item I2)")
     ap.add_argument("--no-hook", action="store_true", help="don't listen for the comms hook")
+    ap.add_argument("--fast", action="store_true", help="ask Export.lua for the 10 Hz flight block (I5)")
     a = ap.parse_args()
     import config
+    flag = fast_flag_path(config) if a.fast else None
+    if a.fast:
+        if flag is None:
+            print("No Saved Games\\DCS\\Scripts folder: set INSTRUCTOR_FAST_FLAG in config.py.")
+        else:
+            with open(flag, "w", encoding="utf-8") as f:
+                f.write("instructor_probe.py --fast\n")
+            print(f"10 Hz flight block requested ({flag}); Export.lua sees it within a second.")
     print(__doc__)
     probe = Probe()
     try:
@@ -430,6 +476,9 @@ def main() -> None:
                 time.sleep(0.005)
     except KeyboardInterrupt:
         pass
+    finally:
+        if flag and os.path.exists(flag):
+            os.remove(flag)
     lines = probe.report()
     print("\n" + "\n".join(lines))
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs",

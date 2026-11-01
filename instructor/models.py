@@ -7,7 +7,7 @@ explained later. SCHEMA goes up whenever a saved field changes meaning.
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, Optional, Tuple
 
-SCHEMA = 1
+SCHEMA = 3          # 2 (Phase 2): Evaluation.context; Sample.ll / fuel_lbs. 3 (Phase 3): pitch / roll / g / gmax
 
 
 @dataclass(frozen=True)
@@ -56,9 +56,22 @@ class Sample:
     vs_fpm: Optional[float]
     hdg: Optional[float]                        # true heading, deg
     ias_kt: Optional[float]
+    ll: Optional[Tuple[float, float]] = None    # lat, lon (deg): distances / bearings to waypoints, true north
+    fuel_lbs: Optional[float] = None            # core.fuel.current_lbs (DCS fuel first)
+    pitch: Optional[float] = None               # deg, nose up +
+    roll: Optional[float] = None                # deg, right wing down +
+    g: Optional[float] = None                   # normal acceleration now (LoGetAccelerationUnits().y)
+    gmax: Optional[float] = None                # peak g since the previous 10 Hz packet (read every frame)
 
     def to_json(self) -> Dict[str, Any]:
         return asdict(self)
+
+    @staticmethod
+    def from_json(d: Dict[str, Any]) -> "Sample":
+        vec = lambda v, n: tuple(v) if isinstance(v, (list, tuple)) and len(v) == n else None
+        return Sample(d["t"], d.get("aircraft", ""), vec(d.get("pos"), 3), vec(d.get("vel"), 3), d.get("agl_ft"),
+                      d.get("vs_fpm"), d.get("hdg"), d.get("ias_kt"), vec(d.get("ll"), 2), d.get("fuel_lbs"),
+                      d.get("pitch"), d.get("roll"), d.get("g"), d.get("gmax"))
 
 
 @dataclass(frozen=True)
@@ -117,6 +130,7 @@ class Evaluation:
     confidence: str                 # "high" | "medium" | "low" | "none"
     weakness_tags: Tuple[str, ...]
     note: str = ""                  # why it was aborted / not scored, in words
+    context: Dict[str, Any] = field(default_factory=dict)   # the attempt's setup: target, bingo, touchdown time...
 
     def to_json(self) -> Dict[str, Any]:
         return asdict(self)

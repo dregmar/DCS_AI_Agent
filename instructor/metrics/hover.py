@@ -53,8 +53,23 @@ def _worst(pairs: List[Tuple[float, float]]) -> Tuple[float, float]:
     return max(pairs, key=lambda vt: (vt[0], -vt[1]))
 
 
-def observe(samples: List[Sample], t0: float, box: Dict[str, float], judged: Dict[str, bool]) -> Dict[str, Observation]:
-    """judged: which signals passed the quality gate (pos / agl_ft / hdg); the box only uses those."""
+END_S = 2.0            # the last END_S seconds give where you ended up (trend)
+STEADY_SHARE = 0.6     # ended at least this share of the worst excursion away: a steady trend, not wandering
+
+
+def _end_mean(samples: List[Sample], get) -> Optional[float]:
+    if not samples:
+        return None
+    t_end = samples[-1].t
+    vals = [get(s) for s in samples if s.t >= t_end - END_S and get(s) is not None]
+    return statistics.fmean(vals) if vals else None
+
+
+def observe(samples: List[Sample], t0: float, box: Dict[str, float], judged: Dict[str, bool],
+            context: Optional[dict] = None) -> Dict[str, Observation]:
+    """judged: which signals passed the quality gate (pos / agl_ft / hdg); the box only uses those.
+    Evidence also carries the trend: where you ended up versus the worst moment (a steady drift south /
+    climb, or wandering about the point), for the spoken feedback."""
     ref = reference(samples, t0)
     out: Dict[str, Observation] = {}
 
@@ -62,20 +77,29 @@ def observe(samples: List[Sample], t0: float, box: Dict[str, float], judged: Dic
               if s.pos and ref["n"] is not None]
     if radius:
         w, tw = _worst(radius)
+        en = _end_mean(samples, lambda s: s.pos[0] - ref["n"] if s.pos else None)
+        ee = _end_mean(samples, lambda s: s.pos[1] - ref["e"] if s.pos else None)
+        net = math.hypot(en, ee) if en is not None and ee is not None else 0.0
         out["hover.radius_p95"] = Observation(
             "hover.radius_p95", percentile([r for r, _ in radius], 95), "m", "derived", ("pos",),
-            {"n": len(radius), "worst": w, "t_worst": tw, "mean": statistics.fmean(r for r, _ in radius)})
+            {"n": len(radius), "worst": w, "t_worst": tw, "mean": statistics.fmean(r for r, _ in radius),
+             "net_m": net, "net_dir": math.degrees(math.atan2(ee or 0.0, en or 0.0)) % 360.0,
+             "steady": net >= STEADY_SHARE * w and net >= 1.0, "dur_s": samples[-1].t - samples[0].t})
 
     dh = [(s.agl_ft - ref["agl"], s.t) for s in samples if s.agl_ft is not None and ref["agl"] is not None]
     if dh:
         rms = math.sqrt(statistics.fmean(d * d for d, _ in dh))
         w, tw = _worst([(abs(d), t) for d, t in dh])
         side = next(("high" if d > 0 else "low") for d, t in dh if abs(d) == w and t == tw)
+        net = _end_mean(samples, lambda s: s.agl_ft - ref["agl"] if s.agl_ft is not None else None) or 0.0
+        trend = {"net_ft": net, "steady": abs(net) >= STEADY_SHARE * w and abs(net) >= 2.0,
+                 "dur_s": samples[-1].t - samples[0].t}
         out["hover.height_rms"] = Observation(
             "hover.height_rms", rms, "ft", "derived", ("agl_ft",),
-            {"n": len(dh), "ref_ft": ref["agl"], "mean_dev": statistics.fmean(d for d, _ in dh)})
+            dict({"n": len(dh), "ref_ft": ref["agl"], "mean_dev": statistics.fmean(d for d, _ in dh)}, **trend))
         out["hover.height_max"] = Observation(
-            "hover.height_max", w, "ft", "derived", ("agl_ft",), {"n": len(dh), "t_worst": tw, "side": side})
+            "hover.height_max", w, "ft", "derived", ("agl_ft",),
+            dict({"n": len(dh), "t_worst": tw, "side": side}, **trend))
 
     dhdg = [(abs(angle_diff(s.hdg, ref["hdg"])), s.t) for s in samples if s.hdg is not None and ref["hdg"] is not None]
     if dhdg:

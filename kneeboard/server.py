@@ -6,10 +6,13 @@ Python's own ThreadingHTTPServer on a daemon thread, bound to 127.0.0.1 only:
     GET /state     one JSON snapshot of every feed plus "comms" (debugging)
     GET /events    Server-Sent Events: one event per feed ("map", "status", "briefing", "checklist",
                    "ui" ...) when its data changes (each checked at its own interval, resent every
-                   5 s anyway), and "comms" with new log lines only.
+                   5 s anyway), and "comms" with new log lines only; "page" carries the version of
+                   index.html, and a page older than that reloads itself (31 Oct: OpenKneeboard kept
+                   showing the old tabs after an update until its tab was reloaded by hand).
 Each connected page costs one thread that sleeps between checks; building the data is a few
 milliseconds, so DCS doesn't notice. Nothing here touches the game or the voice threads.
 """
+import hashlib
 import json
 import os
 import threading
@@ -20,6 +23,7 @@ from typing import Callable, Dict, Optional, Tuple
 STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 TICK_S = 0.2
 RESEND_S = 5.0
+VERSION_MARK = b"__PAGE_VERSION__"        # index.html carries this; the served page carries the version
 
 
 class Kneeboard:
@@ -28,8 +32,12 @@ class Kneeboard:
                  feeds: Optional[Dict[str, Tuple[Callable[[], dict], float]]] = None):
         """feeds: more pages' data, {event name: (function, seconds between checks)}."""
         self.map_fn, self.status_fn, self.log = map_fn, status_fn, log
-        self.feeds: Dict[str, Tuple[Callable[[], dict], float]] = {"map": (map_fn, TICK_S), "status": (status_fn, 0.5)}
+        self.feeds: Dict[str, Tuple[Callable[[], dict], float]] = {"map": (map_fn, TICK_S), "status": (status_fn, 0.5),
+                                                                  "page": (self.page_version, 2.0)}
         self.feeds.update(feeds or {})
+        self._ver_lock = threading.Lock()
+        self._ver_key = None
+        self._ver = ""
         self.host, self.port = host, port
         self.httpd: Optional[ThreadingHTTPServer] = None
 
@@ -82,7 +90,29 @@ class Kneeboard:
 
     def _file(self, h, name: str, ctype: str) -> None:
         with open(os.path.join(STATIC, name), "rb") as f:
-            self._send(h, 200, ctype, f.read())
+            body = f.read()
+        if name == "index.html":
+            body = body.replace(VERSION_MARK, self._version_of(body).encode())
+        self._send(h, 200, ctype, body)
+
+    @staticmethod
+    def _version_of(body: bytes) -> str:
+        return hashlib.sha1(body).hexdigest()[:12]
+
+    def page_version(self) -> dict:
+        """{"v": version of index.html on disk}: re-read only when its size or time changes."""
+        path = os.path.join(STATIC, "index.html")
+        try:
+            st = os.stat(path)
+        except OSError:
+            return {"v": ""}
+        key = (st.st_mtime_ns, st.st_size)
+        with self._ver_lock:
+            if key != self._ver_key:
+                with open(path, "rb") as f:
+                    self._ver = self._version_of(f.read())
+                self._ver_key = key
+            return {"v": self._ver}
 
     # ------------------------------------------------------------ SSE
     def _events(self, h) -> None:

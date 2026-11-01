@@ -161,6 +161,8 @@ def _on_mission_loaded() -> None:
     ALERTS.reset()                          # the last mission's alerts go to the Alerts history
     if INSTRUCTOR is not None:
         INSTRUCTOR.on_mission_loaded()      # a running exercise is cancelled (stored, not scored)
+    if TACTICAL is not None:
+        TACTICAL.mission_loaded()           # unit ids start again: a new picture, new track numbers
 
 
 comms_menu.ON_LOADED = lambda: _on_mission_loaded()
@@ -194,8 +196,95 @@ comms_menu.ON_TYPES = UNIT_TYPES.on_types_message   # ... and "TYPES ..." (what 
 # Read-only: it reads the state store on its own thread and speaks; it never sends anything to DCS.
 # config.INSTRUCTOR_ENABLED = False turns it off (then "Instructor, ..." goes to George as before).
 from instructor import session as instructor_mod
+INSTRUCTOR_FARP_KM = 10.0
+
+
+def _instructor_target(text: str, snap: dict):
+    """The approach exercise's landing point (decision, 30 Oct): a waypoint named in the words, else
+    the nearest helipad / FARP within INSTRUCTOR_FARP_KM. Returns {"name", "ll", "kind"}, a refusal to
+    say, or None. Waypoints (31 Oct flight: "approach, waypoint 1" / "approach for waypoint 4" were missed):
+      * a mission route waypoint by number, heard as George hears it (common/nav_commands.py), placed on
+        the map by the map-to-lat/lon fit (common/geo.py: needs a minute of flying or contacts first)
+      * one of your named points (Alpha, Bravo ... objective), with or without "to" / "on" before it."""
+    from common import user_waypoints as uw_mod
+    from common import geo, nav, nav_commands
+    t = nav_commands._norm(text)
+    m = nav_commands._NUMBERED.search(t)
+    if m:
+        n = nav_commands._num(m.group(1))
+        p = nav.find_waypoint(snap.get("route") or [], n)
+        if p is None:
+            return f"Instructor, no waypoint {n} in the mission route."
+        geo.FIT.add_snapshot(snap)
+        ll = geo.FIT.to_ll(float(p[1]), float(p[2]))
+        if ll is None:
+            return (f"Instructor, I can't place waypoint {n} on the map yet. Fly a minute and ask again, "
+                    f"or use a named waypoint or a FARP.")
+        return {"name": f"waypoint {n}", "ll": ll, "kind": "route"}
+    name = uw_mod.named_in(text)
+    if not name:
+        nm = re.search(r"\b" + uw_mod.NAME + r"\b", (text or "").lower())
+        name = uw_mod.canon(nm.group(1)) if nm else None
+    if name:
+        ll = USER_WAYPOINTS.ll(name, snap)
+        if ll is None:
+            return f"Instructor, waypoint {name} isn't set. Mark it first, or say approach exercise for the nearest FARP."
+        return {"name": f"waypoint {name}", "ll": ll, "kind": "waypoint"}
+    got = AIRFIELDS.nearest(snap, farp=True)
+    if got is None or got[1] > INSTRUCTOR_FARP_KM * 1000:
+        return None
+    return {"name": got[0]["name"], "ll": (got[0]["lat"], got[0]["lon"]), "kind": "farp"}
+
+
+def _instructor_fuel(snap: dict):
+    from core.fuel import current_lbs
+    return current_lbs(snap)
+
+
+def _instructor_reserve(snap: dict) -> float:
+    """Landing reserve for the fuel exercise: the Huey's own (the 20-minute light), else the aircraft profile's."""
+    if state_store.profile() == "huey":
+        return float(getattr(config, "HUEY_FUEL_RESERVE_LBS", 0) or 0)
+    return float(aircraft_mod.profile(snap).reserve_lbs or 0)
+
+
+def _fast_flag_path() -> "str | None":
+    """Export.lua sends the 10 Hz flight block (I5) while this file exists: config.INSTRUCTOR_FAST_FLAG,
+    else Saved Games\\DCS\\Scripts\\george_fast_telemetry.flag (None when that Scripts folder is missing)."""
+    p = getattr(config, "INSTRUCTOR_FAST_FLAG", None)
+    if p:
+        return p
+    scripts = os.path.join(os.path.expanduser("~"), "Saved Games", "DCS", "Scripts")
+    return os.path.join(scripts, "george_fast_telemetry.flag") if os.path.isdir(scripts) else None
+
+
+_FAST_NOTED = [False]
+
+
+def _instructor_fast(on: bool) -> None:
+    """Called from the instructor's observer thread when an exercise starts / ends (never per packet)."""
+    path = _fast_flag_path()
+    if path is None:
+        if on and not _FAST_NOTED[0]:
+            _FAST_NOTED[0] = True
+            print("[INSTRUCTOR] No Saved Games\\DCS\\Scripts folder: 10 Hz telemetry not requested "
+                  "(set INSTRUCTOR_FAST_FLAG in config.py).")
+        return
+    try:
+        if on:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("George AI instructor: Export.lua sends flight data at 10 Hz while this file exists.\n")
+        elif os.path.exists(path):
+            os.remove(path)
+        print(f"[INSTRUCTOR] 10 Hz telemetry {'requested' if on else 'off'}.")
+    except OSError as e:
+        print(f"[INSTRUCTOR] Couldn't {'create' if on else 'remove'} {path}: {e}")
+
+
 INSTRUCTOR = (instructor_mod.build(config, state_store.snapshot, lambda text: _speak_instructor(text),
-                                   mission_name=KB.mission_name)
+                                   mission_name=KB.mission_name, targets=_instructor_target, fuel=_instructor_fuel,
+                                   reserve=_instructor_reserve, flight=state_store.flight_since,
+                                   fast=_instructor_fast)
               if getattr(config, "INSTRUCTOR_ENABLED", True) else None)
 
 
@@ -255,6 +344,57 @@ from common.jtac import Jtac
 JTAC = Jtac(state_store.snapshot, oly=wingmen.EXECUTOR.oly if wingmen.EXECUTOR else None,
             speak=lambda text: _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_PILOT)))
 _JTAC_WAKE = re.compile(r"^\s*(?:jtac|j tac|jay tac|j-tac)[\s,.!?]+(.*)$", re.I)
+
+
+# --- TACTICAL PICTURE (tactical/, design approved 31 Oct): one track per DCS object, with where each fact
+# came from. Step T3: it runs on its own thread and shows a Status row; nothing reads it yet.
+ENGAGEMENT = None                               # the engagement monitor, once started (last shot time)
+
+
+def _attacker_name(snap: dict, aid: int) -> str:
+    """Who an Olympus attackUnit came from: an Overlord flight, an Outcast or a wingman."""
+    if OVERLORD is not None:
+        for m in OVERLORD.active():
+            ids = {int(u[2]) for u in (OVERLORD._flight(snap, m) or [])}
+            if m.lead_id == aid or aid in ids:
+                return f"{m.cs} flight"
+    ind = wingmen.INDEPENDENTS
+    for n in (ind.numbers() if ind else []):
+        u = ind._unit(snap, n)
+        if u and int(u[2]) == aid:
+            return f"Outcast {n}"
+    for w in snap.get("wing") or []:
+        if int(w[1]) == aid:
+            return str(w[0])
+    return "an AI flight"
+
+
+def _tactical_hints(snap: dict, attacks: dict):
+    """Evidence that a vanished unit was destroyed: whose attack it was, and your / George's last shot."""
+    from tactical.models import dcs_key
+    from tactical.tracks import KillHints
+    targeted = {key: _attacker_name(snap, aid) for key, aid in attacks.items()}
+    if OVERLORD is not None:
+        for m in OVERLORD.active():
+            key = dcs_key((m.current or {}).get("id"))
+            if key:
+                targeted[key] = f"{m.cs} flight"
+    for e in snap.get("engagement") or []:          # George's shoot list
+        key = dcs_key(e.get("contact_id"))
+        if key:
+            targeted[key] = "George"
+    last = getattr(ENGAGEMENT, "_last_shot", None)
+    return KillHints(last_shot_mono=last if isinstance(last, (int, float)) and last > 0 else None, targeted=targeted)
+
+
+TACTICAL = None
+if getattr(config, "TACTICAL_ENABLED", True):
+    from tactical.service import TacticalService
+    from tactical.tracks import Thresholds as _TacticalThresholds
+    TACTICAL = TacticalService(state_store.snapshot, hints=_tactical_hints, jtac=lambda: JTAC.current,
+                               thresholds=_TacticalThresholds.from_config(config))
+    if getattr(config, "OLYMPUS_ENABLED", False):
+        olympus.ON_COMMAND = TACTICAL.note_command
 
 
 def _bullseye():
@@ -495,7 +635,7 @@ def stt_prompt() -> str:
     else:
         base = STT_PROMPT
     if INSTRUCTOR is not None and state_store.profile() != "other":   # helicopters: the hover exercise (decision 5)
-        base += " Instructor, hover exercise, begin, stop, how did I do."
+        base += " Instructor: hover, approach, fuel, bingo, begin, stop, easier, harder."   # short: Whisper keeps the last 224 tokens
     ind = wingmen.INDEPENDENTS
     return base + router_mod.stt_hints(ind.numbers() if ind else [], USER_WAYPOINTS.names())
 
@@ -664,7 +804,15 @@ def kneeboard_checklist() -> dict:
 
 
 def kneeboard_briefing() -> dict:
-    return kb_pages.build_briefing(KB, kb_aircraft())
+    d = kb_pages.build_briefing(KB, kb_aircraft())
+    sec = INSTRUCTOR.briefing_section() if INSTRUCTOR is not None else None
+    if sec:                                     # the selected instructor exercise, first on the page
+        d["sections"] = [sec] + list(d.get("sections") or [])
+    return d
+
+
+def kneeboard_instructor() -> dict:
+    return INSTRUCTOR.view() if INSTRUCTOR is not None else {"state": "off"}
 
 
 def _latency_rows() -> list:
@@ -731,6 +879,7 @@ def kneeboard_status() -> dict:
         {"name": "DCS-BIOS", "ok": snap["bios_age"] <= TELEMETRY_STALE_SEC if snap.get("bios_age") is not None else None,
          "detail": f"last {age(snap.get('bios_age', float('inf')))}"},
         _enemy_picture_link(snap),
+        *([TACTICAL.status_link()] if TACTICAL is not None else []),
         {"name": "Comms hook", "ok": comms.live(), "detail": "radio menu, mission, fuel" if comms.live() else "not heard"},
         {"name": "DCS fuel (hook)", "ok": snap.get("dcs_fuel_age", float("inf")) <= 15.0,
          "detail": f"last {age(snap.get('dcs_fuel_age', float('inf')))}"},
@@ -1412,8 +1561,11 @@ if __name__ == "__main__":
     start_huey_link_thread()      # UH-1H gauges, lamps, Crew Status panel (george_huey_export.lua)
     comms_menu.start(comms)       # radio menu text from Scripts/Hooks/george_comms_hook.lua
     threading.Thread(target=watch_profile, daemon=True, name="profile-watch").start()
+    if TACTICAL is not None:
+        TACTICAL.start()          # the tactical picture (tactical/): reads the state store 4x a second
     if INSTRUCTOR is not None:
         INSTRUCTOR.start()        # instructor observer: reads the state store 10x a second, sends nothing
+        atexit.register(_instructor_fast, False)          # never leave Export.lua on 10 Hz after we quit
     if wingmen.EXECUTOR:
         threading.Thread(target=olympus_watch, daemon=True, name="olympus-watch").start()
     if getattr(config, "FUEL_CALLS", True):              # jets: "Overlord, joker fuel ..."
@@ -1443,7 +1595,7 @@ if __name__ == "__main__":
             Kneeboard(kneeboard_map, kneeboard_status, COMMS_LOG, port=getattr(config, "KNEEBOARD_PORT", 5000),
                       feeds={"briefing": (kneeboard_briefing, 1.0), "checklist": (kneeboard_checklist, 0.5),
                              "ui": (KB_PAGES.view, 0.2), "alerts": (ALERTS.view, 0.5),
-                             "track": (TRACK.view, 2.0)}).start()
+                             "track": (TRACK.view, 2.0), "instructor": (kneeboard_instructor, 0.5)}).start()
             KNEEBOARD_ON = True
             TRACK.start()                                        # your track since mission start
             threading.Thread(target=alerts_watch, daemon=True, name="kb-alerts").start()
@@ -1458,6 +1610,7 @@ if __name__ == "__main__":
     annunciator.start()
     engagement_monitor = EngagementMonitor(speak_alert)   # missile away / target destroyed callouts
     engagement_monitor.start()
+    ENGAGEMENT = engagement_monitor                        # its last shot is "destroyed" evidence (tactical/)
     if config.APACHE_EUFD_CALLOUTS:
         apache_crew.monitor.on_new = _alert_eufd             # warnings / cautions on the Alerts tab too
         apache_crew.start_callouts(active=lambda: state_store.profile() == "apache")

@@ -51,11 +51,11 @@ with the command in exactly one of these forms (keep the pilot's numbers, names,
   "Overlord, picture" | "Overlord, status" | "Overlord, cancel SEAD|CAS|CAP|escort|all" |
   "Overlord, request target" | "Overlord, next target" | "Overlord, mark target" | "Overlord, BDA"
 - Named waypoints (Alpha..Zulu, Objective): "Mark our current position as waypoint Bravo" |
-  "Set grid 38T LM 7218 4018 as waypoint Charlie" | "Where is Bravo" | "Delete waypoint Bravo" |
+  "Set grid <the grid he said> as waypoint Charlie" (only when he said a grid) | "Where is Bravo" | "Delete waypoint Bravo" |
   "List waypoints"
 - Reports: "What's our grid" | "Say bullseye" | "Nearest friendly airfield" | "Nearest FARP" | "Debrief"
 Keep the pilot's own place: "up north" / "to the west" -> "north of me" / "west of me"; "my target"
-only if he said target; never add a waypoint or name he didn't say.
+only if he said target; never add a waypoint, name, grid or number he didn't say.
 Only ROUTE when the pilot clearly meant one of these. Never ROUTE your own crew orders.
 """
 
@@ -107,6 +107,44 @@ def norm(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9' ]+", " ", t)).strip()
 
 
+# spoken digits for the "no invented numbers" check (31 Oct: "george waypoint alpha" was rewritten
+# with the prompt's example grid, "Set grid 38T LM 7218 4018 as waypoint Alpha", and learned)
+_DIGIT_WORDS = {"zero": "0", "oh": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+                "six": "6", "seven": "7", "eight": "8", "nine": "9", "niner": "9", "ten": "10",
+                "eleven": "11", "twelve": "12", "thirteen": "13", "fourteen": "14", "fifteen": "15",
+                "sixteen": "16", "seventeen": "17", "eighteen": "18", "nineteen": "19"}
+_TENS = {"twenty": "2", "thirty": "3", "forty": "4", "fifty": "5", "sixty": "6", "seventy": "7",
+         "eighty": "8", "ninety": "9"}
+
+
+def _spoken_digits(t: str) -> str:
+    """Every digit the pilot said, in order ("three eight tango" -> "38", "twenty five" -> "25")."""
+    out, ws = [], t.split()
+    for i, w in enumerate(ws):
+        if w in _TENS:
+            nxt = ws[i + 1] if i + 1 < len(ws) else ""
+            unit = _DIGIT_WORDS.get(nxt, "")
+            out.append(_TENS[w] + ("" if len(unit) == 1 and unit != "0" else "0"))
+        elif w in _DIGIT_WORDS and not (i and ws[i - 1] in _TENS and len(_DIGIT_WORDS[w]) == 1
+                                        and w not in ("zero", "oh")):
+            out.append(_DIGIT_WORDS[w])
+        elif w in _NUMWORD:
+            out.append(_NUMWORD[w])
+        else:
+            out.append("".join(ch for ch in w if ch.isdigit()))
+    return "".join(out)
+
+
+def _invented_number(o: str, c: str) -> Optional[str]:
+    """A number (or grid part) in the rewrite that the pilot never said, else None."""
+    said, ow = _spoken_digits(o), set(o.split())
+    for w in c.split():
+        d = "".join(ch for ch in w if ch.isdigit())
+        if d and w not in ow and d not in said:
+            return w
+    return None
+
+
 def _numbers(t: str) -> set:
     return {_NUMWORD.get(w, w) for w in t.split() if w.isdigit() or w in _NUMWORD}
 
@@ -147,6 +185,9 @@ def plausible(original: str, command: str) -> Tuple[bool, str]:
     ow = o.split()
     if not c or c == o:
         return False, "no change"
+    bad = _invented_number(o, re.sub(r"^outcast \d+\b", "", c))   # the callsign has its own check below
+    if bad:
+        return False, f"{bad} not said"
     # no invented places (24 Oct: "...armour up north" -> "requesting CAS over Alpha")
     for name in (w for w in c.split() if w in _NATO):
         if not _like(ow, name, 0.7):
@@ -203,7 +244,13 @@ class Router:
         try:
             with open(self.file, encoding="utf-8") as f:
                 data = json.load(f)
-            self.phrases = {norm(k): v for k, v in (data.get("phrases") or {}).items()}
+            self.phrases = {}
+            for k, v in (data.get("phrases") or {}).items():
+                ok, why = plausible(k, v)
+                if ok or why == "no change":
+                    self.phrases[norm(k)] = v
+                else:                        # learned before a gate existed: never fire it again
+                    print(f"[ROUTER] Dropped learned phrase '{k}' -> '{v}': {why}.")
             self.words = {norm(k): norm(v) for k, v in (data.get("words") or {}).items()}
             print(f"[ROUTER] {len(self.phrases)} learned phrases, {len(self.words)} learned words.")
         except Exception as e:

@@ -15,8 +15,9 @@
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
     font: 20px/1.35 "Segoe UI", system-ui, sans-serif; overflow: hidden; }
   #tabs { display: flex; height: 56px; border-bottom: 2px solid var(--line); }
-  #tabs button { flex: 1; background: var(--panel); color: var(--dim); border: 0; border-right: 1px solid var(--line);
-    font-family: inherit; font-size: 24px; font-weight: 600; cursor: pointer; }
+  #tabs button { flex: 1 1 0; min-width: 0; padding: 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    background: var(--panel); color: var(--dim); border: 0; border-right: 1px solid var(--line);
+    font-family: inherit; font-size: 24px; font-weight: 600; cursor: pointer; }   /* 7 tabs: shrink, never overflow */
   #tabs button.on { color: var(--text); background: #1b2633; box-shadow: inset 0 -4px 0 var(--outcast); }
   .page { position: absolute; top: 56px; left: 0; right: 0; bottom: 0; display: none; }
   .page.on { display: block; }
@@ -80,6 +81,18 @@
   .al.critical .sev { color: var(--bad); } .al.warning .sev { color: var(--jtac); } .al.info .sev { color: var(--dim); }
   .al.done { color: var(--dim); } .al.done .sev { color: var(--dim); }
   #alerts h2 { color: var(--dim); font-size: 18px; }
+  /* Instructor tab (Instructor Mode, Phase 2): exercise, live tolerances, last result, levels */
+  .instructor .who { color: #f0abfc; }
+  .ins-state { color: var(--dim); font-size: 18px; margin: -4px 0 10px; }
+  .ins-live { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 24px; }
+  .ins-live b { font-variant-numeric: tabular-nums; }
+  .ins-score { font-size: 44px; font-weight: 700; margin: 4px 0; }
+  .ins-score span { font-size: 18px; color: var(--dim); font-weight: 400; margin-left: 10px; }
+  .ins-ded { padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .ins-ded .p { color: var(--bad); font-weight: 700; margin-right: 8px; font-variant-numeric: tabular-nums; }
+  .ins-nj { color: var(--dim); font-size: 17px; padding: 4px 0; }
+  #instr table { width: 100%; border-collapse: collapse; }
+  #instr td { padding: 7px 6px; border-bottom: 1px solid var(--line); }
 </style>
 </head>
 <body>
@@ -90,6 +103,7 @@
   <button data-p="pcomms">Comms</button>
   <button data-p="pstatus">Status</button>
   <button data-p="palerts" id="alerttab">Alerts</button>
+  <button data-p="pinstr">Instr</button>
 </div>
 <div id="alertbar" title="Alerts"></div>
 
@@ -113,9 +127,11 @@
 <div id="pcomms" class="page"><div id="comms"><div class="empty">Nothing said yet.</div></div></div>
 <div id="pstatus" class="page"><div id="status"><div class="empty">Waiting for the program…</div></div></div>
 <div id="palerts" class="page"><div id="alerts" class="scroll"><div class="empty">No alerts.</div></div></div>
+<div id="pinstr" class="page"><div id="instr" class="scroll"><div class="empty">Waiting for the program…</div></div></div>
 
 <script>
 "use strict";
+const PAGE_VERSION = "__PAGE_VERSION__";      // filled in by kneeboard/server.py
 // ---------------------------------------------------------------- tabs (remembered per viewer)
 const tabs = document.querySelectorAll("#tabs button");
 function show(id) {
@@ -279,7 +295,7 @@ function short(t) { return String(t || "").replace(/_/g, " ").slice(0, 22); }
 
 // ---------------------------------------------------------------- comms
 const commsEl = document.getElementById("comms");
-const WHO = { pilot: "You", george: "Crew", overlord: "Overlord", order: "Order" };
+const WHO = { pilot: "You", george: "Crew", overlord: "Overlord", order: "Order", instructor: "Instructor" };
 function esc(s) { return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
 function highlight(s) {
   return esc(s)
@@ -421,9 +437,47 @@ function showAlerts(a) {
   if (document.body.className !== before) resize();          // the pages moved down / up
 }
 
+// ---------------------------------------------------------------- instructor (Instructor Mode)
+const instrEl = document.getElementById("instr");
+const ISTATE = { idle: "Standing by", selected: "Selected: say “Instructor, begin”", armed: "Armed: waiting to start",
+                 running: "Running", evaluating: "Scoring…" };
+const cap = s => s ? s[0].toUpperCase() + s.slice(1) : "";
+function showInstructor(d) {
+  let h = "";
+  if (d.exercise) {
+    const ex = d.exercise;
+    h += `<h2>${esc(cap(ex.name))} · level ${ex.level}${ex.target ? " · " + esc(ex.target) : ""}</h2>` +
+         `<div class="ins-state">${esc(ISTATE[d.state] || d.state)}${d.left_s != null ? ` · ${d.left_s} s to go` : ""}</div>`;
+    for (const [k, [v, ok]] of Object.entries(d.live || {})) {
+      const c = ok === true ? "--ok" : ok === false ? "--bad" : "--text";
+      h += `<div class="ins-live"><span>${esc(k)}</span><b style="color:var(${c})">${esc(v)}</b></div>`;
+    }
+  } else {
+    h += `<div class="empty">No exercise. Say “Instructor, hover exercise”, “hover turn”, “approach to Alpha” or “fuel exercise”.</div>`;
+  }
+  const L = d.last;
+  if (L) {
+    h += `<h2>Last: ${esc(L.exercise)} · level ${L.level} · ${esc(L.when)}</h2>`;
+    h += L.score != null ? `<div class="ins-score">${L.score}<span>${esc(L.confidence)} confidence${L.outcome === "partial" ? ", partial" : ""}</span></div>`
+                         : `<div class="ins-state">${esc(L.line)}</div>`;
+    h += (L.deductions || []).map(x => `<div class="ins-ded"><span class="p">−${x.points}</span>${esc(x.evidence)}</div>`).join("");
+    h += (L.not_judged || []).map(x => `<div class="ins-nj">Not judged · ${esc(x)}</div>`).join("");
+  }
+  if (d.levels && d.levels.length) {
+    h += `<h2>Levels</h2><table>` + d.levels.map(l => `<tr><td>${esc(cap(l.exercise))}</td><td>level ${l.level}</td>` +
+         `<td>${l.median != null ? "median " + l.median : "—"}</td><td style="color:var(--dim)">${esc(l.why)}</td></tr>`).join("") + `</table>`;
+  }
+  if (d.weak && d.weak.length) h += `<div class="ins-nj" style="color:var(--jtac)">Recurring: ${d.weak.map(esc).join(", ")}</div>`;
+  if (d.suggest) h += `<div class="ins-nj">Next: ${esc(d.suggest.exercise)} exercise (${esc(d.suggest.why)})</div>`;
+  const top = instrEl.scrollTop;
+  instrEl.innerHTML = h;
+  instrEl.scrollTop = top;
+}
+
 // ---------------------------------------------------------------- voice: "show the briefing", "scroll down"
-const PAGE_ID = { map: "pmap", briefing: "pbrief", checklist: "pcheck", comms: "pcomms", status: "pstatus", alerts: "palerts" };
-const SCROLLER = { pbrief: briefEl, pcheck: checkEl, pcomms: commsEl, pstatus: statusEl, palerts: alertsEl };
+const PAGE_ID = { map: "pmap", briefing: "pbrief", checklist: "pcheck", comms: "pcomms", status: "pstatus", alerts: "palerts",
+                  instructor: "pinstr" };
+const SCROLLER = { pbrief: briefEl, pcheck: checkEl, pcomms: commsEl, pstatus: statusEl, palerts: alertsEl, pinstr: instrEl };
 let uiSeq = null;
 function applyUi(u) {
   if (uiSeq === null || u.seq < uiSeq) { uiSeq = u.seq; return; }   // first message (or program restarted): nothing new
@@ -455,6 +509,10 @@ function connect() {
   es.addEventListener("ui", e => applyUi(JSON.parse(e.data)));
   es.addEventListener("alerts", e => showAlerts(JSON.parse(e.data)));
   es.addEventListener("track", e => { T = JSON.parse(e.data); if (isOn("pmap")) draw(); });
+  es.addEventListener("instructor", e => showInstructor(JSON.parse(e.data)));
+  // the program has a newer page than this one (updated while OpenKneeboard stayed open): load it
+  es.addEventListener("page", e => { const v = JSON.parse(e.data).v;
+    if (v && PAGE_VERSION.length === 12 && v !== PAGE_VERSION) location.reload(); });
   es.onerror = () => { info.textContent = "Program not running? Reconnecting…"; };
 }
 resize();

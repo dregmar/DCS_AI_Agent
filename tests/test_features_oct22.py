@@ -152,3 +152,24 @@ class TestOct23(unittest.TestCase):
         for q in ("current mission", "current objective", "our mission"):
             self.assertTrue(briefing.is_briefing_question(q), q)
         self.assertFalse(briefing.is_briefing_question("mission status"))
+
+
+class TestMarkOct31(unittest.TestCase):
+    """31 Oct: "Mark position as waypoint Zulu" heard as "...Zolo", "...A" or without "as"."""
+    def setUp(self):
+        self.w = uw.UserWaypoints(None)
+
+    def test_sound_alikes_and_no_as(self):
+        for t in ("Mark position as waypoint Zolo.", "Mark position as waypoint Sulu", "Mark position waypoint Zulu",
+                  "Mark our position, waypoint Zulu", "Set current position as waypoint Zulu"):
+            self.w = uw.UserWaypoints(None)
+            self.assertTrue(self.w.handle(t, SNAP).startswith("Waypoint Zulu marked."), t)
+            self.assertEqual(self.w.names(), ["Zulu"])
+
+    def test_unknown_name_is_asked_again(self):
+        self.assertEqual(self.w.handle("Mark position as waypoint A.", SNAP), "Say again the waypoint name, Alpha to Zulu.")
+        self.assertEqual(self.w.names(), [])
+
+    def test_others_untouched(self):
+        for t in ("Outcast 2, hold position", "mark the target position", "set laser code"):
+            self.assertIsNone(self.w.handle(t, SNAP), t)

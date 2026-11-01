@@ -76,10 +76,29 @@ class TestFields(unittest.TestCase):
         feed(st, [packet(i * 0.25, hdg=-1.0) for i in range(20)])
         self.assertEqual(verdict(st, "I1 heading")["verdict"], "missing")
 
-    def test_g_is_always_needed(self):
+    def test_g_missing_from_an_old_export(self):
         st = AircraftStats("X")
         feed(st, [packet(i * 0.25) for i in range(5)])
-        self.assertEqual(verdict(st, "I1 g")["verdict"], "needed")
+        self.assertEqual(verdict(st, "I1 g")["verdict"], "missing")
+
+    def test_g_and_the_10hz_block(self):                   # Phase 3: Export.lua with I1 / I5
+        st = AircraftStats("X")
+        ps = []
+        for i in range(40):
+            t = i * 0.1
+            if i % 3 == 0:
+                ps.append(dict(packet(t), g=1.0 + 0.01 * (i % 5)))
+            else:
+                ps.append({"k": "f", "t": t, "pos": [0, 0, 0], "vel": [0, 0, 0], "agl_ft": 15.2, "vs_fpm": 0,
+                           "speed_kts": 0, "hdg": 90, "g": 1.0, "gmax": 1.3 if i == 20 else 1.02})
+        feed(st, ps)
+        v = verdict(st, "I1 g")
+        self.assertEqual(v["verdict"], "present")
+        self.assertIn("up to 1.30 g", v["why"])
+        r = verdict(st, "I5 rate")
+        self.assertEqual(r["verdict"], "10 Hz block working")
+        self.assertIn("26 of 40 from the flight block", r["why"])
+        self.assertEqual(st.share("ac"), 1.0)                # shares count full packets only
 
     def test_ias_compared_with_ground_speed(self):
         st = AircraftStats("X")
@@ -90,6 +109,12 @@ class TestFields(unittest.TestCase):
         self.assertIn("+3 kt", v["why"])
         crab = verdict(st, "heading vs track")
         self.assertIn("+0.0 deg", crab["why"])
+
+    def test_slow_sideways_flight_is_not_crab(self):
+        st = AircraftStats("UH-1H")
+        # 12 m/s (23 kt) backwards, IAS 10: not forward flight
+        feed(st, [packet(i * 0.25, vel=[-12.0, 0.0, 0.0], speed_kts=10.0, agl_ft=50.0, hdg=0.0) for i in range(10)])
+        self.assertEqual(st.crab, [])
 
     def test_rounded_fields_are_reported(self):
         st = AircraftStats("X")

@@ -1,6 +1,7 @@
 import math
 import threading
 import time
+from collections import deque
 from typing import Any, Dict, List, Optional
 
 INF = float("inf")
@@ -65,6 +66,29 @@ def clock_position(brg_deg, hdg_deg):
     return 12 if h == 0 else h
 
 
+FLIGHT_RING = 600          # a minute at 10 Hz
+
+
+def _flight_record(seq: int, d: Dict[str, Any], aircraft: str) -> Dict[str, Any]:
+    """This packet's own flight fields (None = not in it); "fast" = the 10 Hz flight block."""
+    def num(k):
+        v = d.get(k)
+        return float(v) if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+    def vec(k, n):
+        v = d.get(k)
+        if isinstance(v, list) and len(v) == n:
+            try:
+                return tuple(float(x) for x in v)
+            except (TypeError, ValueError):
+                return None
+        return None
+    return {"seq": seq, "t": num("t"), "aircraft": aircraft, "fast": d.get("k") == "f",
+            "pos": vec("pos", 3), "vel": vec("vel", 3), "agl_ft": num("agl_ft"), "vs_fpm": num("vs_fpm"),
+            "hdg": num("hdg"), "speed_kts": num("speed_kts"), "pitch": num("pitch"), "roll": num("roll"),
+            "g": num("g"), "gmax": num("gmax"), "ll": vec("ll", 2)}
+
+
 def _f(data: Dict[str, Any], key: str, default: float) -> float:
     try:
         return float(data.get(key, default))
@@ -119,6 +143,7 @@ class ApacheStateStore:
         self.enemy_ground: List[Any] = []
         self.scan_lag: Optional[float] = None    # model s from Export.lua's last world scan to its packet
         self.scan_rx = 0.0                       # when that packet arrived
+        self.scan_t: Optional[float] = None      # that scan's own model time (-1: none yet; None: old Export.lua)
         self.cargo = None                   # nearest sling-load cargo (north_m, east_m, alt_m) or None
         self.fuel_raw = None                # (internal, external) from LoGetEngineInfo: kg, or 0..1
         self.dcs_fuel = None                # (fraction, max internal kg, unit name) from the comms hook
@@ -168,6 +193,10 @@ class ApacheStateStore:
         # received, so a sampler can tell a new packet from the same one read twice (Instructor Mode)
         self.t_model: Optional[float] = None
         self.tel_seq = 0
+        # every packet's flight fields, as sent (full 4 Hz packets and the 10 Hz flight block, I5), so the
+        # instructor's 10 Hz observer gets each one exactly once (flight_since) instead of sampling
+        self.flight_ring: deque = deque(maxlen=FLIGHT_RING)
+        self.g: Optional[float] = None
 
         # Freshness (time.monotonic(); 0.0 means "never received")
         self.telemetry_last_rx = 0.0
@@ -218,6 +247,9 @@ class ApacheStateStore:
             self.t_model = float(t_model) if isinstance(t_model, (int, float)) and not isinstance(t_model, bool) else None
             self.tel_seq += 1
             self.telemetry_last_rx = now
+            g = telemetry_data.get("g")
+            self.g = float(g) if isinstance(g, (int, float)) and not isinstance(g, bool) else None
+            self.flight_ring.append(_flight_record(self.tel_seq, telemetry_data, self.aircraft))
 
             # Targets now come from George's own Target List (set_george_list); the telemetry
             # only brings nearby enemy units, used to put ranges on George's entries.
@@ -259,6 +291,7 @@ class ApacheStateStore:
             if isinstance(t, (int, float)) and isinstance(scan_t, (int, float)):
                 self.scan_lag = INF if scan_t < 0 else max(0.0, float(t) - float(scan_t))
                 self.scan_rx = now
+                self.scan_t = float(scan_t)
             flight = telemetry_data.get("flight")
             if isinstance(flight, list):
                 self.flight_alive = [str(n) for n in flight]
@@ -278,6 +311,11 @@ class ApacheStateStore:
                         return None
                     return v if v >= 0 else None
                 self.ammo = {"msl": _n(ammo[0]), "rkt": _n(ammo[1]), "gun": _n(ammo[2])}
+
+    def flight_since(self, seq: int) -> List[Dict[str, Any]]:
+        """Flight records newer than seq, oldest first (copies)."""
+        with self._lock:
+            return [dict(r) for r in self.flight_ring if r["seq"] > seq]
 
     def set_dcs_fuel(self, fraction: float, max_kg: float, unit: str, source: str = "") -> None:
         """Fuel straight from DCS (Unit:getFuel and the airframe's fuelMassMax, via the comms hook).
@@ -489,6 +527,11 @@ class ApacheStateStore:
                 "enemy_ground": list(self.enemy_ground),
                 "enemy_lists_age": (None if self.scan_lag is None
                                     else self.scan_lag + (now - self.scan_rx)),
+                # For the tactical picture (tactical/sources.py): which world scan the lists come from, and
+                # George's Target List as he shows it (names only) with its age. Read-only additions.
+                "scan_t": self.scan_t,
+                "george_list": list(self.george_list),
+                "george_list_age": list_age,
                 "flight_units": list(self.flight_units),
                 "flight_alive": list(self.flight_alive) if self.flight_alive is not None else None,
                 "flight_alive_age": self._age(self.flight_alive_rx, now),
@@ -504,6 +547,7 @@ class ApacheStateStore:
                 "telemetry_age": self._age(self.telemetry_last_rx, now),
                 "t_model": self.t_model,
                 "tel_seq": self.tel_seq,
+                "g": self.g,
                 "bios_age": self._age(self.bios_last_rx, now),
                 "wpn_page_age": self._age(self.wpn_page_rx, now),
                 "george_ui": dict(self.george_ui),

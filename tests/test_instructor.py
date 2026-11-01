@@ -327,12 +327,17 @@ class TestVoice(unittest.TestCase):
         self.assertIsNone(voice.addressed("instructors"))
 
     def test_commands(self):
-        cases = {"hover exercise": ("select", "hover.stationary"), "hover practice": ("select", "hover.stationary"),
-                 "begin": ("begin", None), "begin hover exercise": ("begin", "hover.stationary"),
-                 "start the hover": ("begin", "hover.stationary"), "stop": ("stop", None),
-                 "abort the hover": ("stop", None), "how did I do?": ("result", None), "results": ("result", None),
-                 "status": ("status", None), "off": ("off", None), "explain the hover": ("brief", "hover.stationary"),
-                 "what's for dinner": ("unknown", None)}
+        cases = {"hover exercise": ("select", "hover.stationary", None), "hover practice": ("select", "hover.stationary", None),
+                 "begin": ("begin", None, None), "begin hover exercise": ("begin", "hover.stationary", None),
+                 "start the hover": ("begin", "hover.stationary", None), "stop": ("stop", None, None),
+                 "abort the hover": ("stop", None, None), "how did I do?": ("result", None, None),
+                 "results": ("result", None, None), "status": ("status", None, None), "off": ("off", None, None),
+                 "explain the hover": ("brief", "hover.stationary", None), "what's for dinner": ("unknown", None, None),
+                 "approach to Alpha": ("select", "approach.pad", None), "landing exercise": ("select", "approach.pad", None),
+                 "fuel exercise": ("select", "fuel.recovery", None), "begin the bingo exercise": ("begin", "fuel.recovery", None),
+                 "mode on": ("on", None, None), "mode off": ("off", None, None), "easier": ("easier", None, None),
+                 "make it harder": ("harder", None, None), "level three": ("level", None, 3), "level 2": ("level", None, 2),
+                 "what should I practise": ("suggest", None, None), "what should I practice": ("suggest", None, None)}
         for said, want in cases.items():
             self.assertEqual(voice.parse(said), want, said)
 

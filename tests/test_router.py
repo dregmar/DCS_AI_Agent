@@ -277,8 +277,6 @@ class TestMainRoute(unittest.TestCase):
         self.main.USER_WAYPOINTS.delete("Alpha")
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class TestOct24(RouterCase):
@@ -337,3 +335,39 @@ class TestOverlordWakeWord(unittest.TestCase):
         self.assertIsNone(addressed("Overhead the target"))
         self.assertIsNone(addressed("Over the bridge, two"))
         self.assertIsNone(addressed("Outcast 2, rejoin"))
+
+
+class TestOct31(RouterCase):
+    """31 Oct: "george waypoint alpha" was rewritten with the prompt's example grid and learned."""
+    BAD = ("george waypoint alpha", "Set grid 38T LM 7218 4018 as waypoint Alpha")
+
+    def test_invented_grid_refused(self):
+        self.assertEqual(R.plausible(*self.BAD), (False, "38t not said"))
+        self.assertFalse(R.plausible("overlord cas east of me", "Overlord, requesting CAS 10 km east of me")[0])
+
+    def test_spoken_numbers_accepted(self):
+        self.assertTrue(R.plausible("set grid three eight tango lima mike seven two one eight four zero one eight "
+                                    "as waypoint charlie", "Set grid 38T LM 7218 4018 as waypoint Charlie")[0])
+        self.assertTrue(R.plausible("set grid 38T LM 72184018 as alpha", "Set grid 38T LM 7218 4018 as waypoint Alpha")[0])
+        self.assertTrue(R.plausible("overlord cas ten clicks east of me", "Overlord, requesting CAS 10 km east of me")[0])
+        self.assertTrue(R.plausible("overlord cas twenty five km north", "Overlord, requesting CAS 25 km north of me")[0])
+        self.assertTrue(R.plausible("outcast two attack target three", "Outcast 2, attack target 3")[0])
+
+    def test_rejected_and_not_learned(self):
+        self.assertFalse(self.r.dispatch(*self.BAD))
+        self.assertEqual(self.shared.ran, [])
+        self.assertNotIn(self.BAD[0], self.r.phrases)
+
+    def test_bad_saved_phrase_dropped_on_load(self):
+        with open(self.file, "w", encoding="utf-8") as f:
+            json.dump({"phrases": {self.BAD[0]: self.BAD[1], "return to rejoin": "Outcast 2, rejoin"}, "words": {}}, f)
+        r = R.Router(self.shared, lambda *a: None, learned_file=self.file)
+        self.assertEqual(r.apply_learned("George, waypoint Alpha"), "George, waypoint Alpha")
+        self.assertEqual(r.apply_learned("return to rejoin"), "Outcast 2, rejoin")
+
+    def test_prompt_has_no_example_grid(self):
+        self.assertNotIn("7218", R.ROUTE_PROMPT)
+
+
+if __name__ == "__main__":
+    unittest.main()

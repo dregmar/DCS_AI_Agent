@@ -8,6 +8,7 @@ kneeboard/pages.py - which page the kneeboard shows, and the Briefing and Checkl
                          -> {"kind": "page", "page": ..., "checklist": ...} | {"kind": "scroll", "by": ...} | None
                          also (30 Oct) "show alerts", "kneeboard, acknowledge (all)" -> {"kind": "ack", "all": ...},
                          "kneeboard, track on / off" -> {"kind": "track", "on": ...}, "kneeboard, zoom in / out"
+                         also (Instructor Mode) "show the instructor / scores / training"
     build_briefing(kb, aircraft)                     the Briefing page's data
     build_checklist(runner, lists, aircraft, chosen) the Checklist page's data (the running list with
                                                      its current step, done items, and what George sees)
@@ -21,16 +22,17 @@ import re
 import threading
 from typing import Dict, List, Optional
 
-PAGES = ("map", "briefing", "checklist", "comms", "status", "alerts")
+PAGES = ("map", "briefing", "checklist", "comms", "status", "alerts", "instructor")
 
 _LEAD = r"^(?:(?:george|kneeboard|knee board|hey|okay|ok)[\s,]+)*"
 _SHOW = r"(?:show(?: me)?|open|display|bring up|pull up|go to|switch to|page|kneeboard|knee board)"
 _PAGE_WORDS = [
-    ("map", r"(?:moving |tactical |the )?map"),
+    ("map", r"(?:moving |tactical |the )?(?:map|mup|mop)"),          # 31 Oct: "kneeboard Mup", "kneeboard, mop"
     ("briefing", r"(?:mission )?(?:briefing|brief)|manual"),
     ("comms", r"(?:comms?|coms|comes|radio|com) ?(?:log)?|log"),     # 29 Oct: "knee board comes"
     ("status", r"(?:system |systems )?status|systems|stats|that s us"),  # 29 Oct: "Niebord, that's us"
     ("alerts", r"alerts?|warnings?"),
+    ("instructor", r"instructor|instructors|training|scores?|score ?card"),     # Instructor Mode tab (Phase 2)
 ]
 _PAGE_RX = [(p, re.compile(_LEAD + _SHOW + r"[\s,]+(?:the |my )?(?:" + w + r")(?:\s+(?:page|tab))?$"))
             for p, w in _PAGE_WORDS]

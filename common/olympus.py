@@ -41,6 +41,9 @@ ALLOWED = {"spawnAircrafts", "cloneUnits", "deleteUnit", "setAltitudeType", "set
 DATA_PATHS = ("/olympus/mission", "/olympus/bullseyes", "/olympus/airbases")
 COMMAND_PATHS = ("/olympus", "/olympus/commands")
 RETRY_SEC = 15.0
+# Called with (name, params) after Olympus accepted a command (main.py: the tactical picture records
+# who attacked what). None = nobody listens. Must not block: it runs on the caller's thread.
+ON_COMMAND = None
 
 
 class OlympusError(Exception):
@@ -204,6 +207,11 @@ class Olympus:
         ok, why = self._command(name, params)
         from common import orders
         orders.note_command(name, ok, why)
+        if ok and ON_COMMAND is not None:          # the tactical picture notes who attacked what
+            try:
+                ON_COMMAND(name, params)
+            except Exception as e:
+                print(f"[OLYMPUS] ON_COMMAND: {type(e).__name__}: {e}")
         return ok, why
 
     def _command(self, name: str, params: Dict[str, Any]) -> Tuple[bool, str]:

@@ -16,6 +16,12 @@ local udp = nil
 local george_tel_last = 0
 local george_tel_noted = {}
 local george_tel_path = lfs.writedir() .. [[Logs\george_telemetry_status.txt]]
+-- Instructor Mode (I5): while this file exists the program wants flight data faster, so a small
+-- flight-only packet goes out at 10 Hz between the full ones. Checked once a second; the program
+-- creates it for an exercise and deletes it after. Without it nothing below runs.
+local george_fast_flag = lfs.writedir() .. [[Scripts\george_fast_telemetry.flag]]
+local george_fast_on, george_fast_check, george_fast_last = false, -1, 0
+local george_gmax = nil                 -- peak normal g since the last fast packet (read every frame)
 
 local function george_tel_note(key, msg)
     if george_tel_noted[key] then return end
@@ -262,6 +268,57 @@ local function george_ll(ll)
     return string.format("[%.6f,%.6f]", ll.Lat, ll.Long)
 end
 
+-- Normal acceleration in g (body y axis), or nil when the module doesn't give it (I1)
+local function george_g()
+    if not LoGetAccelerationUnits then return nil end
+    local ok, a = pcall(LoGetAccelerationUnits)
+    if ok and type(a) == "table" and type(a.y) == "number" then return a.y end
+    return nil
+end
+
+local function george_num(v, fmt)
+    if type(v) ~= "number" or v ~= v then return "null" end
+    return string.format(fmt, v)
+end
+
+-- The 10 Hz flight-only packet: "k":"f" tells the program it carries no contacts, route or lists
+local function george_send_fast(now)
+    if not LoGetSelfData then return end
+    local ok, me = pcall(LoGetSelfData)
+    if not ok or type(me) ~= "table" or type(me.Position) ~= "table" then return end
+    local rad = 180 / math.pi
+    local agl, vs, ias = nil, nil, nil
+    if LoGetAltitudeAboveGroundLevel then
+        local ok2, v = pcall(LoGetAltitudeAboveGroundLevel); if ok2 then agl = v end
+    end
+    if LoGetVerticalVelocity then
+        local ok2, v = pcall(LoGetVerticalVelocity); if ok2 then vs = v end
+    end
+    if LoGetIndicatedAirSpeed then
+        local ok2, v = pcall(LoGetIndicatedAirSpeed); if ok2 then ias = v end
+    end
+    local vel = "null"
+    if LoGetVectorVelocity then
+        local ok2, v = pcall(LoGetVectorVelocity)
+        if ok2 and type(v) == "table" then vel = string.format("[%.2f,%.2f,%.2f]", v.x or 0, v.z or 0, v.y or 0) end
+    end
+    local g = george_g()
+    local gmax = george_gmax or g
+    george_gmax = nil
+    local cargo = george_cargo and string.format("[%.1f,%.1f,%.1f]", george_cargo[1], george_cargo[3], george_cargo[2]) or "null"
+    local payload = string.format(
+        '{"k":"f","t":%.3f,"pos":[%.2f,%.2f,%.2f],"vel":%s,"agl_ft":%s,"vs_fpm":%s,"speed_kts":%s,"hdg":%s,"pitch":%s,"roll":%s,"g":%s,"gmax":%s,"ll":%s,"cargo":%s}',
+        now, me.Position.x, me.Position.z, me.Position.y, vel,
+        george_num(agl and agl * 3.28084, "%.1f"), george_num(vs and vs * 196.85, "%.0f"),
+        george_num(ias and ias * 1.94384, "%.1f"),
+        george_num(type(me.Heading) == "number" and (me.Heading * rad) % 360 or nil, "%.1f"),
+        george_num(type(me.Pitch) == "number" and me.Pitch * rad or nil, "%.1f"),
+        george_num(type(me.Bank) == "number" and me.Bank * rad or nil, "%.1f"),
+        george_num(g, "%.2f"), george_num(gmax, "%.2f"), george_ll(me.LatLongAlt), cargo)
+    local sent = pcall(udp.send, udp, payload)
+    if sent then george_tel_note("fastsent", "first 10 Hz flight packet sent (instructor exercise)") end
+end
+
 local function george_send_telemetry()
     local alt = LoGetAltitudeAboveSeaLevel() or 0
     local ias = LoGetIndicatedAirSpeed() or 0
@@ -328,12 +385,12 @@ local function george_send_telemetry()
     local route, wp_next = george_route(now)
     local cargo = george_cargo and string.format("[%.1f,%.1f,%.1f]", george_cargo[1], george_cargo[3], george_cargo[2]) or "null"
     local payload = string.format(
-        '{"ac":"%s","alt_ft":%.0f,"agl_ft":%.0f,"vs_fpm":%.0f,"speed_kts":%.0f,"pitch":%.1f,"roll":%.1f,"yaw":%.1f,"hdg":%.1f,"ammo":[%d,%d,%d],"contacts":[%s],"pos":%s,"vel":%s,"route":%s,"wp":%d,"cargo":%s,"fuel":%s,"flight":%s,"group":"%s","unit":"%s","wing":%s,"self_id":%d,"ll":%s,"ad":%s,"oly":%s,"air":%s,"gnd":%s,"coal":%d,"t":%.2f,"scan_t":%.2f,"olyx":%s}',
+        '{"ac":"%s","alt_ft":%.0f,"agl_ft":%.0f,"vs_fpm":%.0f,"speed_kts":%.0f,"pitch":%.1f,"roll":%.1f,"yaw":%.1f,"hdg":%.1f,"ammo":[%d,%d,%d],"contacts":[%s],"pos":%s,"vel":%s,"route":%s,"wp":%d,"cargo":%s,"fuel":%s,"flight":%s,"group":"%s","unit":"%s","wing":%s,"self_id":%d,"ll":%s,"ad":%s,"oly":%s,"air":%s,"gnd":%s,"coal":%d,"t":%.2f,"scan_t":%.2f,"olyx":%s,"g":%s}',
         ac, alt * 3.28084, agl, vs, ias * 1.94384,
         (pitch or 0) * rad, (roll or 0) * rad, (yaw or 0) * rad, hdg, msl, rkt, gun,
         table.concat(items, ","), pos, vel, route, wp_next, cargo, fuel, george_flight or "null", george_my_group or "", george_my_unit or "",
         george_wing or "null", george_self_id or -1, george_ll(me_ll), george_ad or "[]", george_oly or "[]", george_air or "[]", george_gnd or "[]", george_coal or 0,
-        now or 0, george_scan_t or -1, george_olyx or "[]")
+        now or 0, george_scan_t or -1, george_olyx or "[]", george_num(george_g(), "%.2f"))
 
     local ok, err = pcall(udp.send, udp, payload)
     if ok then
@@ -358,11 +415,24 @@ end
 function LuaExportBeforeNextFrame()
     if not udp then return end
     local now = (LoGetModelTime and LoGetModelTime()) or os.clock()
-    if now < george_tel_last then george_tel_last = 0 end       -- new mission: sim time restarted
-    if now - george_tel_last < 0.25 then return end
-    george_tel_last = now
-    local ok, err = pcall(george_send_telemetry)
-    if not ok then george_tel_note("error", "telemetry error: " .. tostring(err)) end
+    if now < george_tel_last then george_tel_last, george_fast_last, george_fast_check = 0, 0, -1 end   -- new mission
+    if now - george_fast_check >= 1.0 or now < george_fast_check then
+        george_fast_check = now
+        george_fast_on = lfs.attributes(george_fast_flag) ~= nil
+    end
+    if george_fast_on then
+        local g = george_g()
+        if g and (george_gmax == nil or g > george_gmax) then george_gmax = g end
+    end
+    if now - george_tel_last >= 0.25 then
+        george_tel_last, george_fast_last = now, now
+        local ok, err = pcall(george_send_telemetry)
+        if not ok then george_tel_note("error", "telemetry error: " .. tostring(err)) end
+    elseif george_fast_on and now - george_fast_last >= 0.1 then
+        george_fast_last = now
+        local ok, err = pcall(george_send_fast, now)
+        if not ok then george_tel_note("fasterror", "fast telemetry error: " .. tostring(err)) end
+    end
 end
 
 function LuaExportStop()
