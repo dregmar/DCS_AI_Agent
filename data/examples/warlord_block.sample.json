@@ -1,0 +1,13 @@
+{
+  "_help": "Copy the \"warlord\" part into data/campaign_briefing.json, next to \"entries\" (Phase 2, Warlord). All of it is optional. Zones are a centre (lat / lon in decimal degrees) and a radius in metres. no_strike: Warlord denies CAS / SEAD there and Darkside never clears a flight hot on a target inside. priority_areas: a flight outside all of them is approved with a note. Read when the program starts.",
+  "warlord": {
+    "objectives": ["Destroy the SA-11 battery north of Gudauta", "Keep the coast road open"],
+    "roe": "Weapons free on armour and air defence north of the river. No strikes inside towns.",
+    "no_strike": [
+      {"name": "Gudauta town", "lat": 43.1050, "lon": 40.6260, "radius_m": 2500}
+    ],
+    "priority_areas": [
+      {"name": "Objective Bravo", "lat": 43.2000, "lon": 40.9000, "radius_m": 8000}
+    ]
+  }
+}

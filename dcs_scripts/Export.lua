@@ -67,6 +67,17 @@ george_ad, george_oly, george_air, george_gnd = "[]", "[]", "[]", "[]"
 -- Enemy-side "Olympus-" groups (training targets spawned by the program's Game Master login, audit
 -- step 7): [group, unit name, id, lat, lon, alt], so it can find what it spawned and remove only that.
 george_olyx = "[]"
+-- Tactical picture I-T2 / I-T3 (1 Nov): neutrals and your own side, so neither is taken for an enemy.
+-- neu: units of neither side (ground / naval within 40 km), fr: your side's units (not your group, not
+-- Olympus- flights) - ground / naval within 40 km, aircraft within 120 km. [type, id, lat, lon, alt, "a"|"g"|"n"]
+local GEORGE_SIDE_MAX = 40
+george_neu, george_fr = "[]", "[]"
+-- Enemy = the other side (1 red, 2 blue). Units of neither side are neutral, not enemies. If your own
+-- side isn't 1 or 2 (spectator?), everything not yours, as before.
+local function george_enemy(c, mine)
+    if mine == 1 or mine == 2 then return (c == 1 or c == 2) and c ~= mine end
+    return c ~= mine
+end
 local function george_is_ad(name)
     local n = string.lower(name or "")
     for _, w in ipairs(GEORGE_AD_WORDS) do
@@ -134,8 +145,9 @@ local function george_contacts(now)
     local cargo, cargo_d = nil, GEORGE_CARGO_RANGE_M
     george_cargo_seen = 0
     local ad, oly, air, gnd, olyx = {}, {}, {}, {}, {}
+    local neu, fr = {}, {}
     for id, o in pairs(objs) do
-        if type(o) == "table" and o.Position and o.LatLongAlt and o.CoalitionID ~= my_coal
+        if type(o) == "table" and o.Position and o.LatLongAlt and george_enemy(o.CoalitionID, my_coal)
            and type(o.Type) == "table" and (o.Type.level1 == 1 or o.Type.level1 == 2) then
             local ex, ez = o.Position.x - me.Position.x, o.Position.z - me.Position.z
             local ed = math.sqrt(ex * ex + ez * ez)
@@ -163,7 +175,7 @@ local function george_contacts(now)
                 olyx[#olyx + 1] = string.format('["%s","%s",%d,%.6f,%.6f,%.0f]', george_json_str(gname),
                     george_json_str(o.UnitName), tonumber(id) or -1, ll.Lat or 0, ll.Long or 0, ll.Alt or 0)
             end
-            if o.CoalitionID ~= my_coal and type(o.Type) == "table" and o.Type.level1 == 2
+            if george_enemy(o.CoalitionID, my_coal) and type(o.Type) == "table" and o.Type.level1 == 2
                    and george_is_ad(o.Name) then
                 local adx, adz = o.Position.x - me.Position.x, o.Position.z - me.Position.z
                 local add = math.sqrt(adx * adx + adz * adz)
@@ -171,6 +183,27 @@ local function george_contacts(now)
                     ad[#ad + 1] = { d = add, s = string.format('["%s",%d,%.6f,%.6f,%.0f]', george_json_str(o.Name),
                         tonumber(id) or -1, o.LatLongAlt.Lat or 0, o.LatLongAlt.Long or 0, o.LatLongAlt.Alt or 0) }
                 end
+            end
+        end
+        -- Neutrals and your own side (I-T2 / I-T3): aircraft (level2 1 / 2), ground, ships, with a name
+        if type(o) == "table" and o.Position and o.LatLongAlt and type(o.Type) == "table"
+           and tostring(o.Name or "") ~= "" and (o.Type.level1 == 2 or o.Type.level1 == 3
+               or (o.Type.level1 == 1 and (o.Type.level2 == 1 or o.Type.level2 == 2))) then
+            local sx, sz = o.Position.x - mx, o.Position.z - mz
+            local sd = math.sqrt(sx * sx + sz * sz)
+            local cat = (o.Type.level1 == 1 and "a") or (o.Type.level1 == 3 and "n") or "g"
+            local sgrp = tostring(o.GroupName or "")
+            local sll = o.LatLongAlt
+            local row = { d = sd, s = string.format('["%s",%d,%.6f,%.6f,%.0f,"%s"]', george_json_str(o.Name),
+                tonumber(id) or -1, sll.Lat or 0, sll.Long or 0, sll.Alt or 0, cat) }
+            if o.CoalitionID == my_coal then
+                if (my_group == "" or sgrp ~= my_group) and sgrp:sub(1, 8) ~= "Olympus-"
+                   and tostring(o.UnitName or "") ~= my_unit
+                   and sd <= (cat == "a" and GEORGE_AIR_RANGE_M or GEORGE_GND_RANGE_M) then
+                    fr[#fr + 1] = row
+                end
+            elseif not george_enemy(o.CoalitionID, my_coal) and cat ~= "a" and sd <= GEORGE_GND_RANGE_M then
+                neu[#neu + 1] = row
             end
         end
         -- Sling-load cargo (any coalition): nearest object whose name or type says "cargo"
@@ -195,7 +228,7 @@ local function george_contacts(now)
                     tonumber(id) or -1, ll.Lat or 0, ll.Long or 0)
             end
         end
-        if not is_cargo and type(o) == "table" and o.Position and o.CoalitionID ~= my_coal
+        if not is_cargo and type(o) == "table" and o.Position and george_enemy(o.CoalitionID, my_coal)
            and type(o.Type) == "table" and (o.Type.level1 == 2 or o.Type.level1 == 3) then
             local dx, dz = o.Position.x - mx, o.Position.z - mz
             local dist = math.sqrt(dx * dx + dz * dz)
@@ -224,6 +257,9 @@ local function george_contacts(now)
         return "[" .. table.concat(o, ",") .. "]"
     end
     george_air, george_gnd = nearest(air, GEORGE_AIR_MAX), nearest(gnd, GEORGE_GND_MAX)
+    george_neu, george_fr = nearest(neu, GEORGE_SIDE_MAX), nearest(fr, GEORGE_SIDE_MAX)
+    george_tel_note("side" .. math.min(#neu, 1) .. math.min(#fr, 1), string.format(
+        "neutral units within %d km: %d; your side's units in range: %d", GEORGE_GND_RANGE_M / 1000, #neu, #fr))
     george_tel_note("ad" .. math.min(#ad, 1), string.format("air-defence radars within %d km: %d; Olympus flights' units: %d",
         GEORGE_AD_RANGE_M / 1000, #ad, #oly))
     george_tel_note("flight" .. #flight, string.format("your group '%s': %d other unit(s) alive: %s",
@@ -385,12 +421,13 @@ local function george_send_telemetry()
     local route, wp_next = george_route(now)
     local cargo = george_cargo and string.format("[%.1f,%.1f,%.1f]", george_cargo[1], george_cargo[3], george_cargo[2]) or "null"
     local payload = string.format(
-        '{"ac":"%s","alt_ft":%.0f,"agl_ft":%.0f,"vs_fpm":%.0f,"speed_kts":%.0f,"pitch":%.1f,"roll":%.1f,"yaw":%.1f,"hdg":%.1f,"ammo":[%d,%d,%d],"contacts":[%s],"pos":%s,"vel":%s,"route":%s,"wp":%d,"cargo":%s,"fuel":%s,"flight":%s,"group":"%s","unit":"%s","wing":%s,"self_id":%d,"ll":%s,"ad":%s,"oly":%s,"air":%s,"gnd":%s,"coal":%d,"t":%.2f,"scan_t":%.2f,"olyx":%s,"g":%s}',
+        '{"ac":"%s","alt_ft":%.0f,"agl_ft":%.0f,"vs_fpm":%.0f,"speed_kts":%.0f,"pitch":%.1f,"roll":%.1f,"yaw":%.1f,"hdg":%.1f,"ammo":[%d,%d,%d],"contacts":[%s],"pos":%s,"vel":%s,"route":%s,"wp":%d,"cargo":%s,"fuel":%s,"flight":%s,"group":"%s","unit":"%s","wing":%s,"self_id":%d,"ll":%s,"ad":%s,"oly":%s,"air":%s,"gnd":%s,"coal":%d,"t":%.2f,"scan_t":%.2f,"olyx":%s,"g":%s,"neu":%s,"fr":%s}',
         ac, alt * 3.28084, agl, vs, ias * 1.94384,
         (pitch or 0) * rad, (roll or 0) * rad, (yaw or 0) * rad, hdg, msl, rkt, gun,
         table.concat(items, ","), pos, vel, route, wp_next, cargo, fuel, george_flight or "null", george_my_group or "", george_my_unit or "",
         george_wing or "null", george_self_id or -1, george_ll(me_ll), george_ad or "[]", george_oly or "[]", george_air or "[]", george_gnd or "[]", george_coal or 0,
-        now or 0, george_scan_t or -1, george_olyx or "[]", george_num(george_g(), "%.2f"))
+        now or 0, george_scan_t or -1, george_olyx or "[]", george_num(george_g(), "%.2f"),
+        george_neu or "[]", george_fr or "[]")
 
     local ok, err = pcall(udp.send, udp, payload)
     if ok then

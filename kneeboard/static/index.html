@@ -92,6 +92,7 @@
   #alerts h2 { color: var(--dim); font-size: 18px; }
   /* Instructor tab (Instructor Mode, Phase 2): exercise, live tolerances, last result, levels */
   .instructor .who { color: #f0abfc; }
+  .warlord .who { color: #fca5a5; } .darkside .who { color: #fcd34d; } .ai .who { color: #8b9bb0; }
   .ins-state { color: var(--dim); font-size: 18px; margin: -4px 0 10px; }
   .ins-live { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 24px; }
   .ins-live b { font-variant-numeric: tabular-nums; }
@@ -340,7 +341,7 @@ function showPanel(p) {        // "kneeboard, contact 42": the track's details, 
 // ---------------------------------------------------------------- comms
 const commsEl = document.getElementById("comms");
 const WHO = { pilot: "You", george: "Crew", overlord: "Overlord", order: "Order", instructor: "Instructor",
-              picture: "Picture" };
+              picture: "Picture", warlord: "Warlord", darkside: "Darkside", ai: "AI to AI" };
 function esc(s) { return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
 function highlight(s) {
   return esc(s)

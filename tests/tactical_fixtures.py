@@ -13,7 +13,7 @@ def track(tid, typ, km_north=0.0, km_east=0.0, status=Status.ACTIVE, aff=Affilia
           cat=Category.GROUND, vel=None, alt=300.0, reason="in the DCS world scan"):
     pos = Position(ME[0] + km_north * KM_LAT, ME[1] + km_east * KM_LON, alt, Basis.WORLD, 100.0, 1000.0)
     v = Velocity(vel[0], vel[1], None, Basis.INFERRED, 99.0, 100.0) if vel else None
-    return Track(track_id=tid, key="dcs:" + tid[1:], generation=0, category=cat, affiliation=aff, type_name=typ,
+    return Track(track_id=tid, key=f"dcs:{int(tid[1:])}", generation=0, category=cat, affiliation=aff, type_name=typ,
                  display=typ, position=pos, velocity=v, first_seen_mono=1000.0, last_seen_mono=1000.0,
                  last_update_mono=1000.0, sources=(SourceMark("world.gnd", Basis.WORLD, 1000.0, 1000.0, 1),),
                  exist_conf=existence_conf(status), ident_conf=identity_conf(Basis.WORLD), status=status,

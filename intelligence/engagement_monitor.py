@@ -103,6 +103,14 @@ class EngagementMonitor:
             return
         current = eng[0]
         cid = current.get("contact_id")
+        from tactical import link
+        from tactical.models import dcs_key
+        st = link.status(dcs_key(cid)) if cid is not None else None
+        if st is not None:                            # a current tactical picture decides (step T7)
+            self._missing = 0
+            if st == "dead" and now - self._last_shot <= SHOT_WINDOW_SEC:
+                self._destroyed(current, snap)        # gone from 3 fresh scans, soon after a shot
+            return
         if cid is None or cid in present or cid not in self._last_seen:
             self._missing = 0
             return
@@ -123,6 +131,9 @@ class EngagementMonitor:
         if self._missing < MISSING_POLLS:
             return
         self._missing = 0
+        self._destroyed(current, snap)
+
+    def _destroyed(self, current: dict, snap: dict) -> None:
         from common.debrief import DEBRIEF
         DEBRIEF.kill("George", str(current.get("type") or "target"))
         nxt = state_store.pop_engagement()

@@ -120,12 +120,14 @@ class TestMain(unittest.TestCase):
         main.JTAC.snapshot = lambda: snap()
         self.addCleanup(setattr, main.JTAC, "snapshot", old)
         self.addCleanup(main.JTAC.reset)
+        # Phase 2 (P2-4): Overlord hands JTAC requests to Darkside, who answers in his voice and words
         said, who, _ = main.shared_reply("Overlord, request target")
-        self.assertEqual(who, "overlord")
-        self.assertTrue(said.startswith("Overlord, target Shilka."), said)
+        self.assertEqual(who, "darkside")
+        self.assertRegex(said, r"^\w[\w ]*(?: \d+-\d)?, Darkside, target Shilka\.")
+        self.assertEqual(said.pre, (("Overlord, contact Darkside.", "overlord"),))
         said, who, _ = main.shared_reply("JTAC, say again target")
-        self.assertEqual(who, "overlord")
-        self.assertTrue(said.startswith("Overlord, target Shilka."), said)
+        self.assertEqual(who, "darkside")
+        self.assertIn(", Darkside, target Shilka.", said)
         self.assertEqual(main._george_top(state_store.snapshot())["id"], 2)       # "my target" = the JTAC's
 
 
@@ -157,7 +159,7 @@ class TestOct28Flight(unittest.TestCase):
         self.addCleanup(setattr, main.JTAC, "snapshot", old)
         self.addCleanup(main.JTAC.reset)
         said, who, _ = main.shared_reply("Next target.")
-        self.assertEqual(who, "overlord")
-        self.assertTrue(said.startswith("Overlord, target"), said)
+        self.assertEqual(who, "darkside")                                  # Phase 2: Darkside's (P2-4)
+        self.assertIn(", Darkside, target", said)
         said, who, _ = main.shared_reply("smoke on my target")
-        self.assertEqual(who, "overlord")
+        self.assertEqual(who, "darkside")

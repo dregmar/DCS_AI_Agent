@@ -471,6 +471,7 @@ ON_TYPES = None
 ON_AIRBASES = None
 ON_PLAYERS = None          # "PLAYERS n mp|sp": people connected (common/training.py refuses multiplayer)
 ON_LOADED = None            # "LOADED n": a mission was loaded or restarted (unit ids start again)
+ON_EVENTS = None            # "EVENTS\n<kind;id;name;type;killer id;name;type>...": DCS unit deaths (tactical I-T4)
 
 
 def listen(menu: CommsMenu) -> None:
@@ -501,9 +502,19 @@ def listen(menu: CommsMenu) -> None:
                 if ON_LOADED is not None:
                     ON_LOADED()
                 continue
+            if text.startswith("EVENTS\n"):           # DCS says units died (george_comms_hook.lua, T8)
+                if ON_EVENTS is not None:
+                    ON_EVENTS(text)
+                continue
             if text.startswith("PLAYERS"):            # who's connected (george_comms_hook.lua, audit step 7)
                 if ON_PLAYERS is not None:
                     ON_PLAYERS(text)
+                continue
+            if text.startswith("CALLSIGN "):          # your callsign from the mission (hook, P2-2)
+                from command.roles import parse_callsign
+                got = parse_callsign(text)
+                if got is not None:
+                    state_store.set_callsign(*got)
                 continue
             if text.startswith("FUEL "):              # your fuel straight from DCS (george_comms_hook.lua)
                 got = parse_fuel(text)

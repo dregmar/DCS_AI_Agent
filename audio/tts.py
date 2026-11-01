@@ -30,6 +30,10 @@ PRIORITY_ROUTINE = 2  # low-importance callouts
 GEORGE = "george"
 OVERLORD = "overlord"
 INSTRUCTOR = "instructor"      # Instructor Mode (instructor/): jenny.onnx (Andre, 30 Oct; was bryce-medium)
+WARLORD = "warlord"            # command roles P2-3 (Andre, 1 Nov): en_US-norman-medium.onnx
+DARKSIDE = "darkside"          # command roles P2-3 (Andre, 1 Nov): en_US-bryce-medium.onnx
+# A role whose voice file isn't there speaks in this voice instead (and the Status page says so)
+FALLBACK = {WARLORD: OVERLORD, DARKSIDE: OVERLORD}
 
 # Set by main.py while the PTT key is held. Non-pilot callouts wait while it is set,
 # so George never talks over you.
@@ -67,22 +71,36 @@ def _load_instructor():
     return _load(path, INSTRUCTOR)
 
 
+def _load_role(label: str, setting: str, filename: str):
+    """A command role's voice (P2-3), only if its model is in the project folder; until it's
+    downloaded the role speaks in Overlord's voice (a missing file isn't an error)."""
+    import config as _config
+    path = getattr(_config, setting, None) or os.path.join(getattr(_config, "BASE_DIR", ""), filename)
+    if not os.path.exists(path):
+        print(f"[AUDIO] {label.capitalize()} voice not found ({path}): {label} will use Overlord's voice. "
+              f"Put {os.path.basename(path)} and its .json in the project folder.")
+        return None
+    return _load(path, label)
+
+
 VOICES = {GEORGE: _load(PIPER_MODEL_PATH, GEORGE),
           OVERLORD: _load(OVERLORD_MODEL_PATH, OVERLORD),
-          INSTRUCTOR: _load_instructor()}
+          INSTRUCTOR: _load_instructor(),
+          WARLORD: _load_role(WARLORD, "WARLORD_MODEL_PATH", "en_US-norman-medium.onnx"),
+          DARKSIDE: _load_role(DARKSIDE, "DARKSIDE_MODEL_PATH", "en_US-bryce-medium.onnx")}
 voice = VOICES[GEORGE]            # kept for older code that reads tts.voice
 if VOICES[OVERLORD] is None and voice is not None:
     print("[AUDIO] Overlord will use George's voice.")
 
 
 def _voice_for(speaker: str):
-    return VOICES.get(speaker) or VOICES[GEORGE]
+    return VOICES.get(speaker) or VOICES.get(FALLBACK.get(speaker)) or VOICES[GEORGE]
 
 
 def speak_radio(text: str, speaker: str = GEORGE, priority: int = PRIORITY_PILOT, max_age=None) -> None:
     """Queues a transmission in the speaker's voice. NON-BLOCKING and safe to call from any thread.
 
-    speaker:  "george" (intercom / crew) or "overlord" (command radio).
+    speaker:  "george" (intercom / crew), "overlord" (command radio), "instructor", "warlord", "darkside".
     priority: lower is spoken first (queue order only; a transmission in progress is never cut off).
     max_age:  seconds a queued callout stays worth saying; older ones are dropped unspoken.
     """
@@ -126,6 +144,16 @@ def speak_overlord(text: str, priority: int = PRIORITY_PILOT, max_age=None) -> N
 def speak_instructor(text: str, priority: int = PRIORITY_PILOT, max_age=None) -> None:
     """The instructor (same queue, DSP and playback as the others; George's voice until jenny.onnx is there)."""
     speak_radio(text, INSTRUCTOR, priority, max_age)
+
+
+def speak_warlord(text: str, priority: int = PRIORITY_PILOT, max_age=None) -> None:
+    """Warlord, the mission commander (Overlord's voice until en_US-norman-medium.onnx is there)."""
+    speak_radio(text, WARLORD, priority, max_age)
+
+
+def speak_darkside(text: str, priority: int = PRIORITY_PILOT, max_age=None) -> None:
+    """Darkside, the JTAC / FAC (Overlord's voice until en_US-bryce-medium.onnx is there)."""
+    speak_radio(text, DARKSIDE, priority, max_age)
 
 
 # Called with (speaker, text) for every transmission actually played (kneeboard comms log), or None.

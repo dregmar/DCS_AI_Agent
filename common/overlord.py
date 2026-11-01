@@ -44,6 +44,11 @@ from typing import Callable, Dict, List, Optional, Tuple
 from common import geo
 from common.debrief import DEBRIEF
 from common.orders import ORDERS
+from command import roles as _roles
+from command.permissions import acting_as
+from command import exchange
+from command.roles import Said
+from command.tasking import TASKS
 from core.state import enemy_lists_stale, stale_reason
 from intelligence.threat_engine import threat_weight
 
@@ -119,6 +124,10 @@ BREAK_OFF_M = 20_000               # a bandit this far outside the radius: back 
 COST_PER_AIRCRAFT = 10             # Olympus's default spawn cost when the database gives none
 APPEAR_TIMEOUT_S = 30.0
 MISSION_TIMEOUT_S = 25 * 60        # SEAD / CAS
+CAS_MAX_TARGETS = 8                # CAS: the named target and the most dangerous others (1 Nov: 40 listed)
+IP_M = 9_000                       # CAS under Darkside: the initial point, this far from the target area
+IP_REACHED_M = 4_000               # ... reached within this
+IP_TIMEOUT_S = 240.0               # ... or after this long (AI flights don't always fly to the point)
 COVER_TIMEOUT_S = 30 * 60          # CAP / escort
 POLL_S = 3.0
 
@@ -128,7 +137,7 @@ WINDOWS = {"air_defence": (80_000, 25), "enemy_ground": (40_000, 40), "enemy_air
 # ------------------------------------------------------------------ parsing
 _SEAD = re.compile(r"\b(?:sead|s\s?e\s?a\s?d|seed|cede|seid|sid|see\s?add|c\s?e\s?a\s?d|wild\s?weasel|"
                    r"weasel|sam\s?suppression|suppress(?:ion)?\s+(?:of\s+)?(?:enemy\s+)?air\s?defen[cs]es?)\b")
-_CAS = re.compile(r"\b(?:cas|c\s?a\s?s|kass|cass|kaz|close\s?air\s?support|air\s?support|hogs?|a\s?10s?)\b")
+_CAS = re.compile(r"\b(?:cas|c\s?a\s?s|cac|kass|cass|kaz|close\s?air\s?support|air\s?support|hogs?|a\s?10s?)\b")
 _CAP = re.compile(r"\b(?:cap|c\s?a\s?p|caps|combat\s?air\s?patrol|air\s?patrol|barcap)\b")
 _ESCORT = re.compile(r"\b(?:escorts?|escorting|fighter\s?cover|top\s?cover|air\s?cover|cover\s?me|"
                      r"fighter\s?escort)\b")
@@ -334,6 +343,28 @@ def ground_near(snap: dict, point: Tuple[float, float], radius: float = CAS_RADI
     return out
 
 
+_STRUCTURE_NAMES = re.compile(r"outpost|bunker|road|house|tower|depot|warehouse|barrack|fortif|sandbag|checkpoint", re.I)
+
+
+def is_structure(name: str) -> bool:
+    """A fortification / building / static object (DCS's attributes; by name until DCS describes it)."""
+    from common.unit_types import TYPES
+    a = TYPES.attrs(name)
+    if a:
+        return bool(a & {"Fortifications", "Buildings", "Static"})
+    return bool(_STRUCTURE_NAMES.search(name or ""))
+
+
+def cas_targets(targets: List[dict], keep_first: bool = False) -> List[dict]:
+    """The CAS list: structures dropped while there are vehicles to hit (a named first target stays),
+    at most CAS_MAX_TARGETS, most dangerous first as ground_near sorted them."""
+    head, rest = (targets[:1], targets[1:]) if keep_first else ([], targets)
+    live = [t for t in rest if not is_structure(t["type"])]
+    if live or head:
+        rest = live
+    return (head + rest)[:CAS_MAX_TARGETS]
+
+
 def big_sams_near(snap: dict, point: Tuple[float, float], radius: float = SEARCH_RADIUS_M) -> List[dict]:
     return [r for r in radars_near(snap, point, radius) if is_big_sam(r["type"])]
 
@@ -353,7 +384,14 @@ def bandits_near(snap: dict, point: Tuple[float, float], radius: float) -> List[
 
 
 def target_state(snap: dict, tgt: dict) -> str:
-    """'alive', 'dead' or 'unknown' (outside what Export.lua lists, or the lists are stale)."""
+    """'alive', 'dead' or 'unknown' (outside what Export.lua lists, or the lists are stale).
+    With a current tactical picture (step T7) its track decides: dead only after 3 fresh scans without
+    the unit inside coverage, never on one missing row. Without one, the old rule below."""
+    from tactical import link
+    from tactical.models import dcs_key
+    st = link.status(dcs_key(tgt.get("id")))
+    if st is not None:
+        return st
     if enemy_lists_stale(snap):                  # a frozen picture can't say what's dead
         return "unknown"
     key = tgt.get("src", "air_defence")
@@ -391,6 +429,7 @@ class Mission:
         self.spawn_ll = spawn_ll
         self.known_groups = set(known_groups)
         self.station = point                 # CAP / escort: where they orbit
+        self.ip = None                       # CAS under Darkside: the initial point (P2-6)
         self.group: Optional[str] = None
         self.lead_id: Optional[int] = None
         self.current: Optional[dict] = None
@@ -398,6 +437,7 @@ class Mission:
         self.state = "launching"            # launching > engaging > home | lost | failed | cancelled
         self.started = time.monotonic()
         self.cancel = threading.Event()
+        self.task_id: Optional[str] = None   # its record in the tasking registry (command/tasking.py)
 
     @property
     def cs(self) -> str:
@@ -412,9 +452,15 @@ class Overlord:
 
     def __init__(self, oly, snapshot: Callable[[], dict], speak: Callable[[str], None],
                  my_target: Optional[Callable[[dict], Optional[dict]]] = None,
-                 ask: Optional[Callable[[str], str]] = None):
+                 ask: Optional[Callable[[str], str]] = None, tasks=None, warlord=None, darkside=None):
+        """warlord (common/warlord.py): asked before every spawn; None = no review (as before Phase 2).
+        darkside (common/darkside.py): controls CAS flights (weapons hold, IP, cleared hot); None = CAS
+        attacks on its own, as before."""
         self.oly, self.snapshot, self.speak = oly, snapshot, speak
         self.my_target, self.ask = my_target, ask
+        self.tasks = tasks if tasks is not None else TASKS   # Phase 2: every flight has a tasking record
+        self.warlord, self.darkside = warlord, darkside
+        self.callsign: Callable[[], str] = lambda: "Nomad"     # main.py: the mission's callsign (P2-2)
         self._lock = threading.Lock()
         self._missions: List[Mission] = []
 
@@ -522,12 +568,11 @@ class Overlord:
         if point is None:
             return where
         k = KINDS["SEAD"]
-        err = self._launch(k, snap, point, where, radars)
-        if err:
-            return err
         names = _say_list([say_type(r["type"]) for r in radars])
-        return (f"Overlord copies. {k.callsign} flight, {k.desc}, tasked SEAD {where}. "
-                f"Targets: {names}. Time on target {_minutes(self._eta(k))}.")
+        return self._launch(k, snap, point, where, radars,
+                            f"Overlord copies. {k.callsign} flight, {k.desc}, tasked SEAD {where}. "
+                            f"Targets: {names}. Time on target {_minutes(self._eta(k))}.",
+                            f"Overlord, {k.callsign} flight tasked SEAD {where}, {_minutes(self._eta(k))}.")
 
     def request_cas(self, t: str) -> str:
         snap = self.snapshot()
@@ -556,20 +601,21 @@ class Overlord:
             tgt = {"type": first.get("type") or "target", "id": int(first["id"]), "lat": float(first["lat"]),
                    "lon": float(first["lon"]), "d": 0.0, "w": 999, "src": "enemy_ground"}
             targets = [tgt] + [x for x in targets if x["id"] != tgt["id"]]
+        targets = cas_targets(targets, keep_first=first is not None)
         if not targets:
             return (f"Overlord, negative. No enemy ground units known within "
                     f"{_dist(CAS_RADIUS_M, snap)} of {where}. No flight sent.")
         sams = big_sams_near(snap, point)
         k = KINDS["CAS"]
-        err = self._launch(k, snap, point, where, targets)
-        if err:
-            return err
         kinds = _say_list([say_type(x["type"]) for x in targets[:3]])
         more = f" and {len(targets) - 3} more" if len(targets) > 3 else ""
         warn = (f" Caution, {_say_list([say_type(s['type']) for s in sams])} within "
                 f"{_dist(SEARCH_RADIUS_M, snap)}. Recommend SEAD." if sams else "")
-        return (f"Overlord copies. {k.callsign} flight, {k.desc}, tasked CAS {where}. "
-                f"Targets: {kinds}{more}. Time on target {_minutes(self._eta(k))}.{warn}")
+        dark = " Weapons hold until Darkside clears them." if self.darkside is not None else ""
+        return self._launch(k, snap, point, where, targets,
+                            f"Overlord copies. {k.callsign} flight, {k.desc}, tasked CAS {where}. "
+                            f"Targets: {kinds}{more}. Time on target {_minutes(self._eta(k))}.{warn}{dark}",
+                            f"Overlord, {k.callsign} flight tasked CAS {where}, {_minutes(self._eta(k))}.{warn}")
 
     def request_cap(self, t: str) -> str:
         snap = self.snapshot()
@@ -580,12 +626,11 @@ class Overlord:
         if point is None:
             return f"Overlord, unable, {where}."
         k = KINDS["CAP"]
-        err = self._launch(k, snap, point, where, [])
-        if err:
-            return err
         where_said = "over " + where if where in ("your position",) or where.startswith("waypoint") else where
-        return (f"Overlord copies. {k.callsign} flight, {k.desc}, CAP {where_said}. "
-                f"On station in {_minutes(self._eta(k))}.")
+        return self._launch(k, snap, point, where, [],
+                            f"Overlord copies. {k.callsign} flight, {k.desc}, CAP {where_said}. "
+                            f"On station in {_minutes(self._eta(k))}.",
+                            f"Overlord, {k.callsign} flight, CAP {where_said}, on station in {_minutes(self._eta(k))}.")
 
     def request_escort(self, t: str) -> str:
         snap = self.snapshot()
@@ -596,10 +641,10 @@ class Overlord:
         if not me:
             return "Overlord, unable, I don't have your position."
         k = KINDS["ESCORT"]
-        err = self._launch(k, snap, (me[0], me[1]), "you", [])
-        if err:
-            return err
-        return f"Overlord copies. {k.callsign} flight, {k.desc}, escorting you. Joining in {_minutes(self._eta(k))}."
+        return self._launch(k, snap, (me[0], me[1]), "you", [],
+                            f"Overlord copies. {k.callsign} flight, {k.desc}, escorting you. "
+                            f"Joining in {_minutes(self._eta(k))}.",
+                            f"Overlord, {k.callsign} flight joining you in {_minutes(self._eta(k))}.")
 
     def _eta(self, k: Kind) -> int:
         return max(1, round((self._back_m(k, self.snapshot()) / k.cruise_mps) / 60))
@@ -612,8 +657,27 @@ class Overlord:
         return p.escort_back_m if k.key == "ESCORT" and p.escort_back_m else k.back_m
 
     # -------------------------------------------------------------- spawning
-    def _launch(self, k: Kind, snap: dict, point, where: str, targets: List[dict]) -> Optional[str]:
-        """Spawns the flight and starts its thread. What to say on failure, else None."""
+    def _tasking_text(self, k: Kind, ok_text: str, short_text: str) -> str:
+        """Overlord's tasking line in the exchange's form (command/exchange.py, P2-7). Without Warlord
+        (command roles off) it's today's line, unchanged."""
+        if self.warlord is None:
+            return ok_text
+        if exchange.short():
+            return short_text or ok_text
+        body = re.sub(r"^Overlord copies\.\s*", "", ok_text)
+        dark = " Contact Darkside." if k.key == "CAS" and self.darkside is not None else ""
+        return f"{self.callsign()}, Overlord, {body}{dark}"
+
+    def _ack(self, k: Kind, where: str) -> str:
+        """Full form: Overlord's first answer, before he asks Warlord."""
+        what = k.said if k.key == "ESCORT" else f"{k.said} {where}"
+        return f"{self.callsign()}, Overlord, copy {what}. Checking with Warlord."
+
+    def _launch(self, k: Kind, snap: dict, point, where: str, targets: List[dict], ok_text: str = "",
+                short_text: str = "") -> str:
+        """Asks Warlord, then spawns the flight and starts its thread. Returns what to say: ok_text
+        when it launched (with Warlord's note after it, if he has one), else why not. A Warlord denial is
+        held for "Warlord, override" (common/warlord.py) and said in his voice after Overlord's line."""
         who = f"{k.callsign} flight"
         if not self.oly.connect():
             ORDERS.record(who, k.key, "failed", "Olympus isn't running")
@@ -623,6 +687,45 @@ class Overlord:
         if why:
             ORDERS.record(who, k.key, "failed", why)
             return f"Overlord, unable, {why}."
+        from tactical.models import dcs_key
+        task = self.tasks.new(k.key, _roles.OVERLORD, who, where=where,
+                              targets=[dcs_key(x.get("id")) for x in targets])
+        note = ()
+        final = self._tasking_text(k, ok_text, short_text)
+        full = self.warlord is not None and not exchange.short()
+        if self.warlord is None:
+            self.tasks.set_state(task.task_id, "approved", "no Warlord")
+        else:
+            d = self.warlord.review(k.key, point, targets, snap)
+            if d.verdict == "deny":
+                self.tasks.set_state(task.task_id, "denied", d.reason)
+                ORDERS.record(who, k.key, "failed", f"Warlord denied: {d.reason}")
+                self.warlord.hold(task.task_id, k.key, d,
+                                  lambda: self._spawn(k, self.snapshot(), point, where, targets, task.task_id)
+                                  or final)
+                return Said(self._ack(k, where) if full else "",
+                            then=[(self.warlord.deny_text(k.key, d), "warlord")])
+            if d.verdict == "defer":
+                self.tasks.set_state(task.task_id, "deferred", d.reason)
+                self.tasks.set_state(task.task_id, "failed", f"deferred: {d.reason}")
+                ORDERS.record(who, k.key, "failed", f"Warlord deferred: {d.reason}")
+                return Said(self._ack(k, where) if full else "",
+                            then=[(self.warlord.defer_text(k.key, d), "warlord")])
+            self.tasks.set_state(task.task_id, "approved", "Warlord approved")
+            if d.advice:
+                note = ((self.warlord.advice_text(k.key, d), "warlord"),)
+        err = self._spawn(k, snap, point, where, targets, task.task_id)
+        if err:
+            return err
+        if full:                         # the whole exchange: ack, Warlord's approval, the tasking, his note
+            return Said(self._ack(k, where), then=[(self.warlord.approve_text(k.key), "warlord"),
+                                                   (final, "overlord"), *note])
+        return Said(final, then=note) if note else final
+
+    def _spawn(self, k: Kind, snap: dict, point, where: str, targets: List[dict], task_id: str) -> Optional[str]:
+        """Spawns an approved (or overridden) task's flight and starts its thread. Why not, else None."""
+        who = f"{k.callsign} flight"
+        cost = k.size * COST_PER_AIRCRAFT
         me = snap.get("my_ll") or point
         d_me, brg_me = dist_brg(point, me)
         if d_me < 1000:                      # on your own position: come in from behind you
@@ -639,14 +742,19 @@ class Overlord:
                           "altitude": k.alt_m, "heading": heading, "loadout": k.loadout,
                           "liveryID": "", "skill": "High"})
         known = {u[0] for u in snap.get("olympus_units") or []}
-        ok, why = self.oly.command("spawnAircrafts", {
-            "coalition": "blue", "country": "", "airbaseName": "", "immediate": True,
-            "spawnPoints": cost, "units": units})
+        task = self.tasks.get(task_id)
+        with acting_as(_roles.OVERLORD, task.task_id):
+            ok, why = self.oly.command("spawnAircrafts", {
+                "coalition": "blue", "country": "", "airbaseName": "", "immediate": True,
+                "spawnPoints": cost, "units": units})
         if not ok:
+            self.tasks.set_state(task.task_id, "failed", f"spawnAircrafts: {why}")
             ORDERS.record(who, k.key, "failed", f"spawnAircrafts: {why}")
             return f"Overlord, unable, {why}."
         ORDERS.record(who, k.key, "accepted", f"spawning {k.size} {k.unit_type}")
+        self.tasks.set_state(task.task_id, "en_route", f"spawning {k.size} {k.unit_type}")
         m = Mission(k, point, where, targets, spawn, known)
+        m.task_id = task.task_id
         DEBRIEF.launch(f"{k.callsign} flight", k.key)
         with self._lock:
             self._missions.append(m)
@@ -689,17 +797,24 @@ class Overlord:
                 best = (d, u[0])
         return best[1] if best else None
 
+    def _task(self, m: Mission, state: str, reason: str = "") -> None:
+        self.tasks.set_state(m.task_id, state, reason)
+
     def _run(self, m: Mission) -> None:
-        try:
-            if not self._join(m):
-                return
-            if m.kind.key in ("SEAD", "CAS"):
-                self._strike_loop(m)
-            else:
-                self._cover_loop(m)
-        except Exception as e:                       # never kill the program over a mission
-            print(f"[OVERLORD] {m.kind.key} mission error: {type(e).__name__}: {e}")
-            m.state = "failed"
+        with acting_as(_roles.OVERLORD, m.task_id):     # every command this flight's thread sends
+            try:
+                if not self._join(m):
+                    return
+                if m.kind.key == "CAS" and self.darkside is not None:
+                    self._cas_loop(m)                # Darkside's terminal control (P2-6)
+                elif m.kind.key in ("SEAD", "CAS"):
+                    self._strike_loop(m)
+                else:
+                    self._cover_loop(m)
+            except Exception as e:                   # never kill the program over a mission
+                print(f"[OVERLORD] {m.kind.key} mission error: {type(e).__name__}: {e}")
+                m.state = "failed"
+                self._task(m, "failed", f"error: {type(e).__name__}")
 
     def _join(self, m: Mission) -> bool:
         """Waits for the spawned group; True when it's ready to task."""
@@ -710,6 +825,7 @@ class Overlord:
                 break
             time.sleep(1.0)
         if not m.group:
+            self._task(m, "aborted" if m.cancel.is_set() else "failed", "no group appeared")
             if not m.cancel.is_set():
                 m.state = "failed"
                 ORDERS.record(f"{m.cs} flight", m.kind.key, "failed", "failed to launch: no group appeared")
@@ -717,14 +833,18 @@ class Overlord:
             return False
         flight = self._flight(self.snapshot(), m)
         m.lead_id = int(flight[0][2])
+        self.tasks.attach(m.task_id, m.group, [int(u[2]) for u in flight])
         if hasattr(self.oly, "claim"):
             self.oly.claim(m.group)
         print(f"[OVERLORD] {m.kind.key} flight is {m.group}, lead id {m.lead_id}")
         if m.cancel.is_set():
+            self._task(m, "aborted", "cancelled")
             self._send_home(m)
             return False
-        ok, why = self.oly.command("setROE", {"ID": m.lead_id, "ROE": 0})          # weapons free
+        hold = m.kind.key == "CAS" and self.darkside is not None   # CAS arrives weapons hold (P2-6)
+        ok, why = self.oly.command("setROE", {"ID": m.lead_id, "ROE": 4 if hold else 0})   # hold / weapons free
         if m.cancel.is_set():                            # cancelled while it was being tasked
+            self._task(m, "aborted", "cancelled")
             self._send_home(m)
             return False
         ORDERS.record(f"{m.cs} flight", m.kind.key, "submitted",
@@ -739,6 +859,7 @@ class Overlord:
         for m in old:
             m.state = "cancelled"
             m.cancel.set()
+        self.tasks.reset()                               # unit ids start again
 
     def _check_flight(self, snap: dict, m: Mission) -> bool:
         """False when the flight is gone. Follows a new lead when the first one is lost."""
@@ -747,6 +868,7 @@ class Overlord:
         flight = self._flight(snap, m)
         if not flight:
             m.state = "lost"
+            self._task(m, "lost", "flight down")
             ORDERS.record(f"{m.cs} flight", m.kind.key, "failed", "flight down")
             DEBRIEF.loss(f"{m.cs} flight")
             self.speak(f"Overlord, {m.cs} flight is down.")
@@ -754,6 +876,7 @@ class Overlord:
         # Export.lua lists units in no fixed order: only a lead that's gone is replaced
         if all(int(u[2]) != m.lead_id for u in flight):
             m.lead_id = int(flight[0][2])
+            self.tasks.attach(m.task_id, m.group, [int(u[2]) for u in flight])
             m.current = None
             print(f"[OVERLORD] {m.cs} lead lost, {flight[0][1]} leads (id {m.lead_id})")
         return True
@@ -775,24 +898,120 @@ class Overlord:
                 m.targets = [r for r in m.targets if target_state(snap, r) != "dead"]
                 if not m.targets:
                     m.state = "home"
+                    self._task(m, "complete", "area clear")
                     ORDERS.record(f"{m.cs} flight", m.kind.key, "completed", "area clear, returning to base")
                     self.speak(f"Overlord, {m.cs} reports the area clear. Returning to base.")
                     self._send_home(m)
                     return
                 m.current = m.targets[0]
                 ok, why = self.oly.command("attackUnit", {"ID": m.lead_id, "targetID": m.current["id"]})
+                if ok:
+                    self._task(m, "attacking", say_type(m.current["type"]))
                 if not ok:
                     m.state = "failed"
+                    self._task(m, "failed", f"attackUnit: {why}")
                     ORDERS.record(f"{m.cs} flight", m.kind.key, "failed", f"attackUnit: {why}")
                     self.speak(f"Overlord, {m.cs} can't be tasked, {why}.")
                     return
             if time.monotonic() - m.started > MISSION_TIMEOUT_S:
                 m.state = "home"
+                self._task(m, "complete", "out of time on station")
                 ORDERS.record(f"{m.cs} flight", m.kind.key, "completed", "out of time on station, returning to base")
                 self.speak(f"Overlord, {m.cs} is out of time on station. Returning to base.")
                 self._send_home(m)
                 return
             time.sleep(POLL_S)
+
+    def _ip(self, m: Mission, snap: dict):
+        """The CAS initial point: IP_M from the target area, on the side away from known air defence
+        (else towards where the flight came from)."""
+        lat0, lon0 = m.point
+        threats = radars_near(snap, m.point, SEARCH_RADIUS_M)
+        if threats:
+            n = sum(t["lat"] - lat0 for t in threats)
+            e = sum((t["lon"] - lon0) * math.cos(math.radians(lat0)) for t in threats)
+            brg = (math.degrees(math.atan2(e, n)) + 180.0) % 360 if (n or e) else 0.0
+        else:
+            _, brg = dist_brg(m.point, m.spawn_ll)
+        return geo.offset_ll(lat0, lon0, IP_M * math.cos(math.radians(brg)), IP_M * math.sin(math.radians(brg)))
+
+    def _lead_ll(self, snap: dict, m: Mission):
+        for u in self._flight(snap, m):
+            if int(u[2]) == m.lead_id:
+                return float(u[3]), float(u[4])
+        return None
+
+    def _to_ip(self, m: Mission) -> None:
+        self.oly.command("setPath", {"ID": m.lead_id, "path": [{"lat": m.ip[0], "lng": m.ip[1]}]})
+
+    def _cas_loop(self, m: Mission) -> None:
+        """CAS under Darkside (P2-6): weapons hold to the IP, check in, cleared hot only by Darkside,
+        target by target; any abort brings it back to the IP."""
+        d = self.darkside
+        m.ip = self._ip(m, self.snapshot())
+        self._to_ip(m)
+        d.register(m)
+        at_ip, hot, joined = False, False, time.monotonic()
+        try:
+            while not m.cancel.is_set():
+                snap = self.snapshot()
+                if not self._check_flight(snap, m):
+                    return
+                if m.current and target_state(snap, m.current) == "dead":
+                    what = say_type(m.current["type"])
+                    m.killed.append(what)
+                    DEBRIEF.kill(f"{m.cs} flight", what)
+                    left = [r for r in m.targets if r is not m.current and target_state(snap, r) != "dead"]
+                    d.good_effect(m, what, len(left), m.current.get("id"))
+                    m.current = None
+                    if hot and left:                     # the next one, if Darkside still clears it
+                        ok, why = d.clearance(m, left[0], snap)
+                        if ok:
+                            m.current = left[0]
+                            if not d.attack(m, m.current):
+                                hot = False
+                        else:
+                            d.hold(m, why)
+                            d.withheld(m, why)
+                if m.current is None:
+                    m.targets = [r for r in m.targets if target_state(snap, r) != "dead"]
+                    if not m.targets:
+                        m.state = "home"
+                        self._task(m, "complete", "area clear")
+                        ORDERS.record(f"{m.cs} flight", m.kind.key, "completed", "area clear, returning to base")
+                        d.area_clear(m)
+                        self._send_home(m)
+                        return
+                    m.current = m.targets[0]
+                state = (self.tasks.get(m.task_id).state if self.tasks.get(m.task_id) else "")
+                if hot and state == "holding":           # Darkside aborted or withheld: back to the IP
+                    hot, at_ip = False, False
+                    self._to_ip(m)
+                if not hot:
+                    if not at_ip:
+                        ll = self._lead_ll(snap, m)
+                        if ((ll and dist_brg(ll, m.ip)[0] <= IP_REACHED_M)
+                                or time.monotonic() - joined > IP_TIMEOUT_S):
+                            at_ip = True
+                            if state != "holding":
+                                self._task(m, "holding", "at the IP")
+                            d.check_in(m)
+                    if at_ip:
+                        ok, why = d.clearance(m, m.current, snap)
+                        if ok:
+                            hot = d.clear(m, m.current)
+                        else:
+                            d.withheld(m, why)
+                if time.monotonic() - m.started > MISSION_TIMEOUT_S:
+                    m.state = "home"
+                    self._task(m, "complete", "out of time on station")
+                    ORDERS.record(f"{m.cs} flight", m.kind.key, "completed", "out of time on station, returning to base")
+                    self.speak(f"Overlord, {m.cs} is out of time on station. Returning to base.")
+                    self._send_home(m)
+                    return
+                time.sleep(POLL_S)
+        finally:
+            d.unregister(m)
 
     def _goto_station(self, m: Mission) -> None:
         if self._escort_follows(m):                      # jets: formation on you, not an orbit
@@ -817,6 +1036,7 @@ class Overlord:
         if escort and self.snapshot().get("my_ll"):
             m.station = tuple(self.snapshot()["my_ll"][:2])
         self._goto_station(m)
+        self._task(m, "on_task", "on station")
         while not m.cancel.is_set():
             snap = self.snapshot()
             if not self._check_flight(snap, m):
@@ -837,10 +1057,12 @@ class Overlord:
                     self.speak(f"Overlord, {m.cs} reports splash one {say_type(m.current['type'])}.")
                     m.current = None
                     self._goto_station(m)
+                    self._task(m, "on_task", "back on station")
                 elif not stale and now is not None and now["d"] > radius + BREAK_OFF_M:
                     self.speak(f"Overlord, {m.cs} breaking off, back on station.")
                     m.current = None
                     self._goto_station(m)
+                    self._task(m, "on_task", "broke off")
             if m.current is None and not stale:
                 bandits = bandits_near(snap, centre, radius)
                 if bandits:
@@ -848,6 +1070,7 @@ class Overlord:
                     ok, why = self.oly.command("attackUnit", {"ID": m.lead_id, "targetID": b["id"]})
                     if ok:
                         m.current = b
+                        self._task(m, "attacking", say_type(b["type"]))
                         where = ""
                         if me:
                             d, brg = dist_brg((me[0], me[1]), (b["lat"], b["lon"]))
@@ -855,6 +1078,7 @@ class Overlord:
                         self.speak(f"Overlord, {m.cs} committing on {say_type(b['type'])}{where}.")
             if time.monotonic() - m.started > COVER_TIMEOUT_S:
                 m.state = "home"
+                self._task(m, "complete", "bingo fuel")
                 self.speak(f"Overlord, {m.cs} is bingo fuel. Returning to base.")
                 self._send_home(m)
                 return
@@ -937,8 +1161,12 @@ class Overlord:
         for m in act:
             m.cancel.set()
             m.state = "cancelled"
+            self._task(m, "aborted", "cancelled")
             ORDERS.record(f"{m.cs} flight", m.kind.key, "completed", "cancelled, returning to base")
-            self._send_home(m)
+            with acting_as(_roles.OVERLORD, m.task_id):   # on the reply thread, not the flight's
+                if m.kind.key == "CAS" and self.darkside is not None and m.lead_id is not None:
+                    self.oly.command("setROE", {"ID": m.lead_id, "ROE": 4})   # anyone may stop an attack
+                self._send_home(m)
         names = _say_list([f"{m.cs} flight" for m in act])
         return f"Overlord copies. {names}, mission cancelled, returning to base."
 
@@ -972,6 +1200,26 @@ class AirWarning:
                 self.check()
             except Exception as e:
                 print(f"[OVERLORD] air warning: {type(e).__name__}: {e}")
+
+    CLOSING_MPS = 5.0
+
+    @staticmethod
+    def _closing(b: dict, me, snap: dict) -> str:
+        """", closing" / ", opening" only when the tactical picture measured it (two scans, step T7);
+        nothing when it can't say. Without a picture: the old wording (", closing")."""
+        from tactical import link
+        from tactical.models import dcs_key
+        if not link.active():
+            return ", closing"
+        vel = snap.get("vel")
+        rr = link.closure(dcs_key(b["id"]), me, vel[:2] if vel else None)
+        if rr is None:
+            return ""
+        if rr <= -AirWarning.CLOSING_MPS:
+            return ", closing"
+        if rr >= AirWarning.CLOSING_MPS:
+            return ", opening"
+        return ""
 
     def check(self, now: Optional[float] = None) -> List[str]:
         """One look. Returns what was said (also for tests)."""
@@ -1019,7 +1267,7 @@ class AirWarning:
             if b["d"] <= close_m and b["id"] not in self._closed:
                 d, brg = dist_brg(me, (b["lat"], b["lon"]))
                 said.append(f"Overlord, bandit, {say_type(b['type'])}, {_dist(d, snap, whole=True)} "
-                            f"{compass(brg)} of you, closing.")
+                            f"{compass(brg)} of you{self._closing(b, me, snap)}.")
                 self._closed[b["id"]] = now
                 self._warned[b["id"]] = now
         for s in said:

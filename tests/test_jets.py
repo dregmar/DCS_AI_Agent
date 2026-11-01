@@ -133,7 +133,8 @@ class TestMainJet(unittest.TestCase):
         state_store.update_telemetry({"ac": "FA-18C_hornet"})
         self.addCleanup(reset_state)
         said, who, _ = main.shared_reply("say bingo")
-        self.assertEqual((said, who), ("Unable, no fuel reading or no home plate.", "george"))
+        # 1 Nov (Andre): no crew in a jet, so Overlord answers
+        self.assertEqual((said, who), ("Overlord, unable, no fuel reading or no home plate.", "overlord"))
         said, who, _ = main.shared_reply("Overlord, say bingo")
         self.assertEqual((said, who), ("Overlord, unable, no fuel reading or no home plate.", "overlord"))
 

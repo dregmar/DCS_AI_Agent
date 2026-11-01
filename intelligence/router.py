@@ -49,11 +49,17 @@ with the command in exactly one of these forms (keep the pilot's numbers, names,
 - Overlord (C2 on the radio): "Overlord, requesting SEAD|CAS|CAP|escort <where>" where <where> is
   "on my target", "north of me", "10 km east of me", "over waypoint 4", "over Alpha" or nothing |
   "Overlord, picture" | "Overlord, status" | "Overlord, cancel SEAD|CAS|CAP|escort|all" |
-  "Overlord, request target" | "Overlord, next target" | "Overlord, mark target" | "Overlord, BDA"
+  "Overlord, request target" | "Overlord, next target" | "Overlord, mark target" | "Overlord, BDA" |
+  "Overlord, tactical picture" | "Overlord, what threats are known" | "Overlord, what's changed"
+- Warlord (mission commander) and Darkside (JTAC), by name only: "Warlord, radio check" | "Darkside, radio check" |
+  "Warlord, override" | "Warlord, say objectives" | "Warlord, say ROE" | "Darkside, request target" |
+  "Darkside, next target" | "Darkside, mark target" | "Darkside, BDA" | "Darkside, abort" | "Darkside, continue"
 - Named waypoints (Alpha..Zulu, Objective): "Mark our current position as waypoint Bravo" |
   "Set grid <the grid he said> as waypoint Charlie" (only when he said a grid) | "Where is Bravo" | "Delete waypoint Bravo" |
   "List waypoints"
 - Reports: "What's our grid" | "Say bullseye" | "Nearest friendly airfield" | "Nearest FARP" | "Debrief"
+- The tactical picture (questions only): "Tactical picture" | "What threats are known" |
+  "Where are the unknown contacts" | "What has JTAC reported" | "Which contacts are stale" | "What's changed"
 Keep the pilot's own place: "up north" / "to the west" -> "north of me" / "west of me"; "my target"
 only if he said target; never add a waypoint, name, grid or number he didn't say.
 Only ROUTE when the pilot clearly meant one of these. Never ROUTE your own crew orders.
@@ -204,8 +210,12 @@ def plausible(original: str, command: str) -> Tuple[bool, str]:
         return (m.group(1) in _numbers(o), f"Outcast {m.group(1)} not named")
     if c.startswith("overlord"):
         ok = _like(ow, "overlord", 0.6) or re.search(r"\b(?:sead|cas|cap|escort|close air|fighter cover|"
-                                                    r"picture|bogey dope|bandits)\b", o) is not None
+                                                    r"picture|bogey dope|bandits|threats?|tactical|"
+                                                    r"changed)\b", o) is not None
         return ok, "Overlord not named"
+    for role in ("warlord", "darkside"):            # command roles (P2-3): only when he said the name
+        if c.startswith(role):
+            return _like(ow, role, 0.7), f"{role.capitalize()} not named"     # "dark side" = "darkside"
     m = re.match(r"(two|three|four|flight)\b", c)
     if m:
         who = m.group(1)

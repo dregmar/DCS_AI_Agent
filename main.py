@@ -47,7 +47,8 @@ from intelligence.threat_engine import evaluate_tactical_environment
 from intelligence.engagement_monitor import EngagementMonitor
 from intelligence.fast_path import match_fast
 from intelligence import router as router_mod
-from audio.tts import (speak_george_radio, speak_overlord, speak_instructor, start_speech_worker, ptt_active,
+from audio.tts import (speak_george_radio, speak_overlord, speak_instructor, speak_warlord, speak_darkside,
+                       speak_radio, PRIORITY_ROUTINE, start_speech_worker, ptt_active,
                        PRIORITY_ALERT, PRIORITY_PILOT)
 from audio import tts as tts_mod
 from kneeboard.comms_log import LOG as COMMS_LOG
@@ -146,6 +147,9 @@ def _on_mission_loaded() -> None:
     mission's Overlord flights, Outcasts and claimed groups are forgotten (28 Oct: a restart left
     Olympus-1 'claimed', the next clone was refused, and Overlord called the old escort down)."""
     print("[MISSION] Loaded: forgetting the last mission's flights, Outcasts and home plate.")
+    state_store.set_callsign(None)          # the new mission's callsign comes from the hook (P2-2)
+    if DARKSIDE is not None:
+        DARKSIDE.reset()                    # kills called, aborts: unit ids start again
     if OVERLORD is not None:
         OVERLORD.reset()
     if wingmen.INDEPENDENTS is not None:
@@ -322,9 +326,44 @@ def briefing_answer(text: str, speaker: str = "george") -> str:
 
 
 OVERLORD = None
+# Phase 2 command roles (command/): every command the Blue commander client sends passes the one
+# permission table (P2-1), enforced from P2-6 (PERMISSIONS_ENFORCE, default True while the roles are on;
+# False = refusals only logged). COMMAND_ROLES_ENABLED = False: no Warlord / Darkside, as before Phase 2.
+COMMAND_ROLES_ON = bool(getattr(config, "COMMAND_ROLES_ENABLED", True))
+from command import exchange as exchange_mod     # P2-7: full (default) or short radio exchange
+exchange_mod.configure(short=bool(getattr(config, "COMMAND_SHORT_FORM", False)),
+                       ai_spoken=bool(getattr(config, "AI_TO_AI_SPOKEN", False)))
+from command.permissions import Guard as _PermissionGuard
+from command import roles as roles_mod
+OPERATOR_CALLSIGN = getattr(config, "OPERATOR_CALLSIGN", roles_mod.DEFAULT_CALLSIGN)   # P2-2 fallback
+
+
+def my_callsign() -> str:
+    """What the roles call you: the mission's callsign ("Enfield 1-1"), else OPERATOR_CALLSIGN."""
+    return roles_mod.callsign(state_store.snapshot(), OPERATOR_CALLSIGN)[0]
+
+
+PERMISSIONS = _PermissionGuard(enforce=COMMAND_ROLES_ON and bool(getattr(config, "PERMISSIONS_ENFORCE", True)))
+DANGER_CLOSE_M = float(getattr(config, "DARKSIDE_DANGER_CLOSE_M", 1000))
+# WARLORD (common/warlord.py, P2-5): reviews every flight Overlord would spawn; his rules read the
+# hand-written "warlord" block of data/campaign_briefing.json (command/rules.py)
+WARLORD = None
+if COMMAND_ROLES_ON:
+    from command import rules as _rules
+    from common.warlord import Warlord
+    WARLORD = Warlord(state_store.snapshot, callsign=lambda: my_callsign(),
+                      block=_rules.load_block(os.path.join(config.BASE_DIR, "data", "campaign_briefing.json")),
+                      max_flights=int(getattr(config, "WARLORD_MAX_FLIGHTS", 4)), danger_close_m=DANGER_CLOSE_M,
+                      # the tactical picture turned off (TACTICAL_ENABLED = False): he judges without it
+                      picture_active=lambda: TACTICAL is None or _picture_link_active())
+
+
+def _picture_link_active() -> bool:
+    from tactical import link
+    return link.active()
 if getattr(config, "OLYMPUS_ENABLED", False):
     from common import olympus, olympus_orders
-    _oly = olympus.Olympus(config.OLYMPUS_URL, config.OLYMPUS_USER, config.OLYMPUS_PASSWORD)
+    _oly = olympus.Olympus(config.OLYMPUS_URL, config.OLYMPUS_USER, config.OLYMPUS_PASSWORD, guard=PERMISSIONS)
     wingmen.EXECUTOR = olympus_orders.Executor(_oly, state_store.snapshot, _george_top)
     # "two, go independent" -> Outcast 2, an AI group of its own that Olympus can task
     from common import independents
@@ -337,13 +376,29 @@ if getattr(config, "OLYMPUS_ENABLED", False):
         lambda text: _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_PILOT)),
         my_target=lambda snap: (JTAC.my_target()                                  # "CAS on my target":
                                 or targets_mod.my_target(snap, _george_top(snap))),   # JTAC's, George's, the nose
-        ask=lambda q: briefing_answer(q, "overlord"))                              # briefing questions
+        ask=lambda q: briefing_answer(q, "overlord"),                              # briefing questions
+        warlord=WARLORD)                                                           # P2-5: asked before every spawn
 
 
 # Overlord as JTAC: "Overlord, request target" / "mark target" / "BDA" (common/jtac.py)
 from common.jtac import Jtac
 JTAC = Jtac(state_store.snapshot, oly=wingmen.EXECUTOR.oly if wingmen.EXECUTOR else None,
             speak=lambda text: _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_PILOT)))
+# DARKSIDE (common/darkside.py, P2-4 / P2-6): the JTAC calls in his voice, and terminal control of
+# Overlord's CAS flights (weapons hold, IP, cleared hot by his checks, "Darkside, abort").
+DARKSIDE = None
+if COMMAND_ROLES_ON:
+    from common.darkside import Darkside
+    DARKSIDE = Darkside(JTAC, state_store.snapshot,
+                        lambda text: _unprompted(text, lambda t: speak_darkside(t, priority=PRIORITY_PILOT)),
+                        callsign=lambda: my_callsign(), oly=JTAC.oly, warlord=WARLORD,
+                        log=lambda who, text: COMMS_LOG.add(who, text), danger_close_m=DANGER_CLOSE_M,
+                        say_ai=lambda text, who: _unprompted(       # AI_TO_AI_SPOKEN: held in the carrier quiet window
+                            text, lambda t: speak_radio(t, who, priority=PRIORITY_ROUTINE, max_age=20.0)))
+    JTAC.speak = DARKSIDE.jtac_speak                 # "good effect" in Darkside's voice
+    if OVERLORD is not None:
+        OVERLORD.darkside = DARKSIDE                 # CAS under his control (P2-6)
+        OVERLORD.callsign = lambda: my_callsign()    # the full exchange names you (P2-7)
 _JTAC_WAKE = re.compile(r"^\s*(?:jtac|j tac|jay tac|j-tac)[\s,.!?]+(.*)$", re.I)
 
 
@@ -390,32 +445,45 @@ def _tactical_hints(snap: dict, attacks: dict):
 
 TACTICAL = None
 PICTURE_MAX_AGE_S = 5.0                         # the map uses the picture only while it's this fresh
-# Comms log "Picture" lines (step T5): kills and losses of enemy units always; new / lost / back only for
-# units that matter (air defence, aircraft, threat weight >= this), so a busy mission doesn't flood it
-PICTURE_LOG_WEIGHT = 70
+
+
+
+def tactical_answer(text: str):
+    """Questions about the tactical picture (tactical/queries.py, step T6): "tactical picture", "what threats
+    are known", "unknown contacts", "what has JTAC reported", "which contacts are stale", "what's changed".
+    The answer, or None if it isn't one of them. Fixed templates from the picture only (D6)."""
+    from tactical import queries
+    q = queries.match(text)
+    if q is None or TACTICAL is None:
+        return None
+    pic = _KB_CTX.picture()                           # only while the service keeps it current
+    if pic is None:
+        return "The tactical picture isn't updating."
+    snap = state_store.snapshot()
+    me = snap.get("my_ll")
+    say = queries.Say(dist=lambda m: aircraft_mod.say_dist(m, snap), type=overlord_mod.say_type,
+                      compass=overlord_mod.compass)
+    ctx = queries.Context(me_ll=(me[0], me[1]) if me else None, say=say, jtac=JTAC.current,
+                          events=TACTICAL.events(), stale=TACTICAL.stale, stale_reason=TACTICAL.stale_reason)
+    return queries.answer(q, pic, ctx)
 
 
 def _picture_events(events) -> None:
     """New picture events (tactical/events.py) -> kneeboard comms log lines of kind "picture". Runs on the
-    tactical thread; never speaks."""
+    tactical thread; never speaks. Which ones: tactical/queries.py worth_reporting (also "what's changed")."""
     from kneeboard.model import short_tid
-    from tactical.models import Affiliation, Category
+    from tactical.queries import worth_reporting
     from tactical.sources import dist_m, true_bearing
     pic = TACTICAL.picture() if TACTICAL is not None else None
     me = state_store.snapshot().get("my_ll")
     imperial = aircraft_mod.profile(state_store.snapshot()).imperial
     for e in events:
+        if not worth_reporting(e, pic):
+            continue
         if e.track_id is None:                           # the picture as a whole: stale, current, new mission
             COMMS_LOG.add("picture", e.text)
             continue
-        t = pic.track(e.track_id) if pic is not None else None
-        if t is None or t.affiliation == Affiliation.FRIENDLY:
-            continue                                     # own flights are reported by whoever leads them
-        if e.kind in ("new", "lost", "reappeared"):
-            threat = next((a for a in pic.threats if a.track_id == t.track_id), None)
-            air = t.category in (Category.AIR, Category.AIR_FIXED, Category.AIR_ROTARY)
-            if not (air or "air_defence" in t.tags or (threat is not None and threat.weight >= PICTURE_LOG_WEIGHT)):
-                continue
+        t = pic.track(e.track_id)
         text = e.text.replace(f"({t.track_id})", f"({short_tid(t.track_id)})")
         if e.kind in ("new", "reappeared") and me and t.position is not None:
             d = dist_m((me[0], me[1]), (t.position.lat, t.position.lon))
@@ -431,6 +499,9 @@ if getattr(config, "TACTICAL_ENABLED", True):
     if getattr(config, "OLYMPUS_ENABLED", False):
         olympus.ON_COMMAND = TACTICAL.note_command
     TACTICAL.on_events = _picture_events            # picture changes on the kneeboard comms log (T5)
+    comms_menu.ON_EVENTS = TACTICAL.note_dcs_events  # DCS's own "unit dead / killed" as evidence (T8)
+    from tactical import link as _tactical_link     # kill / BDA, "closing", JTAC position read it (T7)
+    _tactical_link.set_provider(_tactical_link.ServiceLink(TACTICAL, max_age=PICTURE_MAX_AGE_S))
 
 
 def _bullseye():
@@ -469,6 +540,14 @@ def _speak_pilot(text: str) -> None:
 
 def _speak_overlord(text: str) -> None:
     speak_overlord(text, priority=PRIORITY_PILOT)
+
+
+def _speak_warlord(text: str) -> None:
+    speak_warlord(text, priority=PRIORITY_PILOT)
+
+
+def _speak_darkside(text: str) -> None:
+    speak_darkside(text, priority=PRIORITY_PILOT)
 
 
 def _speak_instructor(text: str) -> None:
@@ -510,10 +589,73 @@ CARRIER = carrier_mod.CarrierCalls(
 apache_crew = ApacheCrew(_speak_pilot, state_store, cmd_sender)
 
 
+def as_overlord(said: str) -> str:
+    """"Steer 270, 12 miles." -> "Overlord, steer 270, 12 miles." (a name or type keeps its capital:
+    "SA-8, ..." -> "Overlord, SA-8, ...")."""
+    said = (said or "").strip()
+    if not said or said.lower().startswith("overlord"):
+        return said
+    word = said.split()[0]
+    if len(word) > 1 and word[1:].islower():
+        said = said[0].lower() + said[1:]
+    return "Overlord, " + said
+
+
+# Replies that stay in the crew voice in a jet: other aircraft talking, and the radio menu
+JET_CREW_SOURCES = ("wingmen", "radio", "kneeboard")
+
+
 def shared_reply(text: str):
     """Radio menu and navigation, for any aircraft; Apache checklists and EUFD questions.
     Runs the order and returns (what to say, speaker, who answered), or None if no shared
-    handler takes it. Speaks nothing itself (handle_shared does)."""
+    handler takes it. Speaks nothing itself (handle_shared does).
+    Jets (profile "other", no crew; Andre, 1 Nov): replies that aren't a wingman, an Outcast or the
+    radio menu are Overlord's ("Overlord, steer 270, 12 miles.")."""
+    got = _shared_reply(text)
+    if got is None or state_store.profile() != "other":
+        return got
+    said, speaker, source = got
+    if speaker == "george" and source not in JET_CREW_SOURCES and said:
+        return as_overlord(said), "overlord", source
+    return got
+
+
+# Command roles P2-3: "Warlord, ..." / "Darkside, ..." answer in their own voices. Until their modules
+# arrive (Darkside P2-4, Warlord P2-5) they answer a radio check and say where tasking goes for now.
+_RADIO_CHECK = re.compile(r"\b(?:radio|comms?|mic)\s+check\b|\bhow (?:do )?(?:you|d'?you|ya) read\b|"
+                          r"\bdo you read\b|\bcheck(?:ing)? in\b", re.I)
+
+
+def role_reply(text: str):
+    """(said, speaker, source) for an utterance addressed to Warlord or Darkside, else None."""
+    if not COMMAND_ROLES_ON:
+        return None
+    from command import wake
+    got = wake.addressed(text)
+    if got is None:
+        return None
+    role, rest = got
+    name, speaker = ("Warlord", "warlord") if role == roles_mod.WARLORD else ("Darkside", "darkside")
+    cs = my_callsign()
+    if not rest:
+        said = f"{cs}, {name}, go ahead."
+    elif _RADIO_CHECK.search(rest):
+        said = f"{cs}, {name}, loud and clear."
+    elif role == roles_mod.WARLORD:
+        said = WARLORD.handle(rest) if WARLORD is not None else None     # override, objectives, ROE (P2-5)
+        if said is None:
+            said = f"{cs}, {name}, standing by. Request tasking through Overlord."
+    else:
+        said = DARKSIDE.handle(rest) if DARKSIDE is not None else None   # targets, mark, BDA, abort (P2-4/6)
+        if said is None:
+            said = f"{cs}, {name}, say again. I can give targets, mark, BDA, or abort a CAS run."
+    return said, speaker, speaker
+
+
+def _shared_reply(text: str):
+    got = role_reply(text)                           # "Warlord, ..." / "Darkside, ..." (P2-3)
+    if got is not None:
+        return got
     rest = overlord_mod.addressed(text)
     if rest is not None:                             # "Overlord, ...": only Overlord answers
         if TRAINING.wanted(rest):                    # "Overlord, training mode on" / "clear training targets"
@@ -524,13 +666,25 @@ def shared_reply(text: str):
             if not getattr(config, "OLYMPUS_ENABLED", False):
                 return "Overlord, unable, Olympus is turned off in config.", "overlord", "overlord"
             return SPAWNER.handle(rest), "overlord", "overlord"
+        said = tactical_answer(rest)                 # "Overlord, threats" / "Overlord, tactical picture" (T6)
+        if said is not None:                         # ("Overlord, picture" stays his air picture)
+            return "Overlord, " + said[0].lower() + said[1:], "overlord", "overlord"
         if JTAC.wanted(rest):                        # "Overlord, request target" / "mark target" / "BDA"
+            if DARKSIDE is not None:                 # P2-4: Overlord hands it to Darkside
+                said = DARKSIDE.handle(rest)
+                if said is not None:
+                    pre = [] if exchange_mod.short() else [("Overlord, contact Darkside.", "overlord")]
+                    return roles_mod.Said(said, pre=pre), "darkside", "darkside"
             said = JTAC.handle(rest)
             if said is not None:
                 return said, "overlord", "overlord"
         if FUEL_WATCH.wanted(rest) and aircraft_mod.profile(state_store.snapshot()).fuel_calls:   # "Overlord, say bingo"
             a = FUEL_WATCH.answer(state_store.snapshot())
             return "Overlord, " + a[0].lower() + a[1:], "overlord", "overlord"
+        if WARLORD is not None and WARLORD.held() is not None:     # "Overlord, override" (1 Nov flight)
+            from common.warlord import _OVERRIDE as _WARLORD_OVERRIDE
+            if _WARLORD_OVERRIDE.search(rest):
+                return WARLORD.override(), "warlord", "warlord"
         if OVERLORD is not None:
             said = OVERLORD.handle(text)
         elif position.wanted(rest):
@@ -542,7 +696,7 @@ def shared_reply(text: str):
             said = briefing_answer(rest, "overlord")
         else:
             said = "Overlord, unable, Olympus is turned off in config."
-        return said or "", "overlord", "overlord"
+        return (said if said is not None else ""), "overlord", "overlord"   # keep a Said's other voices
     if INSTRUCTOR is not None and INSTRUCTOR.wanted(text):   # "Instructor, ...": only the instructor answers
         return INSTRUCTOR.handle(text), "instructor", "instructor"
     page = kb_pages.match(text, bare_scroll=state_store.profile() != "apache") if KNEEBOARD_ON else None
@@ -556,11 +710,14 @@ def shared_reply(text: str):
         else:
             KB_PAGES.apply(page)
         return "", "george", "kneeboard"
-    m = _JTAC_WAKE.match(text or "")                 # "JTAC, request target": Overlord answers
+    said = tactical_answer(text)                     # "tactical picture", "what's changed" ...: the crew (T6)
+    if said is not None:
+        return said, "george", "tactical"
+    m = _JTAC_WAKE.match(text or "")                 # "JTAC, request target": Darkside (else Overlord)
     if m and JTAC.wanted(m.group(1)):
-        said = JTAC.handle(m.group(1))
+        said = DARKSIDE.handle(m.group(1)) if DARKSIDE is not None else JTAC.handle(m.group(1))
         if said is not None:
-            return said, "overlord", "overlord"
+            return (said, "darkside", "darkside") if DARKSIDE is not None else (said, "overlord", "overlord")
     said = wingmen.handle(text, comms, state_store.snapshot(), _speak_pilot)
     if said is not None:
         return said, "george", "wingmen"
@@ -568,13 +725,15 @@ def shared_reply(text: str):
     # JTAC target is up (never the Apache: there "next target" is George's)
     if (state_store.profile() != "apache" and JTAC.wanted(text)
             and (aircraft_mod.profile(state_store.snapshot()).kind == "jet" or JTAC.active())):
-        said = JTAC.handle(text)
+        said = DARKSIDE.handle(text) if DARKSIDE is not None else JTAC.handle(text)
         if said is not None:
-            return said, "overlord", "overlord"
+            return (said, "darkside", "darkside") if DARKSIDE is not None else (said, "overlord", "overlord")
     if said is None:
         said = CARRIER.handle(text)         # Supercarrier calls (jets, a ship in the mission)
     if said is None:
         said = comms_menu.handle(comms, text)
+    if said is not None:                    # the radio menu / carrier calls: the crew voice everywhere
+        return said, "george", "radio"
     if said is None:                # "debrief" / "mission summary"
         said = DEBRIEF.handle(text)
     if said is None:                # "nearest friendly field" / "nearest FARP" / "divert"
@@ -605,10 +764,20 @@ def shared_reply(text: str):
 
 
 def _speak_as(said: str, speaker: str) -> None:
+    for text, who in getattr(said, "pre", ()):       # another voice first ("Overlord, contact Darkside.")
+        _speak_as(text, who)
+    _speak_one(said, speaker)
+    for text, who in getattr(said, "then", ()):      # ... or after (Warlord's denial, Overlord's launch)
+        _speak_as(text, who)
+
+
+def _speak_one(said: str, speaker: str) -> None:
     if not said:                    # '' = done and nothing to say (wingman orders that went through)
         return
-    print(f"[{ {'overlord': 'OVERLORD', 'instructor': 'INSTRUCTOR'}.get(speaker, 'CREW') }]: '{said}'")
-    {"overlord": _speak_overlord, "instructor": _speak_instructor}.get(speaker, _speak_pilot)(said)
+    print(f"[{ {'overlord': 'OVERLORD', 'instructor': 'INSTRUCTOR', 'warlord': 'WARLORD',
+               'darkside': 'DARKSIDE'}.get(speaker, 'CREW') }]: '{said}'")
+    {"overlord": _speak_overlord, "instructor": _speak_instructor, "warlord": _speak_warlord,
+     "darkside": _speak_darkside}.get(speaker, _speak_pilot)(said)
 
 
 def handle_shared(text: str, deferred: list = None) -> bool:
@@ -672,6 +841,8 @@ def stt_prompt() -> str:
         base = STT_PROMPT
     if INSTRUCTOR is not None and state_store.profile() != "other":   # helicopters: the hover exercise (decision 5)
         base += " Instructor: hover, approach, fuel, bingo, begin, stop, easier, harder."   # short: Whisper keeps the last 224 tokens
+    if COMMAND_ROLES_ON:
+        base += " Warlord, Darkside, radio check, override, abort, continue, cleared hot."
     ind = wingmen.INDEPENDENTS
     return base + router_mod.stt_hints(ind.numbers() if ind else [], USER_WAYPOINTS.names())
 
@@ -936,6 +1107,8 @@ def kneeboard_status() -> dict:
          "detail": f"last {age(snap.get('dcs_fuel_age', float('inf')))}"},
     ]
     links.append(_olympus_link(wingmen.EXECUTOR))
+    links.append(PERMISSIONS.link())
+    links.append(roles_mod.callsign_link(snap, OPERATOR_CALLSIGN))
     links.append(TRAINING.link())
     if INSTRUCTOR is not None:
         links.append(INSTRUCTOR.link())
@@ -944,8 +1117,11 @@ def kneeboard_status() -> dict:
                   "detail": (f"last call {last['secs']:.2f} s, {age(time.time() - last['when'])}"
                              + (f" ({last['error']})" if last.get("error") else "")) if last else "not used yet"})
     voices = getattr(tts_mod, "VOICES", {}) or {}
-    links.append({"name": "Voices (Piper)", "ok": bool(voices) and all(v is not None for v in voices.values()),
-                  "detail": ", ".join(f"{k} {'ok' if v is not None else 'missing'}" for k, v in voices.items())})
+    fallback = getattr(tts_mod, "FALLBACK", {}) or {}            # a role without its file uses another voice
+    links.append({"name": "Voices (Piper)",
+                  "ok": bool(voices) and all(v is not None for k, v in voices.items() if k not in fallback),
+                  "detail": ", ".join(f"{k} {'ok' if v is not None else ('missing, uses ' + fallback[k] + chr(39) + 's voice' if k in fallback else 'missing')}"
+                                      for k, v in voices.items())})
     with _stats_lock:
         stt = _STATS.get("stt")
     times = [{"name": "Profile", "value": state_store.profile()},
@@ -1146,10 +1322,9 @@ def _route_other(text: str, deferred: list) -> None:
         deferred[0]()
         return
     global _OTHER_SAID                               # the long version once, then just "say again"
-    said = "Say again." if _OTHER_SAID else OTHER_AIRCRAFT_SAY
+    said = as_overlord("Say again." if _OTHER_SAID else OTHER_AIRCRAFT_SAY)
     _OTHER_SAID = True
-    print(f"[CREW]: '{said}'")
-    speak_george_radio(said, priority=PRIORITY_PILOT)
+    _speak_as(said, "overlord")                      # no crew in a jet: Overlord answers (Andre, 1 Nov)
 
 
 def handle_command(text: str, captured: float = None) -> None:
@@ -1177,9 +1352,8 @@ def handle_command(text: str, captured: float = None) -> None:
     if state_store.profile() == "other":            # not the Apache or Huey: no George, no crew
         if not deferred and (briefing.is_briefing_question(text)       # or "how do I employ the Maverick?"
                              or (briefing.is_manual_question(text) and KB.has_manual(kb_aircraft()))):
-            said = briefing_answer(text, "george")
-            print(f"[CREW]: '{said}'")
-            speak_george_radio(said, priority=PRIORITY_PILOT)
+            said = as_overlord(briefing_answer(text, "george"))
+            _speak_as(said, "overlord")             # no crew in a jet: Overlord answers (Andre, 1 Nov)
             return
         _route_other(text, deferred)
         return

@@ -46,6 +46,8 @@ POLL_S = 0.25
 FNS_REFRESH_S = 30.0         # threat look-ups are cached per type name this long
 ATTACK_KEEP_S = 600.0        # an attack order counts as evidence this long
 ATTACK_MAX = 200
+DCS_EVENT_KEEP_S = 600.0     # DCS's "unit dead / killed" (I-T4) counts as evidence this long
+DCS_EVENT_MAX = 500
 
 
 class TacticalService:
@@ -77,6 +79,7 @@ class TacticalService:
         self._loads_lock = threading.Lock()
         self._attacks: Deque[Tuple[str, int, float]] = deque(maxlen=ATTACK_MAX)   # (target key, attacker id, mono)
         self._attacks_lock = threading.Lock()
+        self._dcs_events: Dict[str, Tuple[str, float]] = {}   # key -> (what DCS said, mono); _attacks_lock
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self.ticks = 0
@@ -132,6 +135,33 @@ class TacticalService:
             with self._attacks_lock:
                 self._attacks.append((key, attacker, self._now()))
 
+    def note_dcs_events(self, text: str) -> None:
+        """An "EVENTS" message from george_comms_hook.lua (comms_menu.ON_EVENTS, its listener thread):
+        DCS's own word that units died, kept as evidence for "destroyed" (T8, I-T4)."""
+        try:
+            got = sources.dcs_events(text)
+        except Exception as e:                          # evidence is optional
+            self._error(f"dcs events: {type(e).__name__}: {e}")
+            return
+        if not got:
+            return
+        now = self._now()
+        with self._attacks_lock:
+            for k, said in got.items():
+                old = self._dcs_events.get(k)
+                if old is not None and old[0].startswith("a kill") and not said.startswith("a kill"):
+                    continue                            # a later DEAD doesn't hide who killed it
+                self._dcs_events[k] = (said, now)
+            if len(self._dcs_events) > DCS_EVENT_MAX:
+                for k, _ in sorted(self._dcs_events.items(), key=lambda kv: kv[1][1])[:-DCS_EVENT_MAX]:
+                    del self._dcs_events[k]
+
+    def dcs_events(self) -> Dict[str, str]:
+        """{key: what DCS said} for unit deaths reported in the last DCS_EVENT_KEEP_S."""
+        now = self._now()
+        with self._attacks_lock:
+            return {k: said for k, (said, t) in self._dcs_events.items() if now - t <= DCS_EVENT_KEEP_S}
+
     def attacks(self) -> Dict[str, int]:
         """{target key: attacker object id} for attacks ordered in the last ATTACK_KEEP_S (latest wins)."""
         now = self._now()
@@ -149,6 +179,8 @@ class TacticalService:
             now = self._now()
             if loads:
                 self._clock.mission_loaded(now)
+                with self._attacks_lock:
+                    self._dcs_events.clear()                # unit ids start again
             snap = self._snapshot()
             st = self._clock.scan_time(snap, now)
             if st.kind in (SAME, OLDER) and self._world is not None and self._world[0] == st.generation:
@@ -166,6 +198,9 @@ class TacticalService:
                     hints = self._hints(snap, self.attacks()) or KillHints()
                 except Exception as e:                  # evidence is optional; the picture isn't
                     self._error(f"hints: {type(e).__name__}: {e}")
+            dcs = self.dcs_events()
+            if dcs:
+                hints = replace(hints, dcs_events={**dict(hints.dcs_events), **dcs})
             me = _pair(snap.get("my_ll"))
             transitions = self._table.ingest(reports, health, st, now, me, hints)
             pic = self._enrich(self._table.snapshot(now, 0), george, me, _pair(snap.get("vel"), 3))
@@ -250,6 +285,15 @@ class TacticalService:
             print(f"[TACTICAL ERROR] {text}")
 
     # ------------------------------------------------------------ readers (any thread)
+    @property
+    def stale(self) -> bool:
+        """The whole picture is stale (or there is none yet)."""
+        return self._stale
+
+    @property
+    def stale_reason(self) -> str:
+        return self._stale_reason
+
     def picture(self) -> Optional[PictureSnapshot]:
         with self._lock:
             return self._pic

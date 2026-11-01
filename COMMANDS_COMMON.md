@@ -347,6 +347,58 @@ into one of the standard orders on this page, which then runs as if you'd said i
   on 24 Oct it heard "Outcast 2" right every time, base.en heard "All Class", "Ocast", "ORCAS").
   Not `"distil-small.en"`: it can't use the word prompt and wrote garbage, 2-9 s per call.
 
+## Tactical picture (any aircraft; the crew voice, or Overlord's after "Overlord,")
+Answers come only from the tactical picture (one track per unit in DCS's lists; DCS's lists are simulator
+truth, not what anyone detected, so the answers say "picture", not "I see"). Fixed wording, no model.
+
+| Say | Answer |
+|---|---|
+| "Tactical picture" · "ground picture" · "what's out there?" | counts (ground, air, last known only), the top threat, George's entries the picture can't place |
+| "What threats are known?" · "threat summary" · "any threats?" | up to 3 threats, most important first: type, kind, distance and direction, "inside its approximate ring", "closing" only when measured |
+| "Where are the unknown contacts?" · "what can't George place?" | George's list entries with no unit in the picture (a class only, or nothing fits) |
+| "What has JTAC reported?" · "JTAC report" · "what's the JTAC target?" | the JTAC's target and what happened to it (still active, destroyed by ..., last seen ...) |
+| "Which contacts are stale?" · "stale contacts" | units not in the latest scan, with how long ago and where they were |
+| "What's changed?" · "anything new?" | the last 2 minutes: kills, units gone, new air defence / aircraft / serious threats |
+| "Overlord, threats" · "Overlord, tactical picture" | the same, in Overlord's voice ("Overlord, picture" is still his air picture) |
+
+Not these: "what do you see" and George's target list (his own sensor), "where's the priority threat"
+(George), "status" / "sitrep". The kneeboard map's "Kneeboard, contact 42" shows one unit's details.
+
+## Warlord and Darkside (any aircraft; Phase 2 command roles)
+Warlord (mission commander) and Darkside (JTAC) answer only when their name comes first, each in his
+own voice (en_US-norman-medium / en_US-bryce-medium; Overlord's voice until the files are there). They
+call you by the mission's callsign ("Enfield 1-1"), or OPERATOR_CALLSIGN ("NOMAD") when DCS gives none.
+COMMAND_ROLES_ENABLED = False in config.py turns all of this off (Overlord as before Phase 2).
+
+| Say | Answer |
+|---|---|
+| "Warlord, radio check" · "Darkside, how do you read?" | "Enfield 1-1, Warlord, loud and clear." |
+| "Warlord" · "Darkside" (nothing after) | "..., go ahead." |
+| "Darkside, request target" · "next target" · "say again target" · "mark target" · "BDA" | the JTAC talk-on, mark and BDA, in Darkside's voice ("JTAC, ..." too) |
+| "Overlord, request target" (and his other JTAC phrases) | "Overlord, contact Darkside." then Darkside answers |
+| "Darkside, abort" | every CAS flight weapons hold, back to the IP |
+| "Darkside, continue" | they're cleared again from the IP, if his checks pass |
+| "Warlord, override" | within 60 s of a denial: the flight launches anyway; the risk is restated and logged in the debrief |
+| "Warlord, say objectives" · "say ROE" · "say priorities" · "say no-strike zones" | from the "warlord" block of data/campaign_briefing.json (sample: data/examples/warlord_block.sample.json) |
+
+Every flight Overlord would send is reviewed by Warlord first. He defers with no current tactical
+picture or with WARLORD_MAX_FLIGHTS (4) flights up, and denies a target in a no-strike zone, CAS under a
+big SAM with no SEAD up, or CAS / SEAD with your side's units within DARKSIDE_DANGER_CLOSE_M (1000 m)
+of a target. An approval outside the priority areas comes with a note.
+
+Overlord's CAS (Hog) arrives weapons hold, flies to an IP 9 km from the target (away from known air
+defence) and checks in with Darkside (comms log, "AI to AI"). Darkside clears it hot himself when the
+target is alive in the picture, no friendly is within 1000 m and it isn't in a no-strike zone; if
+not, he says why it's holding. SEAD, CAP and escort are Overlord's, as before.
+
+How it sounds (config.py, both optional): COMMAND_SHORT_FORM = False (default) is the full exchange:
+"Enfield 1-1, Overlord, copy CAS on your target. Checking with Warlord." / "Overlord, Warlord, CAS
+approved." / "Enfield 1-1, Overlord, Hog flight, two A-10s, tasked CAS ... Contact Darkside." / later
+"Enfield 1-1, Darkside, Hog is cleared hot, T-72B, your target." True is one line per step: "Overlord,
+Hog flight tasked CAS your target, 6 minutes." / "Darkside, Hog cleared hot." Denials, danger close,
+aborts and the override's risk keep their full words in both. AI_TO_AI_SPOKEN = False (default): calls
+between AI flights ("Darkside: Hog 1, cleared hot, T-72B.") are only in the comms log; True speaks them too.
+
 ## VR kneeboard pages (any aircraft; see KNEEBOARD.md)
 - "Show the map / briefing / checklist / comms / status", "kneeboard, briefing"
 - "Show the shutdown checklist" (shows it, doesn't start it)

@@ -141,6 +141,10 @@ class ApacheStateStore:
         self.coalition = 0                  # your coalition (Export.lua CoalitionID: 1 red, 2 blue)
         self.enemy_air: List[Any] = []
         self.enemy_ground: List[Any] = []
+        # Tactical picture I-T2 / I-T3: Export.lua's neutral and own-side lists, [type, id, lat, lon, alt,
+        # "a"|"g"|"n"]. None = an older Export.lua that doesn't send them (enemy lists then may hold neutrals).
+        self.neutral_units: Optional[List[Any]] = None
+        self.friendly_units: Optional[List[Any]] = None
         self.scan_lag: Optional[float] = None    # model s from Export.lua's last world scan to its packet
         self.scan_rx = 0.0                       # when that packet arrived
         self.scan_t: Optional[float] = None      # that scan's own model time (-1: none yet; None: old Export.lua)
@@ -148,6 +152,8 @@ class ApacheStateStore:
         self.fuel_raw = None                # (internal, external) from LoGetEngineInfo: kg, or 0..1
         self.dcs_fuel = None                # (fraction, max internal kg, unit name) from the comms hook
         self.dcs_fuel_t = 0.0
+        self.callsign = None                # (raw callsign, unit name) from the comms hook (P2-2)
+        self.callsign_t = 0.0
         self.start_pos = None               # where this flight started: "home" when there's no route
 
         # UH-1H crew link (huey/link.py): gauges, lamps, Crew Status panel, flares
@@ -287,6 +293,11 @@ class ApacheStateStore:
             gnd = telemetry_data.get("gnd")
             if isinstance(gnd, list):
                 self.enemy_ground = [tuple(g) for g in gnd if isinstance(g, list) and len(g) in (4, 5)]  # + alt (m)
+            neu, fr = telemetry_data.get("neu"), telemetry_data.get("fr")
+            if isinstance(neu, list):
+                self.neutral_units = [tuple(u) for u in neu if isinstance(u, list) and len(u) == 6]
+            if isinstance(fr, list):
+                self.friendly_units = [tuple(u) for u in fr if isinstance(u, list) and len(u) == 6]
             t, scan_t = telemetry_data.get("t"), telemetry_data.get("scan_t")
             if isinstance(t, (int, float)) and isinstance(scan_t, (int, float)):
                 self.scan_lag = INF if scan_t < 0 else max(0.0, float(t) - float(scan_t))
@@ -323,6 +334,13 @@ class ApacheStateStore:
         with self._lock:
             self.dcs_fuel = (float(fraction), float(max_kg), str(unit or ""), str(source or ""))
             self.dcs_fuel_t = time.monotonic()
+
+    def set_callsign(self, raw: Optional[str], unit: str = "") -> None:
+        """Your callsign as the mission gives it (Unit:getCallsign() via the comms hook), or None to
+        forget it (a new mission)."""
+        with self._lock:
+            self.callsign = (str(raw), str(unit or "")) if raw else None
+            self.callsign_t = time.monotonic() if raw else 0.0
 
     def set_flight(self, group: str, units: List[Any]) -> None:
         with self._lock:
@@ -513,6 +531,9 @@ class ApacheStateStore:
                 "fuel_raw": self.fuel_raw,
                 "dcs_fuel": self.dcs_fuel,
                 "dcs_fuel_age": (time.monotonic() - self.dcs_fuel_t) if self.dcs_fuel else float("inf"),
+                "callsign_raw": self.callsign[0] if self.callsign else None,
+                "callsign_unit": self.callsign[1] if self.callsign else None,
+                "callsign_age": (time.monotonic() - self.callsign_t) if self.callsign else None,
                 "flight_group": self.flight_group,
                 "my_group": self.my_group,
                 "my_unit": self.my_unit,
@@ -525,6 +546,8 @@ class ApacheStateStore:
                 "enemy_air": list(self.enemy_air),
                 "coalition": self.coalition,
                 "enemy_ground": list(self.enemy_ground),
+                "neutral_units": None if self.neutral_units is None else list(self.neutral_units),
+                "friendly_units": None if self.friendly_units is None else list(self.friendly_units),
                 "enemy_lists_age": (None if self.scan_lag is None
                                     else self.scan_lag + (now - self.scan_rx)),
                 # For the tactical picture (tactical/sources.py): which world scan the lists come from, and

@@ -56,6 +56,7 @@ class Debrief:
         self.fuel_start: Optional[str] = None
         self.fuel_now: Optional[str] = None
         self.training: List[dict] = []         # feature 8: {"what", "units", "kills": [seconds]}
+        self.overrides: List[str] = []         # Phase 2: Warlord denials the pilot overrode
 
     # ------------------------------------------------------------ recording
     def _event(self, kind: str, who: str, what: str = ""):
@@ -76,6 +77,12 @@ class Debrief:
         with self._lock:
             self.launched.append(who)
             self._event("launch", who, what)
+
+    def override(self, what: str) -> None:
+        """The pilot overrode a Warlord denial (Phase 2, P2-5)."""
+        with self._lock:
+            self.overrides.append(what)
+            self._event("override", "Warlord", what)
 
     def training_spawn(self, what: str, units: int) -> dict:
         """A training group spawned (feature 8). Returns its record for training_kill."""
@@ -134,6 +141,9 @@ class Debrief:
                     times = ", ".join(_mmss(s) for s in r["kills"][:4]) + (" ..." if k > 4 else "")
                     each.append(f"{r['what']}, {got}" + (f" ({times} after spawn)" if k else ""))
                 parts.append("Training: " + "; ".join(each) + ".")
+            if self.overrides:
+                n = len(self.overrides)
+                parts.append(f"{n} Warlord override{'s' if n != 1 else ''}: " + "; ".join(self.overrides[:3]) + ".")
             if self.launched:
                 parts.append(f"Overlord sent {len(self.launched)} flight{'s' if len(self.launched) != 1 else ''}.")
             if self.fuel_now:

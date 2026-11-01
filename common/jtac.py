@@ -151,7 +151,19 @@ class Jtac:
               + (f", elevation {tgt['alt'] * FT_PER_M:.0f} ft" if tgt.get("alt") is not None else ""))
         return self.describe(tgt, snap)
 
+    @staticmethod
+    def _live(tgt: dict) -> dict:
+        """The target where it is now: the tactical picture follows a moving unit (step T7); without a
+        picture, the position copied when it was assigned."""
+        from tactical import link
+        from tactical.models import dcs_key
+        pos = link.position(dcs_key(tgt.get("id")))
+        if pos is None:
+            return tgt
+        return dict(tgt, lat=pos[0], lon=pos[1], alt=pos[2] if pos[2] is not None else tgt.get("alt"))
+
     def describe(self, tgt: dict, snap: dict) -> str:
+        tgt = self._live(tgt)
         prof = aircraft.profile(snap)
         parts = [f"Overlord, target {say_type(tgt['type'])}."]
         if prof.target_coords == "ddm":
@@ -200,6 +212,7 @@ class Jtac:
             return "Overlord, no target to mark. Request a target first."
         if self.oly is None or not getattr(self.oly, "connect", lambda: False)():
             return "Overlord, unable to mark, Olympus isn't running."
+        tgt = self._live(tgt)                        # smoke where it is now, not where it was assigned
         color = next((c for c in _COLORS if re.search(r"\b" + c + r"\b", text.lower())), "red")
         ok, why = self.oly.command("smoke", {"color": color, "location": {"lat": tgt["lat"], "lng": tgt["lon"]}})
         if not ok:
@@ -234,7 +247,7 @@ class Jtac:
             tgt = self.current
         if tgt is None or target_state(self.snapshot(), tgt) == "dead":
             return None
-        return dict(tgt, jtac=True)
+        return dict(self._live(tgt), jtac=True)
 
     def tick(self) -> Optional[str]:
         """Calls the target destroyed once, on his own."""

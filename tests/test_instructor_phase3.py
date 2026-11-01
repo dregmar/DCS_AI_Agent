@@ -145,7 +145,7 @@ class TestExportLua(unittest.TestCase):
         self.assertIn('"g":%s,"gmax":%s', self.src)
 
     def test_full_packet_has_g(self):
-        self.assertIn('"olyx":%s,"g":%s}', self.src)
+        self.assertIn('"olyx":%s,"g":%s,', self.src)                     # T8 adds neu / fr after it
         self.assertIn("LoGetAccelerationUnits", self.src)
 
     def test_g_read_every_frame_only_while_fast(self):

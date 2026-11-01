@@ -75,7 +75,10 @@ class TestRouting(unittest.TestCase):
         self.assertEqual(self.tp.OVERLORD_SPOKEN, ["Overlord, Grid 38 Tango, Lima Mike, 7 2 1 8, 4 0 1 8."])
 
     def test_other_aircraft_has_no_george(self):
+        # 1 Nov (Andre): no crew in a jet, so Overlord answers, never George's voice
         from unittest import mock
-        with mock.patch.object(self.main.state_store, "profile", lambda: "other"):
+        with mock.patch.object(self.main.state_store, "profile", lambda: "other"), \
+                mock.patch.object(self.main, "_OTHER_SAID", False):
             self.main.handle_command("lock target 3")
-        self.assertEqual(self.tp.SPOKEN, [self.main.OTHER_AIRCRAFT_SAY])
+        self.assertEqual(self.tp.SPOKEN, [])
+        self.assertEqual(self.tp.OVERLORD_SPOKEN, [self.main.as_overlord(self.main.OTHER_AIRCRAFT_SAY)])

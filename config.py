@@ -171,4 +171,4 @@ GEORGE_SHORT_PRESS_S = 0.10        # < 0.5 s
 GEORGE_LONG_PRESS_S = 0.75         # > 0.5 s
 GEORGE_EXTRA_LONG_PRESS_S = 1.30   # > 1 s (CPG start-up / shutdown)
 GEORGE_WEAPON_CYCLE = ["NO_WPN", "GUN", "MSL", "RKT"]   # only loaded weapons appear in George's cycle
-GEORGE_IDLE_CLOSE_MAIN_S = 6.0     # hide George's wheel after this many idle seconds (None = never)
+GEORGE_IDLE_CLOSE_MAIN_S = 0.0     # hide George's wheel after this many idle seconds (None = never)

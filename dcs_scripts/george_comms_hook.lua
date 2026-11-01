@@ -340,6 +340,105 @@ local function send_fuel(now)
     end
 end
 
+-- Tactical picture I-T4 (1 Nov): DCS's own word that a unit died. Run in the mission scripting state
+-- every 0.5 s: the first run there adds one world event handler (GEORGE_EV, a global of that state, so
+-- a new mission gets a new one); it queues "kind;victim id;victim name;victim type;killer id;killer
+-- name;killer type" for DEAD / KILL / UNIT_LOST / CRASH (at most 200 waiting). Each run hands back the
+-- queue as "EVENTS\n<lines>". Ids are the objects' id_ (Export.lua's LoGetWorldObjects keys - the first
+-- flight confirms they match). Read-only: nothing in the mission is changed.
+local EVENTS_CODE = [==[
+local ok, res = pcall(function()
+    if type(world) ~= "table" or type(world.event) ~= "table" or not world.addEventHandler then return "NOWORLD" end
+    if not GEORGE_EV then
+        local E = world.event
+        local kinds = {}
+        if E.S_EVENT_DEAD then kinds[E.S_EVENT_DEAD] = "DEAD" end
+        if E.S_EVENT_KILL then kinds[E.S_EVENT_KILL] = "KILL" end
+        if E.S_EVENT_UNIT_LOST then kinds[E.S_EVENT_UNIT_LOST] = "LOST" end
+        if E.S_EVENT_CRASH then kinds[E.S_EVENT_CRASH] = "CRASH" end
+        local function clean(v) return (tostring(v or ""):gsub("[;\r\n]", " ")) end
+        local function who(o)
+            if o == nil then return "", "", "" end
+            local oi, i = pcall(function() return o.id_ end)
+            local on, n = pcall(function() return o:getName() end)
+            local ot, t = pcall(function() return o:getTypeName() end)
+            return (oi and i ~= nil) and clean(i) or "", on and clean(n) or "", ot and clean(t) or ""
+        end
+        GEORGE_EV = { q = {} }
+        GEORGE_EV.h = { onEvent = function(self, e)
+            pcall(function()
+                local kind = e and kinds[e.id]
+                if not kind or #GEORGE_EV.q >= 200 then return end
+                local victim, killer = e.initiator, nil
+                if kind == "KILL" then victim, killer = e.target, e.initiator end
+                local vi, vn, vt = who(victim)
+                if vi == "" then return end
+                local ki, kn, kt = who(killer)
+                GEORGE_EV.q[#GEORGE_EV.q + 1] = table.concat({ kind, vi, vn, vt, ki, kn, kt }, ";")
+            end)
+        end }
+        world.addEventHandler(GEORGE_EV.h)
+    end
+    local q = GEORGE_EV.q
+    if #q == 0 then return "EVENTS0" end
+    GEORGE_EV.q = {}
+    return "EVENTS\n" .. table.concat(q, "\n")
+end)
+if not ok then return "ERR " .. tostring(res) end
+return res
+]==]
+
+local function send_events(now)
+    if now < (gch.events_t or 0) then return end
+    gch.events_t = now + 0.5
+    local st = gch.types_state
+    if not st then return end                       -- the scripting state isn't found yet (send_types)
+    local r = run(st, EVENTS_CODE)
+    if r:sub(1, 7) == "EVENTS\n" then
+        gch.out:send(r:sub(1, 60000))
+        note("events", "first DCS unit events sent from the '" .. st .. "' Lua state")
+    elseif r ~= "EVENTS0" then
+        note("eventsno" .. r:sub(1, 12), "no DCS unit events: " .. r:sub(1, 80))
+    end
+end
+
+-- Command roles P2-2 (1 Nov): your callsign as the mission gives it (Unit:getCallsign(), e.g.
+-- "Enfield11"), asked of the mission scripting state every 10 s: "CALLSIGN <callsign>\t<unit name>".
+-- The program says it as "Enfield 1-1"; with nothing from here it uses OPERATOR_CALLSIGN ("NOMAD").
+local CALLSIGN_BODY = [==[
+local u
+if name ~= "" and type(Unit) == "table" and Unit.getByName then
+    local ok, x = pcall(Unit.getByName, name)
+    if ok and x then u = x end
+end
+if not u and type(world) == "table" and world.getPlayer then
+    local ok, x = pcall(world.getPlayer)
+    if ok and x then u = x end
+end
+if not u then return "NOUNIT" end
+local okc, c = pcall(function() return u:getCallsign() end)
+if not okc or c == nil or tostring(c) == "" then return "NOCALLSIGN" end
+local okn, n = pcall(function() return u:getName() end)
+local cs = (tostring(c):gsub("[\r\n\t]", " "))
+local un = okn and (tostring(n):gsub("[\r\n\t]", " ")) or ""
+return "CALLSIGN " .. cs .. "\t" .. un
+]==]
+
+local function send_callsign(now)
+    if now < (gch.callsign_t or 0) then return end
+    gch.callsign_t = now + 10.0
+    local states = gch.types_state and { gch.types_state } or { "server", "mission", "scripting" }
+    for _, st in ipairs(states) do
+        local r = run(st, "local name = " .. string.format("%q", gch.want_unit or "") .. "\n" .. CALLSIGN_BODY)
+        if r:sub(1, 9) == "CALLSIGN " then
+            gch.out:send(r)
+            note("callsign" .. r, "callsign sent from the '" .. st .. "' Lua state: " .. r:gsub("\t", " / "))
+            return
+        end
+        note("callsignno" .. st .. r:sub(1, 8), "no callsign from '" .. st .. "': " .. r:sub(1, 80))
+    end
+end
+
 local function send_route(now)
     if now < (gch.route_t or 0) then return end
     gch.route_t = now + 10.0
@@ -383,6 +482,8 @@ local function frame()
     send_types(now)
     send_fuel(now)
     send_players(now)
+    send_events(now)
+    send_callsign(now)
     local state = find_state(now)
     if not state then return end
     if gch.inp then
@@ -393,7 +494,7 @@ local function frame()
             local unit = msg:match("^UNIT (.+)$")
             if unit then
                 if unit ~= gch.want_unit then
-                    gch.want_unit, gch.fuel_t = unit, 0
+                    gch.want_unit, gch.fuel_t, gch.callsign_t = unit, 0, 0
                     note("unit" .. unit, "the program asked for unit '" .. unit .. "'")
                 end
             elseif want then
@@ -421,7 +522,8 @@ end
 
 DCS.setUserCallbacks({
     onMissionLoadEnd = function()            -- new mission (or the same one restarted): send at once
-        gch.route_t, gch.brief_t, gch.types_t, gch.fuel_t, gch.players_t = 0, 0, 0, 0, 0
+        gch.route_t, gch.brief_t, gch.types_t, gch.fuel_t, gch.players_t, gch.events_t = 0, 0, 0, 0, 0, 0
+        gch.callsign_t = 0
         gch.loaded = (gch.loaded or 0) + 1      -- the program forgets this mission's flights and clones
     end,
     onSimulationFrame = function()

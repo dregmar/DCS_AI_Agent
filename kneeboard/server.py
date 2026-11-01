@@ -26,6 +26,16 @@ RESEND_S = 5.0
 VERSION_MARK = b"__PAGE_VERSION__"        # index.html carries this; the served page carries the version
 
 
+
+class _QuietServer(ThreadingHTTPServer):
+    """OpenKneeboard's WebView drops connections (tab switch, reload): ConnectionAbortedError while the
+    request line is read, before our handler runs. That isn't an error; anything else still prints."""
+    def handle_error(self, request, client_address):
+        import sys
+        if isinstance(sys.exc_info()[1], (ConnectionAbortedError, ConnectionResetError, BrokenPipeError)):
+            return
+        super().handle_error(request, client_address)
+
 class Kneeboard:
     def __init__(self, map_fn: Callable[[], dict], status_fn: Callable[[], dict], log,
                  host: str = "127.0.0.1", port: int = 5000,
@@ -68,7 +78,7 @@ class Kneeboard:
                 except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
                     pass
 
-        self.httpd = ThreadingHTTPServer((self.host, self.port), Handler)
+        self.httpd = _QuietServer((self.host, self.port), Handler)
         self.httpd.daemon_threads = True
         self.port = self.httpd.server_address[1]
         threading.Thread(target=self.httpd.serve_forever, daemon=True, name="kneeboard-http").start()

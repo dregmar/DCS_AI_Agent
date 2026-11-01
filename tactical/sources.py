@@ -2,7 +2,8 @@
 tactical/sources.py - state_store.snapshot() -> Reports, plus each source's health and coverage
 (design sections 2 and 3).
 
-    world_reports(snap, st)          Export.lua's world lists (contacts, gnd, ad, air, oly, olyx, wing)
+    world_reports(snap, st)          Export.lua's world lists (contacts, gnd, ad, air, oly, olyx, wing,
+                                     and from T8 neu / fr: neutrals and your own side)
     george_reports(snap, now, gen)   George's Target List: names only, no position, no id
     jtac_report(current, now, gen)   the JTAC's current target: a pointer (key + tag), not a sighting
 
@@ -14,7 +15,10 @@ Coordinates: lat / lon in WGS-84 degrees as DCS gives them, altitude in metres M
 list's bearing is a GRID bearing (atan2 on DCS x / z); it is kept as "brg_grid", and the true bearing
 from your lat / lon as "brg_true" (design section 3).
 
-Not here yet: AIRBASES and tasking targets (later steps); coalition per row arrives with I-T2.
+Coalition (T8, I-T2): an Export.lua that sends the neutral list ("neutral_units") keeps neutrals out of
+the enemy lists, so their rows are the other side's (coalition 3 - yours); neutrals come as coalition 0.
+An older Export.lua: enemy rows stay "coalition_unreported" (enemy or neutral), as before.
+Not here yet: AIRBASES and tasking targets (later steps).
 Pure module: no threads, no I/O, no imports from the rest of the program.
 """
 import math
@@ -32,7 +36,11 @@ WORLD_LISTS = {
     "world.oly": ("olympus_units", None, 40),
     "world.olyx": ("olympus_enemy", None, 40),
     "world.wing": ("wing", None, None),
+    "world.neu": ("neutral_units", 40_000.0, 40),      # T8 (I-T2): ground / naval, neither side
+    "world.fr": ("friendly_units", 40_000.0, 40),      # T8 (I-T3): your side; aircraft out to 120 km
 }
+_SIDE_CATEGORY = {"a": Category.AIR, "g": Category.GROUND, "n": Category.NAVAL}
+_ENEMY_LISTS = ("world.contacts", "world.gnd", "world.ad", "world.air")
 
 # George's Target List shows a classification until he has identified a contact (manual p.655), and
 # the wheel sometimes shows these words. A superset of core.state._GENERIC_NAMES (checked by a test).
@@ -98,6 +106,11 @@ def _parse_row(source: str, row: Any) -> Optional[Dict[str, Any]]:
             return None
         return {"id": row[2], "type": None, "lat": row[3], "lon": row[4], "alt": row[5],
                 "group": row[0], "unit": row[1]}
+    if source in ("world.neu", "world.fr"):           # [type, id, lat, lon, alt, "a"|"g"|"n"]
+        if len(row) != 6:
+            return None
+        return {"id": row[1], "type": row[0], "lat": row[2], "lon": row[3], "alt": row[4],
+                "cat": _SIDE_CATEGORY.get(row[5])}
     if source == "world.wing":                        # [unit name, id, lat, lon]
         if len(row) != 4:
             return None
@@ -107,8 +120,8 @@ def _parse_row(source: str, row: Any) -> Optional[Dict[str, Any]]:
 
 _CATEGORY = {"world.contacts": Category.SURFACE, "world.gnd": Category.GROUND, "world.ad": Category.GROUND,
              "world.air": Category.AIR, "world.oly": Category.UNKNOWN, "world.olyx": Category.UNKNOWN,
-             "world.wing": Category.AIR}
-_RELATION = {"world.oly": Relation.OWN, "world.wing": Relation.OWN}
+             "world.wing": Category.AIR, "world.neu": Category.GROUND, "world.fr": Category.UNKNOWN}
+_RELATION = {"world.oly": Relation.OWN, "world.wing": Relation.OWN, "world.fr": Relation.OWN}
 
 
 # ------------------------------------------------------------------ world scan
@@ -121,6 +134,8 @@ def world_reports(snap: dict, st: ScanTime) -> Tuple[List[Report], Dict[str, Sou
             health[name] = SourceHealth(name, False, range_m=rng, cap=cap, note="no world scan yet")
         return [], health
     me = _own_ll(snap)
+    mine = snap.get("coalition")
+    sides_known = isinstance(snap.get("neutral_units"), (list, tuple)) and mine in (1, 2)
     reports: List[Report] = []
     for name, (key, rng, cap) in WORLD_LISTS.items():
         rows = snap.get(key)
@@ -157,8 +172,15 @@ def world_reports(snap: dict, st: ScanTime) -> Tuple[List[Report], Dict[str, Sou
             if alt is None:
                 flags.add("no_altitude")
             relation = _RELATION.get(name, Relation.OTHER)
-            if relation == Relation.OTHER:
-                flags.add("coalition_unreported")     # until Export.lua sends coalition per row (I-T2)
+            coalition = None
+            if name == "world.neu":
+                coalition = 0
+            elif name in _ENEMY_LISTS and sides_known:
+                coalition = 3 - mine                  # Export keeps neutrals out of these (I-T2)
+            elif name == "world.fr" and mine in (1, 2):
+                coalition = mine
+            if relation == Relation.OTHER and coalition is None:
+                flags.add("coalition_unreported")     # older Export.lua: enemy or neutral
             if not st.age_known:
                 flags.add("age_unknown")
             extra = {k2: r[k2] for k2 in ("group", "unit", "dist_m", "brg_grid") if r.get(k2) is not None}
@@ -169,7 +191,8 @@ def world_reports(snap: dict, st: ScanTime) -> Tuple[List[Report], Dict[str, Sou
             if name == "world.ad":
                 flags.add("air_defence_by_name")      # Export picks these by words in the type name
             out.append(Report(source=name, basis=Basis.WORLD, key=k, relation=relation,
-                              category=_CATEGORY[name], type_name=typ, klass=None, coalition=None,
+                              category=r.get("cat") or _CATEGORY[name], type_name=typ, klass=None,
+                              coalition=coalition,
                               position=pos, seen_model=st.seen_model, seen_mono=st.seen_mono,
                               age_known=st.age_known, generation=st.generation,
                               flags=frozenset(flags), extra=_extra(extra)))
@@ -250,4 +273,31 @@ def by_key(reports: Iterable[Report]) -> Dict[str, List[Report]]:
     for r in reports:
         if r.key is not None:
             out.setdefault(r.key, []).append(r)
+    return out
+
+
+# ------------------------------------------------------------------ DCS unit events (T8, I-T4)
+_EVENT_WORDS = {"DEAD": "it dead", "LOST": "it lost", "CRASH": "it crashed"}
+
+
+def dcs_events(text: str) -> Dict[str, str]:
+    """george_comms_hook.lua's "EVENTS\\n<kind;victim id;name;type;killer id;name;type>..." ->
+    {key: what DCS said}, e.g. {"dcs:16777473": "a kill by Hog 1-1"}. A KILL (it names the killer) wins
+    over DEAD / LOST / CRASH for the same unit. Bad lines are skipped."""
+    out: Dict[str, str] = {}
+    if not isinstance(text, str) or not text.startswith("EVENTS"):
+        return out
+    for line in text.split("\n")[1:]:
+        f = line.strip().split(";")
+        if len(f) != 7:
+            continue
+        kind, vid, _vname, _vtype, _kid, kname, ktype = (x.strip() for x in f)
+        key = dcs_key(vid)
+        if key is None:
+            continue
+        if kind == "KILL":
+            by = kname or ktype
+            out[key] = f"a kill by {by}" if by else "a kill"
+        elif kind in _EVENT_WORDS and not out.get(key, "").startswith("a kill"):
+            out.setdefault(key, _EVENT_WORDS[kind])
     return out
