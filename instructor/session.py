@@ -38,6 +38,9 @@ POLL_S = 0.1
 MAX_SAMPLES = 30000            # 50 min at 10 Hz (the fuel exercise runs up to 45 min)
 
 IDLE, SELECTED, ARMED, RUNNING, EVALUATING = "idle", "selected", "armed", "running", "evaluating"
+# 1 Nov (one training mode): these need training mode on; results / status / suggest always answer
+GATED = ("select", "brief", "begin", "easier", "harder", "level")
+TRAINING_OFF = "Instructor, training mode is off. Say training mode on."
 VERSIONS = {ex_id: catalog.get(ex_id, 1).version for ex_id in catalog.EXERCISES}
 TAG_OF = {c.id: c.tag for ex_id in catalog.EXERCISES for c in catalog.get(ex_id, 1).criteria}
 
@@ -122,12 +125,15 @@ class Instructor:
                  fuel_after_share: float = catalog.FUEL_AFTER_SHARE,
                  reserve: Optional[Callable[[dict], Optional[float]]] = None,
                  flight: Optional[Callable[[int], List[dict]]] = None,
-                 fast: Optional[Callable[[bool], None]] = None):
+                 fast: Optional[Callable[[bool], None]] = None,
+                 enabled: Optional[Callable[[], bool]] = None):
         """targets(text, snap) -> {"name", "ll", "kind"} or a refusal string (main.py: named waypoint,
         else the nearest helipad / FARP). fuel(snap) -> pounds or None (core.fuel.current_lbs).
         reserve(snap) -> the landing reserve in pounds for this aircraft (the fuel exercise checks it).
         flight(seq) -> the flight records newer than seq (state_store.flight_since): every packet once.
-        fast(on) -> ask Export.lua for the 10 Hz flight block (I5) while an exercise is selected or running."""
+        fast(on) -> ask Export.lua for the 10 Hz flight block (I5) while an exercise is selected or running.
+        enabled() -> training mode is on (1 Nov: one training mode). Exercises can only be selected or
+        begun while it is; results, status and the suggestion always answer. None = always on (tests)."""
         self.snapshot, self.speak, self.history = snapshot, speak, history
         self.mission_name, self.level, self.printer = mission_name, int(level), printer
         self.run_async, self.wall = run_async, wall
@@ -135,6 +141,7 @@ class Instructor:
         self.fuel_allowance, self.fuel_share = float(fuel_allowance_lbs), float(fuel_after_share)
         self.reserve = reserve
         self.flight, self.fast = flight, fast
+        self.enabled = enabled
         self._fast_on: Optional[bool] = None
         self._lock = threading.Lock()
         self.state = IDLE
@@ -323,6 +330,10 @@ class Instructor:
         if rest is None:
             return ""
         cmd, ex_id, arg = voice.parse(rest)
+        if cmd in GATED and not self.training_on():
+            return TRAINING_OFF
+        if cmd == "on" and not self.training_on():
+            return TRAINING_OFF
         snap = self.snapshot()
         aircraft = str(snap.get("aircraft") or "")
         if cmd in ("select", "brief", "begin"):           # no exercise named: the selected one, else the hover
@@ -368,6 +379,36 @@ class Instructor:
         if finish is not None:
             self._evaluate(*finish)
         return said
+
+    def training_on(self) -> bool:
+        if self.enabled is None:
+            return True
+        try:
+            return bool(self.enabled())
+        except Exception:
+            return False
+
+    def stand_down(self, why: str = "training mode off") -> str:
+        """Training mode went off: a running attempt ends (stored as aborted, never scored), an armed
+        or selected one is put away. Returns what to say first ('' when the result line says it)."""
+        finish, said = None, ""
+        with self._lock:
+            if self.state == RUNNING:
+                finish = self._end_locked(why)
+            elif self.state == ARMED:
+                said = "Instructor, exercise cancelled."
+            if self.state != EVALUATING:
+                self.state = IDLE
+        if finish is not None:
+            self._evaluate(*finish)
+        return said
+
+    def record_kill(self, what: str, seconds: float) -> None:
+        """A training target destroyed (common/training_targets.py): kept in the score log."""
+        snap = self.snapshot()
+        self.history.add_kill({"what": str(what), "seconds": round(float(seconds), 1),
+                               "aircraft": str(snap.get("aircraft") or ""), "mission": self.mission_name() or "",
+                               "when": self._now_iso()})
 
     def _resolve_target(self, rest: str, snap: dict):
         if self.targets is None:
@@ -468,6 +509,15 @@ class Instructor:
         if ex_id is None:
             return "Instructor, no exercises for this aircraft."
         return f"Instructor, I suggest the {catalog.NAMES[ex_id]} exercise: {why}. Say {catalog.NAMES[ex_id]} exercise."
+
+    def status_line(self) -> str:
+        """The exercise part of "training status", without the "Instructor," ('' when standing by)."""
+        with self._lock:
+            if self.state == IDLE:
+                return ""
+            said = self._status_locked()
+        said = said[len("Instructor, "):] if said.startswith("Instructor, ") else said
+        return said[:1].upper() + said[1:]
 
     def _status_locked(self) -> str:
         if self.state == RUNNING:
@@ -570,6 +620,9 @@ class Instructor:
                            "not_judged": [f"{r['label']}: {r.get('reason', '')}" for r in last.criteria if not r.get("judged")],
                            "when": last.end_wall[11:16]}
         out.update(self._progress(snap_ac))
+        out["kills"] = [{"what": k.get("what", ""), "seconds": k.get("seconds"),
+                         "when": str(k.get("when", ""))[5:16].replace("T", " ")} for k in self.history.kills(8)]
+        out["training_on"] = self.training_on()
         return out
 
     def briefing_section(self) -> Optional[dict]:
@@ -592,7 +645,7 @@ class Instructor:
 
 def build(config, snapshot: Callable[[], dict], speak: Callable[[str], None],
           mission_name: Callable[[], str] = lambda: "", targets=None, fuel=None, reserve=None,
-          flight=None, fast=None) -> Instructor:
+          flight=None, fast=None, enabled=None) -> Instructor:
     """The instructor from config.py. Every key is optional (defaults in brackets):
         INSTRUCTOR_DATA_DIR    [<project>/data/instructor]   where results are kept; None = memory only (tests)
         INSTRUCTOR_PILOT       ["default"]                   one history per pilot name
@@ -610,5 +663,5 @@ def build(config, snapshot: Callable[[], dict], speak: Callable[[str], None],
                    raw_days=getattr(config, "INSTRUCTOR_RAW_DAYS", 30))
     return Instructor(snapshot, speak, hist, mission_name=mission_name,
                       level=getattr(config, "INSTRUCTOR_HOVER_LEVEL", 1), targets=targets, fuel=fuel, reserve=reserve,
-                      flight=flight, fast=fast,
+                      flight=flight, fast=fast, enabled=enabled,
                       fuel_allowance_lbs=getattr(config, "INSTRUCTOR_FUEL_ALLOWANCE_LBS", catalog.FUEL_ALLOWANCE_LBS))

@@ -399,8 +399,23 @@ Hog flight tasked CAS your target, 6 minutes." / "Darkside, Hog cleared hot." De
 aborts and the override's risk keep their full words in both. AI_TO_AI_SPOKEN = False (default): calls
 between AI flights ("Darkside: Hog 1, cleared hot, T-72B.") are only in the comms log; True speaks them too.
 
+## Training mode (any aircraft; the instructor's voice, Jenny)
+One mode for training targets and the instructor's exercises (1 Nov 2026). Everything about training
+is answered by the instructor, starting "Instructor, ...".
+- "Training mode on" / "training mode off" (also "start / end the training", "Overlord, training mode on",
+  "Instructor mode on / off"). On works even when training targets can't be spawned (no Game Master
+  login, Olympus off, other players in the mission): the exercises work and she says why there are no
+  targets. Off stops a running exercise (kept as aborted, not scored) and removes the training targets.
+- "Overlord, spawn two T-72s 5 km north of me" or "Instructor, spawn ..." (only in training mode; options:
+  live / weapons hold, moving / static, easy / average / hard). "Training group is up" follows.
+- "Overlord / Instructor, clear training targets", "... training status" (the targets and the exercise).
+- Exercises (helicopters): "Instructor, hover exercise / hover turn / approach to Alpha / fuel exercise",
+  "begin", "stop", "how did I do", "easier / harder / level 3", "what should I practise". Selecting or
+  beginning one needs training mode on; results and status always answer.
+- Each training target destroyed goes to your score log (Training tab, Scores).
+
 ## VR kneeboard pages (any aircraft; see KNEEBOARD.md)
-- "Show the map / briefing / checklist / comms / status", "kneeboard, briefing"
+- "Show the map / briefing / checklist / comms / status / training", "kneeboard, briefing"
 - "Show the shutdown checklist" (shows it, doesn't start it)
 - "Page down / up", "next / previous page", "scroll to the top / bottom"; "scroll down / up" except in the Apache (George's list there: say "kneeboard, scroll down")
 Nothing is said back: the page changes.

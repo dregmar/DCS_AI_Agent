@@ -17,9 +17,12 @@ either side. Everything that login sends passes Training.guard first:
 
 The Blue commander client (wingmen, Overlord, Outcasts) is untouched and never sends these.
 
-Voice, Overlord only: "Overlord, training mode on / off", "Overlord, clear training targets",
-"Overlord, training status". Turning training off clears the targets first (decision 5). They are
-also cleared when the program exits, and forgotten when a new mission loads (they went with it).
+Voice (one training mode, 1 Nov; common/training_mode.py routes it): "Training mode on / off" (also
+"Overlord, ..." / "Instructor, ..."), "clear training targets", "training status". Every reply is in
+the instructor's voice and starts "Instructor, ". Training mode turns on even when targets can't be
+spawned (no Game Master login, Olympus off, other players): the instructor's exercises still work and
+spawns are refused with the reason. Turning training off clears the targets first (decision 5). They
+are also cleared when the program exits, and forgotten when a new mission loads (they went with it).
 
 After a crash (decision 6) the list is on disk (logs/training_groups.json). At the next start, once
 the mission briefing says the same mission is running, only units still there under the same group
@@ -46,6 +49,7 @@ TRAINING_COMMANDS = SPAWNS | UNIT_COMMANDS
 _COALITION = {1: "red", 2: "blue"}
 _ENEMY = {1: 2, 2: 1}
 PLAYERS_FRESH_S = 15.0
+VOICE = "Instructor, "            # every training reply (1 Nov: one training mode, the instructor's voice)
 DEFAULT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs",
                             "training_groups.json")
 
@@ -108,11 +112,14 @@ class Training:
                  voice_switch: Optional[bool] = None, max_groups: Optional[int] = None,
                  max_units: Optional[int] = None, max_range_km: Optional[float] = None,
                  path: Optional[str] = "config", clock: Callable[[], float] = time.monotonic,
-                 printer: Callable[[str], None] = print, templates: Any = "config"):
+                 printer: Callable[[str], None] = print, templates: Any = "config",
+                 olympus_enabled: Callable[[], bool] = lambda: True):
         """make_client(guard) -> an Olympus client logged in as Game Master, or None when there's
         no Game Master password in config (called once, on first use). templates: {name: units} of
-        Olympus's site templates ("config": read templates.lua; None: unreadable, ground refused)."""
+        Olympus's site templates ("config": read templates.lua; None: unreadable, ground refused).
+        olympus_enabled() -> config.OLYMPUS_ENABLED (main.py); False = no training targets."""
         self.snapshot, self._make_client, self.mission_name = snapshot, make_client, mission_name
+        self.olympus_enabled = olympus_enabled
         self.on = bool(getattr(config, "TRAINING_MODE", False) if enabled is None else enabled)
         self.voice_switch = bool(getattr(config, "TRAINING_VOICE_SWITCH", True) if voice_switch is None
                                  else voice_switch)
@@ -245,7 +252,7 @@ class Training:
         Returns the entry (for bind / drop); entry["ended"] says why it left the list."""
         entry = {"group": group, "units": [(str(n), int(i)) for n, i in units],
                  "requested": int(requested if requested is not None else len(units)), "what": str(what),
-                 "ended": None}
+                 "ended": None, "t": self.clock()}
         with self._lock:
             self._groups.append(entry)
         self._save()
@@ -362,67 +369,120 @@ class Training:
         except Exception as e:
             self.printer(f"[TRAINING] Clean-up at exit failed: {type(e).__name__}: {e}")
 
-    # ------------------------------------------------------------ voice (Overlord)
+    # ------------------------------------------------------------ voice (the instructor's)
     def wanted(self, rest: str) -> bool:
         """A training order (never a question: "how do I end the training?" goes to the briefing)."""
+        return self.action(rest) is not None
+
+    def action(self, rest: str) -> Optional[str]:
+        """'on' / 'off' / 'clear' / 'status' for a training order, else None (never for a question)."""
         t = (rest or "").lower().strip()
         if _QUESTION.search(t):
-            return False
-        return bool(_ON.search(t) or _OFF.search(t) or _CLEAR.search(t) or _STATUS.search(t))
+            return None
+        if _CLEAR.search(t):
+            return "clear"
+        if _OFF.search(t):
+            return "off"
+        if _ON.search(t):
+            return "on"
+        if _STATUS.search(t):
+            return "status"
+        return None
 
     def handle(self, rest: str) -> Optional[str]:
-        t = (rest or "").lower()
-        if _CLEAR.search(t):
-            return self._say_clear()
-        if _OFF.search(t):
+        act = self.action(rest)
+        if act == "clear":
+            return self.say_clear()
+        if act == "off":
             return self.set_mode(False)
-        if _ON.search(t):
+        if act == "on":
             return self.set_mode(True)
-        if _STATUS.search(t):
+        if act == "status":
             return self.status_text()
+        return None
+
+    def spawn_unavailable(self) -> Optional[str]:
+        """Why training targets can't be spawned at all right now (whatever is asked), or None.
+        May make the Game Master client (no network: it connects on its first command)."""
+        if not self.olympus_enabled():
+            return "Olympus is turned off in config"
+        if self.client() is None:
+            return "no Game Master login in config"
+        others = self.others_present()
+        if others is None:
+            return "I can't tell who else is in the mission, copy the new comms hook"
+        if others:
+            return "other players are in the mission"
         return None
 
     def set_mode(self, on: bool) -> str:
         if on:
             if self.on:
-                return "Overlord, training mode is already on."
+                return VOICE + "training mode is already on."
             if not self.voice_switch:
-                return "Overlord, unable, training mode is switched off in config."
-            if self.client() is None:
-                return "Overlord, unable, no Game Master login in config."
-            others = self.others_present()
-            if others is None:
-                return "Overlord, unable, I can't tell who else is in the mission. Copy the new comms hook."
-            if others:
-                return "Overlord, unable, other players are in the mission."
+                return VOICE + "unable, training mode is switched off in config."
             self.on = True
-            self.printer("[TRAINING] Training mode on.")
-            return "Overlord, training mode on. Training targets allowed."
+            why = self.spawn_unavailable()
+            self.printer("[TRAINING] Training mode on." + (f" No training targets: {why}." if why else ""))
+            if why:
+                return VOICE + f"training mode on. Training targets unavailable, {why}."
+            return VOICE + "training mode on. Training targets allowed."
         if not self.on and not self.has_groups():
-            return "Overlord, training mode is already off."
+            return VOICE + "training mode is already off."
         removed, why = self.clear()
         self.on = False
         self.printer("[TRAINING] Training mode off.")
         if why:
-            return f"Overlord, training mode off. Unable to remove all training targets, {why}."
+            return VOICE + f"training mode off. Unable to remove all training targets, {why}."
         if removed:
-            return f"Overlord, {removed} training group{'s' if removed != 1 else ''} removed. Training mode off."
-        return "Overlord, training mode off."
+            return VOICE + f"{removed} training group{'s' if removed != 1 else ''} removed. Training mode off."
+        return VOICE + "training mode off."
 
-    def _say_clear(self) -> str:
+    def say_clear(self) -> str:
         if not self.has_groups():
-            return "Overlord, no training targets."
+            return VOICE + "no training targets."
         removed, why = self.clear()
         if why:
-            return f"Overlord, {removed} training group{'s' if removed != 1 else ''} removed. Unable to remove the rest, {why}."
-        return f"Overlord, {removed} training group{'s' if removed != 1 else ''} removed."
+            return VOICE + (f"{removed} training group{'s' if removed != 1 else ''} removed. "
+                            f"Unable to remove the rest, {why}.")
+        return VOICE + f"{removed} training group{'s' if removed != 1 else ''} removed."
+
+    _say_clear = say_clear                                       # the old name
 
     def status_text(self) -> str:
         if not self.on:
-            return "Overlord, training mode off."
+            return VOICE + "training mode off."
         groups, units = self.counts()
-        return (f"Overlord, training mode on, {groups} group{'s' if groups != 1 else ''}, "
+        return (VOICE + f"training mode on, {groups} group{'s' if groups != 1 else ''}, "
                 f"{units} unit{'s' if units != 1 else ''} alive.")
+
+    def view(self, snap: Optional[dict] = None) -> dict:
+        """The kneeboard Training tab: mode, why targets can't be spawned, the groups (alive / total,
+        minutes since the spawn). Never makes the Game Master client just to show the tab."""
+        snap = self.snapshot() if snap is None else snap
+        fresh = not enemy_lists_stale(snap) and snap.get("enemy_lists_age") is not None
+        alive_ids = {int(u[2]) for u in snap.get("olympus_enemy") or []}
+        now = self.clock()
+        with self._lock:
+            made, client = self._client_made, self._client
+            groups = []
+            for g in self._groups:
+                seen = bool(g["group"] and g["units"])
+                total = len(g["units"]) if seen else int(g["requested"])
+                alive = (sum(1 for _, i in g["units"] if i in alive_ids) if fresh else total) if seen else None
+                groups.append({"what": g["what"], "alive": alive, "total": total,
+                               "min": int(max(0.0, now - g.get("t", now)) // 60)})
+        why = None
+        if self.on:
+            if not self.olympus_enabled():
+                why = "Olympus is turned off in config"
+            elif not getattr(config, "OLYMPUS_GM_PASSWORD", "") or (made and client is None):
+                why = "no Game Master login in config"
+            else:
+                others = self.others_present()
+                why = ("other players are in the mission" if others else
+                       "waiting for the comms hook" if others is None else None)
+        return {"on": bool(self.on), "spawn_unavailable": why, "groups": groups}
 
     def link(self) -> dict:
         """Kneeboard Status page row (never creates the client just to show it)."""

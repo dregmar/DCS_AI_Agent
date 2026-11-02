@@ -197,8 +197,8 @@ class TestOrder(_Base):
 class TestSpawner(_Base):
     def test_full_flow_ground(self):
         said = self.sp.handle("training, spawn two T-72s 5 km north of me")
-        self.assertEqual(said, "Overlord, two T-72B, 5 kilometres north of you, weapons hold, static.")
-        self.assertTrue(self.wait(lambda: "Overlord, training group is up." in self.said), self.said)
+        self.assertEqual(said, "Instructor, two T-72B, 5 kilometres north of you, weapons hold, static.")
+        self.assertTrue(self.wait(lambda: "Instructor, training group is up." in self.said), self.said)
         self.assertEqual(self.w.commands(), ["spawnGroundUnits", "setROE"])
         roe = self.w.sent[1]["setROE"]
         self.assertEqual(roe["ROE"], 4)                                     # weapons hold
@@ -210,7 +210,7 @@ class TestSpawner(_Base):
 
     def test_live_moving_heli(self):
         self.sp.handle("spawn a Mi-24 8 km north, live, moving")
-        self.assertTrue(self.wait(lambda: "Overlord, training group is up." in self.said))
+        self.assertTrue(self.wait(lambda: "Instructor, training group is up." in self.said))
         self.assertEqual(self.w.commands(), ["spawnHelicopters", "setROE", "setAltitudeType", "setAltitude", "setPath"])
         self.assertEqual(self.w.sent[1]["setROE"]["ROE"], 0)
         self.assertEqual(self.w.sent[3]["setAltitude"]["altitude"], tt.HELI_AGL_M)
@@ -219,7 +219,7 @@ class TestSpawner(_Base):
     def test_static_aircraft_held_at_the_spawn_point(self):
         """30 Oct flight: a static MiG-21 flew straight on; now its path is its own spawn point."""
         self.sp.handle("spawn a MiG-21 10 km north")
-        self.assertTrue(self.wait(lambda: "Overlord, training group is up." in self.said))
+        self.assertTrue(self.wait(lambda: "Instructor, training group is up." in self.said))
         self.assertEqual(self.w.commands(), ["spawnAircrafts", "setROE", "setPath"])
         path = self.w.sent[2]["setPath"]["path"]
         self.assertEqual(len(path), 1)
@@ -235,26 +235,28 @@ class TestSpawner(_Base):
     def test_cleared_before_it_appeared(self):
         self.w.delay = 0.4
         self.sp.handle("spawn a tank 5 km north")
-        self.assertEqual(self.tr.handle("clear training targets"), "Overlord, 1 training group removed.")
+        self.assertEqual(self.tr.handle("clear training targets"), "Instructor, 1 training group removed.")
         self.assertTrue(self.wait(lambda: "deleteUnit" in self.w.commands()))
         self.assertFalse(any("group is up" in s for s in self.said))
         self.assertFalse(self.tr.has_groups())
 
     def test_gate_reasons_spoken(self):
         self.tr.on = False
-        self.assertEqual(self.sp.handle("spawn a tank 5 km north"), "Overlord, unable, training mode is off.")
+        self.assertEqual(self.sp.handle("spawn a tank 5 km north"),
+                         "Instructor, unable, training mode is off. Say training mode on.")
         self.tr.on = True
         self.assertEqual(self.sp.handle("spawn a tank 60 km north"),
-                         "Overlord, unable, spawn point more than 50 km from you.")
+                         "Instructor, unable, spawn point more than 50 km from you.")
+        self.assertEqual(self.sp.handle("spawn a submarine"), "Instructor, I can't spawn that.")
         self.tr.note_players("PLAYERS 3 mp")
-        self.assertEqual(self.sp.handle("spawn a tank 5 km north"), "Overlord, unable, other players are in the mission.")
+        self.assertEqual(self.sp.handle("spawn a tank 5 km north"),
+                         "Instructor, unable, training targets unavailable, other players are in the mission.")
         self.assertEqual(self.w.sent, [])
-        self.assertEqual(self.sp.handle("spawn a submarine"), "Overlord, I can't spawn that.")
 
     def test_limits_count_sites(self):
         for _ in range(2):
             self.sp.handle("spawn an SA-6 site 10 km north")
-        self.assertTrue(self.wait(lambda: self.said.count("Overlord, training group is up.") == 2))
+        self.assertTrue(self.wait(lambda: self.said.count("Instructor, training group is up.") == 2))
         self.assertIn("limit of 24", self.sp.handle("spawn an SA-6 site 10 km north"))
 
 
@@ -262,7 +264,10 @@ class TestMainWiring(unittest.TestCase):
     def test_overlord_spawn_reaches_the_spawner(self):
         main = fakes.pipeline_module().main
         said, who, _ = main.shared_reply("Overlord, spawn two T-72s 5 km north of me")
-        self.assertEqual((said, who), ("Overlord, unable, training mode is off.", "overlord"))
+        self.assertEqual((said, who), ("Instructor, unable, training mode is off. Say training mode on.", "instructor"))
+        said, who, _ = main.shared_reply("Instructor, spawn two T-72s 5 km north of me")
+        self.assertEqual(who, "instructor")
+        self.assertIn("training mode is off", said)
         self.assertIs(main.SPAWNER.training, main.TRAINING)
 
 

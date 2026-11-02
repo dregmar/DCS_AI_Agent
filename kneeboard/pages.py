@@ -8,7 +8,7 @@ kneeboard/pages.py - which page the kneeboard shows, and the Briefing and Checkl
                          -> {"kind": "page", "page": ..., "checklist": ...} | {"kind": "scroll", "by": ...} | None
                          also (30 Oct) "show alerts", "kneeboard, acknowledge (all)" -> {"kind": "ack", "all": ...},
                          "kneeboard, track on / off" -> {"kind": "track", "on": ...}, "kneeboard, zoom in / out"
-                         also (Instructor Mode) "show the instructor / scores / training"
+                         also "show the training / scores / instructor" (the Training tab, 1 Nov)
                          also (tactical picture, T5) "kneeboard, contact 42" / "kneeboard, show contact
                          tango four two" -> {"kind": "contact", "n": 42}; "kneeboard, close contact" -> n None
     build_briefing(kb, aircraft)                     the Briefing page's data

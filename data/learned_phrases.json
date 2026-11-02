@@ -1,9 +1,11 @@
 {
  "_note": "Learned from rewrites that worked. Delete any line that is wrong.",
  "phrases": {
+  "create waypoint alpha 08946 82910": "Set grid 08946 82910 as waypoint Alpha",
   "doctor call picture": "Overlord, picture",
   "doctor called picture": "Overlord, picture",
   "ok cas 2 where are you going": "Outcast 2, status",
+  "overlord request asking": "Overlord, request target",
   "put a marker where we are carly to charlie": "Mark our current position as waypoint Charlie",
   "return to rejoin": "Outcast 2, rejoin"
  },

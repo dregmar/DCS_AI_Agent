@@ -12,7 +12,9 @@ the JTAC target, lat/long for DCS x/z route points and, since step T5, the tacti
 
 With a tactical picture the enemy markers come from its tracks (one per DCS object, design section 9):
 the same keys as before plus "tid" (T42), "status", "age_s" (last seen, for markers that aren't
-current), "conf", "george" (his list number) and "neutral". Units out of coverage or lost are
+current), "conf", "george" (his list number), "neutral", and (1 Nov) "aff" (hostile / neutral /
+unknown: the page colours by it) and "cat" (air / ground / naval ...: the page's layer filters).
+Markers from the raw lists have no "aff" / "cat": they're enemy lists, so the page draws them hostile. Units out of coverage or lost are
 drawn hollow at their last known position. Without a picture (service off, not started, not
 updating) the map is built from the raw lists exactly as before.
 
@@ -172,6 +174,7 @@ def _from_picture(pic, me_ll, ctx, snap):
         base = {"id": oid, "tid": short_tid(t.track_id), "type": t.display or t.type_name or "unknown",
                 "lat": round(p.lat, 6), "lon": round(p.lon, 6), "status": t.status.value, "age_s": _age(pic, t),
                 "conf": t.exist_conf.level.value, "neutral": t.affiliation == Affiliation.NEUTRAL,
+                "aff": t.affiliation.value, "cat": t.category.value,
                 "george": t.george.list_index if t.george is not None else None}
         if "jtac_target" in t.tags:
             jtac = {"type": t.type_name or t.display, "lat": base["lat"], "lon": base["lon"], "tid": base["tid"]}

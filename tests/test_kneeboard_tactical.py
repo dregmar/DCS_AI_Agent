@@ -76,6 +76,19 @@ class MapFromPicture(unittest.TestCase):
         self.assertEqual(self.m["air"][0]["alt_ft"], 10000)
         self.assertTrue(self.g["T30"]["neutral"])
 
+    def test_affiliation_and_category_for_the_page(self):
+        """1 Nov redesign: the page colours by "aff" (unknown = yellow) and filters by "cat"."""
+        self.assertEqual((self.g["T42"]["aff"], self.g["T42"]["cat"]), ("hostile", "ground"))
+        self.assertEqual(self.g["T30"]["aff"], "neutral")
+        self.assertEqual((self.m["air"][0]["aff"], self.m["air"][0]["cat"]), ("hostile", "air"))
+        pic = picture()
+        unk = track("T0061", "Ship", 5, aff=Affiliation.UNKNOWN, cat=Category.NAVAL)
+        m = model.build_map(SNAP, Ctx(replace(pic, tracks=pic.tracks + (unk,))))
+        u = next(g for g in m["ground"] if g["tid"] == "T61")
+        self.assertEqual((u["aff"], u["cat"], u["neutral"]), ("unknown", "naval", False))
+        lists = model.build_map(SNAP, Ctx(None))                              # raw lists: no aff, drawn hostile
+        self.assertNotIn("aff", lists["ground"][0])
+
     def test_last_known_markers(self):
         bmp = self.g["T12"]
         self.assertEqual((bmp["status"], bmp["age_s"]), ("out_of_coverage", 70))     # 75 s in 10 s steps

@@ -5,158 +5,377 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kneeboard</title>
 <style>
+  /* 1 Nov 2026 redesign: amber command-and-control look. Same page, same feeds, same voice commands.
+     Still light for VR: no animations, no blur, panels only rewritten when their text changes. */
   :root {
-    --bg: #0b0f14; --panel: #121922; --line: #263342; --text: #e6edf3; --dim: #8b9bb0;
-    --me: #ffffff; --route: #8b9bb0; --named: #4ade80; --outcast: #22d3ee; --flight: #60a5fa;
-    --enemy: #f87171; --ring: rgba(248,113,113,.55); --jtac: #facc15; --pilot: #e6edf3;
-    --george: #a7f3d0; --overlord: #93c5fd; --ok: #4ade80; --bad: #f87171; --unk: #8b9bb0;
+    --bg: #080b0e; --panel: #10161b; --panel2: #151e25; --panel3: #1b2730; --line: #29333b; --line2: #3a454d;
+    --amber: #ffb52e; --amber2: #e58a12; --amberdim: #a96b18; --amberbg: #3a2a10;
+    --text: #edf2f5; --dim: #9aa8b1; --faint: #66737c;
+    --friendly: #54b7ff; --hostile: #ff554e; --neutral: #43c66c; --unknown: #f4dc4e; --warning: #ff8a32;
+    /* names the drawing code has always used */
+    --me: #ffffff; --route: #8fa3b5; --named: #b4a5ff; --outcast: #3fdcf2; --flight: var(--friendly);
+    --enemy: var(--hostile); --ring: rgba(255,85,78,.62); --jtac: var(--amber); --pilot: #edf2f5;
+    --george: var(--amber); --overlord: var(--friendly); --ok: #5fd86a; --bad: #ff554e; --unk: #7d8a93;
+    --track: rgba(255,181,46,.55); --grid: rgba(201,182,139,.10); --rangering: rgba(255,181,46,.24);
+    --font: Bahnschrift, "Segoe UI", system-ui, sans-serif;
+    --mono: "Cascadia Mono", Consolas, "DejaVu Sans Mono", monospace;
+    --r: 10px;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
-    font: 20px/1.35 "Segoe UI", system-ui, sans-serif; overflow: hidden; }
-  #tabs { display: flex; height: 56px; border-bottom: 2px solid var(--line); }
-  #tabs button { flex: 1 1 0; min-width: 0; padding: 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    background: var(--panel); color: var(--dim); border: 0; border-right: 1px solid var(--line);
-    font-family: inherit; font-size: 24px; font-weight: 600; cursor: pointer; }   /* 7 tabs: shrink, never overflow */
-  #tabs button.on { color: var(--text); background: #1b2633; box-shadow: inset 0 -4px 0 var(--outcast); }
-  .page { position: absolute; top: 56px; left: 0; right: 0; bottom: 0; display: none; }
+    font: 18px/1.35 var(--font); overflow: hidden; }
+  body { display: flex; flex-direction: column; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .num, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* ------------------------------------------------ top bar: identity, seven tabs, mission status, clock */
+  #top { flex: none; display: flex; align-items: stretch; gap: 14px; height: 60px; padding: 0 12px;
+    background: #090d10; border-bottom: 1px solid var(--amberdim); }
+  .brand { flex: none; display: flex; align-items: center; gap: 10px; }
+  .brand .mark { color: var(--amber); font-size: 28px; line-height: 1; }
+  .brand .bn { font-weight: 700; letter-spacing: 1.5px; font-size: 19px; white-space: nowrap; }
+  .brand .bs { color: var(--amber); font-size: 11px; letter-spacing: 1.8px; margin-top: 1px; white-space: nowrap; }
+  #tabs { flex: 1 1 auto; display: flex; gap: 4px; min-width: 0; align-items: center; }
+  #tabs button { flex: 1 1 0; min-width: 0; padding: 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;   /* 7 tabs: shrink, never overflow */
+    height: 46px; background: transparent; color: var(--dim); border: 1px solid transparent; border-radius: 7px;
+    font-size: 17px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; }
+  #tabs button::before { content: attr(data-i); margin-right: 7px; color: var(--faint); font-weight: 400; }
+  #tabs button:hover { color: var(--text); border-color: var(--line2); background: var(--panel); }
+  #tabs button.on { color: var(--amber); background: linear-gradient(180deg, #4a3215, #21190e); border-color: var(--amber); }
+  #tabs button.on::before { color: var(--amber); }
+  #tabs button.warn { color: var(--warning); } #tabs button.crit { color: #fff; background: #5a1714; border-color: var(--hostile); }
+  #tabs button.warn.on { color: var(--amber); }
+  .ls { display: none; }
+  #mstat { flex: none; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 2px; }
+  #live { font-size: 13px; font-weight: 700; letter-spacing: 1px; white-space: nowrap; }
+  #live::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px;
+    background: currentColor; vertical-align: 1px; }
+  #live.ok { color: var(--ok); } #live.wait { color: var(--amber); } #live.off { color: var(--bad); }
+  #clock { font-family: var(--mono); font-size: 17px; color: var(--text); letter-spacing: .5px; white-space: nowrap; }
+  #clock small { color: var(--faint); font-family: var(--font); font-size: 11px; margin-right: 6px; letter-spacing: 1px; }
+
+  /* ------------------------------------------------ alerts marker line (30 Oct): under the bar on every page */
+  #alertbar { display: none; flex: none; height: 34px; line-height: 34px; padding: 0 14px; font-size: 17px; font-weight: 600;
+    border-bottom: 1px solid var(--line); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.alerting #alertbar { display: block; }
+  #alertbar.info { background: var(--panel); color: var(--dim); }
+  #alertbar.warning { background: var(--amberbg); color: var(--amber); border-bottom-color: var(--amberdim); }
+  #alertbar.critical { background: #4a1414; color: #fecaca; height: 48px; line-height: 48px; font-size: 22px; border-bottom-color: var(--hostile); }
+  #alertbar:hover { filter: brightness(1.15); }
+
+  /* ------------------------------------------------ pages */
+  #pages { flex: 1 1 auto; position: relative; min-height: 0; }
+  .page { position: absolute; inset: 0; display: none; padding: 8px; }
   .page.on { display: block; }
-  #map { width: 100%; height: 100%; display: block; }
-  #mapbar { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 8px; }
-  #mapbar button { width: 64px; height: 56px; font-family: inherit; font-size: 28px; font-weight: 700; color: var(--text);
-    background: rgba(18,25,34,.9); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
-  #mapinfo { position: absolute; left: 12px; top: 10px; font-size: 18px; color: var(--dim);
-    background: rgba(11,15,20,.75); padding: 6px 10px; border-radius: 6px; }
-  #mapnote { position: absolute; left: 12px; top: 52px; font-size: 16px; color: var(--george, #a3e635);
-    background: rgba(11,15,20,.75); padding: 4px 10px; border-radius: 6px; display: none; max-width: 70%; }
-  #panel { position: absolute; right: 10px; bottom: 56px; width: 50%; max-height: 45%; overflow-y: auto; font-size: 17px;
-    background: rgba(18,25,34,.95); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: none; }
-  #panel h3 { margin: 0 0 6px; font-size: 20px; color: var(--text); }
-  #panel td { padding: 3px 6px 3px 0; vertical-align: top; color: var(--text); }
+  .panel { background: linear-gradient(160deg, var(--panel2), var(--panel)); border: 1px solid var(--line);
+    border-top: 2px solid var(--amber2); border-radius: var(--r); min-width: 0; overflow: hidden; }
+  .ph { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 11px;
+    border-bottom: 1px solid var(--line); color: var(--amber); font-size: 13px; font-weight: 700; letter-spacing: 1.2px;
+    text-transform: uppercase; white-space: nowrap; }
+  .ph span { color: var(--dim); font-weight: 400; letter-spacing: .5px; overflow: hidden; text-overflow: ellipsis; }
+  .pb { padding: 8px 11px; }
+  .kv { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px solid #222c33; }
+  .kv:last-child { border-bottom: 0; }
+  .kv > span:first-child { color: var(--dim); white-space: nowrap; }
+  .kv > b { font-family: var(--mono); font-weight: 600; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kv > b.txt { font-family: var(--font); }
+  .muted { color: var(--dim); } .faint { color: var(--faint); }
+  .sym { display: inline-block; width: 10px; height: 10px; margin-right: 9px; transform: rotate(45deg); vertical-align: 1px; }
+
+  /* ------------------------------------------------ map page: left column, map, right column, lower strip */
+  #pmap.on { display: grid; gap: 8px; grid-template-columns: 270px minmax(0, 1fr) 310px;
+    grid-template-rows: minmax(0, 1fr) 196px; grid-template-areas: "l m r" "b b b"; }
+  #colL { grid-area: l; } #colR { grid-area: r; } #mapwrap { grid-area: m; } #lower { grid-area: b; }
+  .col { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
+  .col > .panel { flex: none; }
+  #mapwrap { position: relative; min-height: 0; background: #0c1216; }
+  #map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+  #mapinfo { position: absolute; left: 10px; top: 10px; right: 84px; font-size: 16px; color: var(--text);
+    background: rgba(8,13,17,.86); padding: 5px 10px; border-left: 3px solid var(--amber); border-radius: 4px;
+    width: max-content; max-width: calc(100% - 94px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #mapnote { position: absolute; left: 10px; top: 46px; font-size: 15px; color: var(--amber);
+    background: rgba(8,13,17,.86); padding: 4px 10px; border-radius: 4px; display: none; max-width: 70%; }
+  #mapbar { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; z-index: 3; }
+  #mapbar button { width: 58px; height: 50px; font-size: 26px; font-weight: 700; color: var(--text);
+    background: rgba(11,17,24,.94); border: 1px solid var(--line2); border-radius: 7px; }
+  #mapbar button.small { font-size: 17px; letter-spacing: .5px; }
+  #mapbar button:hover { border-color: var(--amber); color: var(--amber); }
+  #mapbar button.on { border-color: var(--amber); color: var(--amber); background: #21190e; }
+  #layers { position: absolute; top: 10px; right: 78px; z-index: 4; display: none; width: 230px; }
+  body.showlayers #layers { display: block; }
+  #layers label { display: flex; align-items: center; gap: 10px; padding: 6px 2px; cursor: pointer; font-size: 17px; }
+  #layers label:hover { color: var(--amber); }
+  #layers input { width: 20px; height: 20px; accent-color: var(--amber); margin: 0; }
+  #legend { position: absolute; left: 10px; right: 10px; bottom: 10px; font-size: 14px; color: var(--dim);
+    background: rgba(8,13,17,.88); border: 1px solid var(--line2); padding: 5px 10px; border-radius: 6px;
+    display: flex; flex-wrap: wrap; gap: 2px 14px; pointer-events: none; }
+  #legend span { white-space: nowrap; }
+  #legend i { font-style: normal; margin-right: 4px; }
+
+  /* selected contact / threats (right column) */
+  #panel h3 { margin: 0 0 4px; font-size: 20px; display: flex; align-items: center; gap: 10px; line-height: 1.2; }
+  #panel h3 .ic { font-size: 18px; }
+  #panel table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  #panel td { padding: 3px 6px 3px 0; vertical-align: top; color: var(--text); border-bottom: 1px solid #222c33; }
+  #panel tr:last-child td { border-bottom: 0; }
   #panel td.k { color: var(--dim); white-space: nowrap; }
-  #panel .hint { color: var(--dim); font-size: 14px; margin-top: 6px; }
-  #legend { position: absolute; left: 12px; bottom: 10px; font-size: 15px; color: var(--dim);
-    background: rgba(11,15,20,.75); padding: 6px 10px; border-radius: 6px; }
-  #legend span { margin-right: 12px; white-space: nowrap; }
-  #comms { height: 100%; overflow-y: auto; padding: 10px 14px 24px; }
+  #panel .hint { color: var(--dim); font-size: 14px; margin-top: 7px; }
+  #panel .src { display: inline-block; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; padding: 1px 6px;
+    border: 1px solid var(--line2); border-radius: 4px; color: var(--dim); margin-bottom: 6px; }
+  .bar { height: 7px; background: #263038; border-radius: 6px; overflow: hidden; margin-top: 4px; }
+  .bar i { display: block; height: 100%; background: var(--amber); }
+  .hostile-t { color: var(--hostile); } .friendly-t { color: var(--friendly); } .neutral-t { color: var(--neutral); }
+  .unknown-t { color: var(--unknown); } .warn-t { color: var(--warning); } .ok-t { color: var(--ok); }
+  .trow { display: flex; align-items: baseline; gap: 8px; padding: 5px 4px; margin: 0 -4px; border-bottom: 1px solid #222c33;
+    cursor: pointer; border-radius: 4px; font-size: 16px; }
+  .trow:hover { background: var(--panel3); }
+  .trow.sel { background: var(--amberbg); box-shadow: inset 3px 0 0 var(--amber); }
+  .trow .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trow .d { font-family: var(--mono); color: var(--dim); white-space: nowrap; font-size: 15px; }
+  .badge { font-size: 11px; font-weight: 700; letter-spacing: 1px; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+  .badge.in { background: #5a1714; color: #ffd0cc; border: 1px solid var(--hostile); }
+  .badge.near { background: #3d2410; color: var(--warning); border: 1px solid var(--warning); }
+
+  /* threat level meter */
+  .lvl { display: flex; align-items: center; gap: 12px; }
+  .lvl .segs { display: flex; gap: 3px; flex: none; }
+  .lvl .segs i { width: 12px; height: 30px; border-radius: 2px; background: #263038; }
+  .lvl b { font-size: 21px; letter-spacing: 1px; display: block; }
+  .lvl small { display: block; color: var(--dim); font-size: 14px; line-height: 1.25; margin-top: 2px; }
+  .linkrow { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 15px; white-space: nowrap; overflow: hidden; }
+  .linkrow span:last-child { overflow: hidden; text-overflow: ellipsis; }
+  .bigstate { font-weight: 700; letter-spacing: 1px; font-size: 18px; margin-bottom: 4px; }
+
+  /* lower strip: one summary per page; click opens the page */
+  #lower { display: grid; grid-template-columns: 1.1fr 1.1fr 1.4fr 1fr 1.1fr .9fr; gap: 8px; min-height: 0; }
+  .mini { cursor: pointer; display: flex; flex-direction: column; }
+  .mini:hover { border-color: var(--amberdim); }
+  .mini:hover .ph { background: #1a1408; }
+  .mini .pb { flex: 1; min-height: 0; overflow: hidden; font-size: 15px; }
+  .mini .ln { padding: 3px 0; border-bottom: 1px solid #222c33; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mini .ln:last-child { border-bottom: 0; }
+  .mini .ln b { margin-right: 6px; }
+  .mini .clip { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; color: #cfd8e3; }
+  .mini .big { font-size: 34px; font-weight: 700; color: var(--amber); font-family: var(--mono); line-height: 1.1; }
+  .progress { height: 8px; background: #30383d; border-radius: 6px; overflow: hidden; margin: 6px 0; }
+  .progress i { display: block; height: 100%; background: var(--amber); }
+
+  /* map-only layout ("⛶"): the map fills the page; the contact panel floats over it while one is selected */
+  body.lay-map #pmap.on { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "m"; }
+  body.lay-map #colL, body.lay-map #lower, body.lay-map #pthreats { display: none; }
+  body.lay-map #colR { position: absolute; right: 86px; bottom: 60px; width: min(46%, 440px); max-height: 52%; z-index: 4; display: none; }
+  body.lay-map.has-sel #colR { display: flex; }
+
+  /* ------------------------------------------------ text pages (Brief, Checklist, Comms, Status, Alerts, Instructor) */
+  .sheet { height: 100%; display: flex; flex-direction: column; }
+  .sheet > .ph { font-size: 14px; padding: 9px 14px; }
+  .sheet > .scroll, .sheet > #comms { flex: 1 1 auto; min-height: 0; }
+  #comms { height: 100%; overflow-y: auto; padding: 6px 14px 24px; }
   .msg { padding: 8px 0; border-bottom: 1px solid var(--line); }
-  .msg .t { color: var(--dim); font-size: 16px; margin-right: 8px; font-variant-numeric: tabular-nums; }
-  .msg .who { font-weight: 700; margin-right: 6px; }
+  .msg .t { color: var(--faint); font-size: 15px; margin-right: 8px; font-family: var(--mono); }
+  .msg .who { font-weight: 700; margin-right: 8px; letter-spacing: .3px; }
   .pilot .who { color: var(--pilot); } .george .who { color: var(--george); } .overlord .who { color: var(--overlord); }
   .msg.order { color: var(--dim); font-size: .9em; } .order .who { color: var(--dim); }
   .msg.order.failed { color: var(--bad); }
-  .msg.picture { color: var(--dim); font-size: .9em; } .picture .who { color: var(--enemy); }
-  mark { background: #3b3410; color: var(--jtac); padding: 0 3px; border-radius: 3px; font-weight: 600; }
-  #status { padding: 14px; }
+  .msg.picture { color: var(--dim); font-size: .9em; } .picture .who { color: var(--hostile); }
+  mark { background: var(--amberbg); color: var(--amber); padding: 0 3px; border-radius: 3px; font-weight: 600; }
   #status table { width: 100%; border-collapse: collapse; }
-  #status td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  .dot { display: inline-block; width: 16px; height: 16px; border-radius: 50%; margin-right: 10px; vertical-align: -2px; }
-  .empty { color: var(--dim); padding: 20px; }
-  .scroll { height: 100%; overflow-y: auto; padding: 10px 16px 40px; }
-  h2 { font-size: 22px; margin: 18px 0 8px; color: var(--overlord); }
-  .entry { padding: 8px 10px; margin: 0 -10px; border-left: 4px solid transparent; }
+  #status td { padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  #status td:first-child { white-space: nowrap; }
+  #status tr:hover td { background: var(--panel3); }
+  .dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 10px; vertical-align: -1px; }
+  .empty { color: var(--dim); padding: 18px; }
+  .scroll { height: 100%; overflow-y: auto; padding: 6px 16px 40px; }
+  h2 { font-size: 15px; margin: 18px 0 8px; color: var(--amber); text-transform: uppercase; letter-spacing: 1.2px;
+    border-bottom: 1px solid var(--line); padding-bottom: 5px; }
+  .entry { padding: 8px 10px; margin: 0 -10px; border-left: 4px solid transparent; border-radius: 0 4px 4px 0; }
   .entry b { display: block; color: var(--text); }
   .entry div { color: #cfd8e3; }
-  .entry.hit { border-left-color: var(--jtac); background: #1b2633; }
-  #asked { color: var(--jtac); font-size: 17px; margin: 4px 0 6px; }
-  details summary { cursor: pointer; font-size: 22px; font-weight: 700; color: var(--overlord); margin: 18px 0 8px; }
+  .entry.hit { border-left-color: var(--amber); background: var(--amberbg); }
+  #asked { color: var(--amber); font-size: 17px; margin: 8px 0 6px; }
+  details summary { cursor: pointer; font-size: 15px; font-weight: 700; color: var(--amber); margin: 18px 0 8px;
+    text-transform: uppercase; letter-spacing: 1.2px; }
+  details summary:hover { color: #ffd27a; }
   #chkhead { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 6px 0 10px; }
-  #chkhead h2 { margin: 0; }
-  #chkstate { color: var(--dim); font-size: 18px; }
+  #chkhead h2 { margin: 0; border: 0; padding: 0; }
+  #chkstate { color: var(--dim); font-size: 17px; font-family: var(--mono); }
   .item { display: flex; gap: 12px; padding: 9px 10px; margin: 0 -10px; border-bottom: 1px solid var(--line); align-items: baseline; }
   .item .ic { width: 26px; text-align: center; font-weight: 700; flex: none; }
   .item .tx { flex: 1; }
-  .item .rd { font-size: 17px; white-space: nowrap; }
-  .item.current { background: #3b3410; border-left: 4px solid var(--jtac); }
-  .item.current .tx { color: var(--jtac); font-weight: 700; }
+  .item .rd { font-size: 16px; white-space: nowrap; }
+  .item.current { background: var(--amberbg); border-left: 4px solid var(--amber); }
+  .item.current .tx { color: var(--amber); font-weight: 700; }
   .item.done .tx { color: var(--dim); }
   .item.skipped .tx { color: var(--dim); text-decoration: line-through; }
-  .others { color: var(--dim); font-size: 17px; margin-top: 18px; }
-  /* alerts (30 Oct): a marker line under the tabs on every page; red and taller for a critical alert */
-  #alertbar { display: none; position: absolute; top: 56px; left: 0; right: 0; height: 34px; line-height: 34px;
-    padding: 0 14px; font-size: 18px; font-weight: 600; border-bottom: 1px solid var(--line); cursor: pointer;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 5; }
-  body.alerting #alertbar { display: block; }
-  body.alerting .page { top: 90px; }
-  body.alerting.crit .page { top: 104px; }
-  #alertbar.info { background: var(--panel); color: var(--dim); }
-  #alertbar.warning { background: #3b3410; color: var(--jtac); }
-  #alertbar.critical { background: #4a1414; color: #fecaca; height: 48px; line-height: 48px; font-size: 22px; }
-  #alerts { padding: 10px 14px 24px; }
-  .al { display: flex; gap: 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); }
-  .al .sev { flex: none; width: 92px; font-size: 15px; font-weight: 700; text-transform: uppercase; }
-  .al .t { color: var(--dim); font-size: 16px; font-variant-numeric: tabular-nums; flex: none; }
+  .others { color: var(--dim); font-size: 16px; margin-top: 18px; }
+  #alerts { padding: 6px 14px 24px; }
+  .al { display: flex; gap: 12px; align-items: baseline; padding: 10px 8px; margin: 0 -8px; border-bottom: 1px solid var(--line); }
+  .al .sev { flex: none; width: 92px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .al .t { color: var(--faint); font-size: 15px; font-family: var(--mono); flex: none; }
   .al .tx { flex: 1; }
-  .al.critical .sev { color: var(--bad); } .al.warning .sev { color: var(--jtac); } .al.info .sev { color: var(--dim); }
-  .al.done { color: var(--dim); } .al.done .sev { color: var(--dim); }
-  #alerts h2 { color: var(--dim); font-size: 18px; }
-  /* Instructor tab (Instructor Mode, Phase 2): exercise, live tolerances, last result, levels */
+  .al.critical { background: #2a1010; box-shadow: inset 4px 0 0 var(--hostile); }
+  .al.warning { box-shadow: inset 4px 0 0 var(--amber); }
+  .al.critical .sev { color: var(--bad); } .al.warning .sev { color: var(--amber); } .al.info .sev { color: var(--dim); }
+  .al.done { color: var(--dim); background: none; box-shadow: none; } .al.done .sev { color: var(--dim); }
+  #alerts h2 { color: var(--dim); }
+  /* Training tab (1 Nov: one training mode): mode + targets, exercise, live tolerances, scores */
+  .ins-mode { font-size: 22px; padding: 4px 0 8px; } .ins-mode b { font-family: var(--mono); }
+  .ins-tgt { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .ins-tgt span:last-child { font-family: var(--mono); color: var(--dim); }
   .instructor .who { color: #f0abfc; }
   .warlord .who { color: #fca5a5; } .darkside .who { color: #fcd34d; } .ai .who { color: #8b9bb0; }
-  .ins-state { color: var(--dim); font-size: 18px; margin: -4px 0 10px; }
-  .ins-live { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 24px; }
-  .ins-live b { font-variant-numeric: tabular-nums; }
-  .ins-score { font-size: 44px; font-weight: 700; margin: 4px 0; }
-  .ins-score span { font-size: 18px; color: var(--dim); font-weight: 400; margin-left: 10px; }
+  .ins-state { color: var(--dim); font-size: 17px; margin: -2px 0 10px; }
+  .ins-live { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 22px; }
+  .ins-live b { font-family: var(--mono); }
+  .ins-score { font-size: 46px; font-weight: 700; margin: 4px 0; color: var(--amber); font-family: var(--mono); }
+  .ins-score span { font-size: 17px; color: var(--dim); font-weight: 400; margin-left: 10px; font-family: var(--font); }
   .ins-ded { padding: 6px 0; border-bottom: 1px solid var(--line); }
-  .ins-ded .p { color: var(--bad); font-weight: 700; margin-right: 8px; font-variant-numeric: tabular-nums; }
-  .ins-nj { color: var(--dim); font-size: 17px; padding: 4px 0; }
+  .ins-ded .p { color: var(--bad); font-weight: 700; margin-right: 8px; font-family: var(--mono); }
+  .ins-nj { color: var(--dim); font-size: 16px; padding: 4px 0; }
   #instr table { width: 100%; border-collapse: collapse; }
   #instr td { padding: 7px 6px; border-bottom: 1px solid var(--line); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; } ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2c363e; border-radius: 6px; } ::-webkit-scrollbar-thumb:hover { background: var(--amberdim); }
+
+  /* ------------------------------------------------ sizes. OpenKneeboard's tab (about 1024 x 768) is the one that matters */
+  @media (max-height: 899px) {                 /* short: no lower strip (each summary is its own tab anyway) */
+    #pmap.on { grid-template-rows: minmax(0, 1fr); grid-template-areas: "l m r"; }
+    #lower { display: none; }
+  }
+  @media (max-width: 1360px) {                 /* the two side columns become one, right of the map */
+    #pmap.on { grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: fit-content(62%) minmax(0, 1fr) 196px;
+      grid-template-areas: "m r" "m l" "b b"; }
+    #lower { grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; }
+    #ptlev { order: -1; }                        /* one column: the threat level first */
+    .brand .bs { display: none; }
+  }
+  @media (max-width: 1360px) and (max-height: 899px) {
+    #pmap.on { grid-template-rows: fit-content(62%) minmax(0, 1fr); grid-template-areas: "m r" "m l"; }
+  }
+  @media (max-width: 1360px) and (min-height: 900px) { #pmap.on { grid-template-rows: fit-content(50%) minmax(0, 1fr) 330px; } }
+  @media (max-width: 1150px) {
+    #tabs button::before { display: none; }
+    #tabs button { font-size: 16px; letter-spacing: .3px; }
+    .brand .bn, .brand .bs { display: none; }
+    #tabs button { letter-spacing: 0; }
+    .lf { display: none; } .ls { display: inline; }
+    #live .ac { display: none; }
+    #pmap.on { grid-template-columns: minmax(0, 1fr) 280px; }
+  }
+  @media (max-width: 860px) {                  /* narrow: tabs get their own row */
+    #top { flex-wrap: wrap; height: auto; padding: 6px 8px; row-gap: 4px; }
+    #tabs { order: 3; flex-basis: 100%; }
+    #tabs button { height: 42px; font-size: 15px; }
+    .brand { margin-right: auto; }
+    #mstat { flex-direction: row; gap: 12px; align-items: center; }
+  }
+  @media (max-width: 760px) {                  /* phone / portrait: everything stacked, page scrolls */
+    .page { padding: 6px; }
+    #pmap.on { overflow-y: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: 62vh auto auto auto;
+      grid-template-areas: "m" "r" "l" "b"; }
+    .col, #lower { overflow: visible; min-height: auto; }
+    #mapwrap { min-height: 360px; }
+    #lower { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: none; grid-auto-rows: 170px; }
+    #mapinfo { font-size: 14px; }
+    #legend { font-size: 12px; }
+    #mapbar button { width: 48px; height: 44px; font-size: 22px; }
+    #layers { right: 66px; }
+  }
+  @media (max-width: 560px) {                  /* phone: seven tabs in two rows */
+    #tabs { flex-wrap: wrap; row-gap: 4px; }
+    #tabs button { flex-basis: 22%; height: 38px; }
+  }
 </style>
 </head>
 <body>
-<div id="tabs">
-  <button data-p="pmap" class="on">Map</button>
-  <button data-p="pbrief">Brief</button>
-  <button data-p="pcheck">Checklist</button>
-  <button data-p="pcomms">Comms</button>
-  <button data-p="pstatus">Status</button>
-  <button data-p="palerts" id="alerttab">Alerts</button>
-  <button data-p="pinstr">Instr</button>
-</div>
+<header id="top">
+  <div class="brand"><span class="mark">✦</span><div><div class="bn">DCS GEORGE AI</div><div class="bs">TACTICAL MISSION SYSTEM</div></div></div>
+  <nav id="tabs" aria-label="Kneeboard pages">
+    <button data-p="pmap" data-i="⌖" class="on">Map</button>
+    <button data-p="pbrief" data-i="▤">Brief</button>
+    <button data-p="pcheck" data-i="☑"><span class="lf">Checklist</span><span class="ls">Check</span></button>
+    <button data-p="pcomms" data-i="◈">Comms</button>
+    <button data-p="pstatus" data-i="◉">Status</button>
+    <button data-p="palerts" data-i="▲" id="alerttab">Alerts</button>
+    <button data-p="pinstr" data-i="◆"><span class="lf">Training</span><span class="ls">Training</span></button>
+  </nav>
+  <div id="mstat"><span id="live" class="wait">CONNECTING</span><span id="clock"><small>LOCAL</small>--:--:--</span></div>
+</header>
 <div id="alertbar" title="Alerts"></div>
 
+<main id="pages">
 <div id="pmap" class="page on">
-  <canvas id="map"></canvas>
-  <div id="mapinfo">Waiting for DCS…</div>
-  <div id="mapnote"></div>
-  <div id="panel"></div>
-  <div id="mapbar">
-    <button id="zin" title="Zoom in">+</button>
-    <button id="zout" title="Zoom out">−</button>
-    <button id="orient" title="North up / track up">N</button>
-  </div>
-  <div id="legend">
-    <span style="color:var(--me)">▲ you</span><span style="color:var(--me);opacity:.6">— your track</span><span style="color:var(--outcast)">◆ Outcast</span>
-    <span style="color:var(--flight)">● Overlord</span><span style="color:var(--enemy)">■ ground ▲ air □ last known</span>
-    <span style="color:var(--jtac)">✛ JTAC</span><span style="color:var(--named)">◇ waypoint</span>
-  </div>
+  <aside id="colL" class="col">
+    <section class="panel"><div class="ph">Mission overview <span id="ovac"></span></div><div class="pb" id="ovw"><div class="muted">Waiting for DCS…</div></div></section>
+    <section class="panel"><div class="ph">Tactical summary <span id="tsrc"></span></div><div class="pb" id="tsum"></div></section>
+    <section class="panel" id="ptlev"><div class="ph">Threat level</div><div class="pb" id="tlev"></div></section>
+    <section class="panel"><div class="ph">DCS link</div><div class="pb" id="links"><div class="muted">Waiting for the program…</div></div></section>
+  </aside>
+
+  <section id="mapwrap" class="panel" aria-label="Tactical map">
+    <canvas id="map"></canvas>
+    <div id="mapinfo">Waiting for DCS…</div>
+    <div id="mapnote"></div>
+    <div id="mapbar">
+      <button id="zin" title="Zoom in">+</button>
+      <button id="zout" title="Zoom out">−</button>
+      <button id="orient" class="small" title="North up / track up">N</button>
+      <button id="layerbtn" class="small" title="Map layers">LYR</button>
+      <button id="layoutbtn" title="Map only / dashboard">⛶</button>
+    </div>
+    <div id="layers" class="panel"><div class="ph">Map layers</div><div class="pb" id="layerlist"></div></div>
+    <div id="legend">
+      <span style="color:var(--me)"><i>▲</i>you</span><span style="color:var(--track)"><i>—</i>your track</span>
+      <span style="color:var(--friendly)"><i>●</i>Overlord</span><span style="color:var(--outcast)"><i>◆</i>Outcast</span>
+      <span style="color:var(--hostile)"><i>■</i>hostile ground <i>▲</i>air <i>□</i>last known</span>
+      <span style="color:var(--neutral)"><i>■</i>neutral</span><span style="color:var(--unknown)"><i>■</i>unknown</span>
+      <span style="color:var(--hostile)"><i>◌</i>threat ring</span>
+      <span style="color:var(--jtac)"><i>✛</i>JTAC</span><span style="color:var(--named)"><i>◇</i>waypoint</span>
+    </div>
+  </section>
+
+  <aside id="colR" class="col">
+    <section class="panel" id="psel"><div class="ph">Selected contact <span id="seltid"></span></div><div class="pb"><div id="panel"></div></div></section>
+    <section class="panel" id="pthreats"><div class="ph">Threat assessment <span id="thcount"></span></div><div class="pb" id="threats"></div></section>
+  </aside>
+
+  <section id="lower">
+    <section class="panel mini" data-go="pbrief"><div class="ph">Mission brief <span id="mbrief-n"></span></div><div class="pb" id="mbrief"><span class="muted">No briefing yet.</span></div></section>
+    <section class="panel mini" data-go="pcheck"><div class="ph">Checklist <span id="mcheck-n"></span></div><div class="pb" id="mcheck"><span class="muted">Waiting…</span></div></section>
+    <section class="panel mini" data-go="pcomms"><div class="ph">Comms</div><div class="pb" id="mcomms"><span class="muted">Nothing said yet.</span></div></section>
+    <section class="panel mini" data-go="pstatus"><div class="ph">Status <span id="mstatus-n"></span></div><div class="pb" id="mstatus"><span class="muted">Waiting…</span></div></section>
+    <section class="panel mini" data-go="palerts"><div class="ph">Alerts <span id="malerts-n"></span></div><div class="pb" id="malerts"><span class="muted">No alerts.</span></div></section>
+    <section class="panel mini" data-go="pinstr"><div class="ph">Training</div><div class="pb" id="minstr"><span class="muted">Waiting…</span></div></section>
+  </section>
 </div>
-<div id="pbrief" class="page"><div id="brief" class="scroll"><div class="empty">No briefing yet. It arrives when DCS loads a mission
-  (and from data/campaign_briefing.json).</div></div></div>
-<div id="pcheck" class="page"><div id="check" class="scroll"><div class="empty">Waiting for the program…</div></div></div>
-<div id="pcomms" class="page"><div id="comms"><div class="empty">Nothing said yet.</div></div></div>
-<div id="pstatus" class="page"><div id="status"><div class="empty">Waiting for the program…</div></div></div>
-<div id="palerts" class="page"><div id="alerts" class="scroll"><div class="empty">No alerts.</div></div></div>
-<div id="pinstr" class="page"><div id="instr" class="scroll"><div class="empty">Waiting for the program…</div></div></div>
+<div id="pbrief" class="page"><section class="panel sheet"><div class="ph">Mission brief <span id="briefmeta"></span></div><div id="brief" class="scroll"><div class="empty">No briefing yet. It arrives when DCS loads a mission
+  (and from data/campaign_briefing.json).</div></div></section></div>
+<div id="pcheck" class="page"><section class="panel sheet"><div class="ph">Checklist</div><div id="check" class="scroll"><div class="empty">Waiting for the program…</div></div></section></div>
+<div id="pcomms" class="page"><section class="panel sheet"><div class="ph">Communications log <span>newest at the bottom</span></div><div id="comms"><div class="empty">Nothing said yet.</div></div></section></div>
+<div id="pstatus" class="page"><section class="panel sheet"><div class="ph">System status</div><div id="status" class="scroll"><div class="empty">Waiting for the program…</div></div></section></div>
+<div id="palerts" class="page"><section class="panel sheet"><div class="ph">Alerts <span>“kneeboard, acknowledge”</span></div><div id="alerts" class="scroll"><div class="empty">No alerts.</div></div></section></div>
+<div id="pinstr" class="page"><section class="panel sheet"><div class="ph">Training <span>“training mode on / off”</span></div><div id="instr" class="scroll"><div class="empty">Waiting for the program…</div></div></section></div>
+</main>
 
 <script>
 "use strict";
 const PAGE_VERSION = "__PAGE_VERSION__";      // filled in by kneeboard/server.py
+const $ = id => document.getElementById(id);
+function setHTML(el, html) { if (el._h !== html) { el._h = html; el.innerHTML = html; } }   // repaint only on change
 // ---------------------------------------------------------------- tabs (remembered per viewer)
 const tabs = document.querySelectorAll("#tabs button");
 function show(id) {
   tabs.forEach(b => b.classList.toggle("on", b.dataset.p === id));
   document.querySelectorAll(".page").forEach(p => p.classList.toggle("on", p.id === id));
   try { localStorage.setItem("kb.tab", id); } catch (e) {}
-  if (id === "pmap") draw();
+  if (id === "pmap") resize();
   if (id === "pcomms") scrollComms();
   if (id === "pbrief" && briefPending) { briefPending = false; scrollToHit(); }
   if (id === "pcheck") scrollToCurrent();
 }
 const isOn = id => document.getElementById(id).classList.contains("on");
 tabs.forEach(b => b.addEventListener("click", () => show(b.dataset.p)));
+document.querySelectorAll("#lower .mini").forEach(m => m.addEventListener("click", () => show(m.dataset.go)));
 
 // ---------------------------------------------------------------- map
 const cv = document.getElementById("map"), ctx = cv.getContext("2d");
@@ -164,39 +383,97 @@ const info = document.getElementById("mapinfo");
 const ZOOMS = [2.5, 5, 10, 20, 40, 80, 160];
 let zoom = 3, trackUp = false, M = null, T = null;   // T: your track since mission start
 try { zoom = +(localStorage.getItem("kb.zoom") ?? 3); trackUp = localStorage.getItem("kb.trackup") === "1"; } catch (e) {}
+if (!(zoom >= 0 && zoom < ZOOMS.length)) zoom = 3;
 document.getElementById("zin").onclick = () => { zoom = Math.max(0, zoom - 1); save(); draw(); };
 document.getElementById("zout").onclick = () => { zoom = Math.min(ZOOMS.length - 1, zoom + 1); save(); draw(); };
 const orientBtn = document.getElementById("orient");
 orientBtn.onclick = () => { trackUp = !trackUp; save(); draw(); };
 function save() { try { localStorage.setItem("kb.zoom", zoom); localStorage.setItem("kb.trackup", trackUp ? "1" : "0"); } catch (e) {} }
 
+// layers (1 Nov): what the map draws, remembered per viewer like zoom; the server's track switch still applies
+const LAYERS = [["rings", "Threat rings"], ["track", "Your track"], ["route", "Route"], ["wpts", "Named waypoints"],
+                ["ground", "Ground units"], ["air", "Aircraft"], ["naval", "Ships"], ["friendly", "Friendly flights"],
+                ["labels", "Labels"]];
+let L = Object.fromEntries(LAYERS.map(l => [l[0], true]));
+try { Object.assign(L, JSON.parse(localStorage.getItem("kb.layers") || "{}")); } catch (e) {}
+$("layerlist").innerHTML = LAYERS.map(([k, t]) => `<label><input type="checkbox" data-k="${k}"${L[k] ? " checked" : ""}>${t}</label>`).join("");
+$("layerlist").addEventListener("change", e => {
+  const k = e.target.dataset.k; if (!k) return;
+  L[k] = e.target.checked;
+  try { localStorage.setItem("kb.layers", JSON.stringify(L)); } catch (e2) {}
+  draw();
+});
+const layerBtn = $("layerbtn");
+layerBtn.onclick = () => { document.body.classList.toggle("showlayers"); layerBtn.classList.toggle("on", document.body.classList.contains("showlayers")); };
+// layout (1 Nov): "auto" = dashboard around the map, "map" = the map alone (as before the redesign)
+let layout = "auto";
+try { layout = localStorage.getItem("kb.layout") === "map" ? "map" : "auto"; } catch (e) {}
+const layoutBtn = $("layoutbtn");
+function applyLayout() {
+  document.body.classList.toggle("lay-map", layout === "map");
+  layoutBtn.classList.toggle("on", layout === "map");
+  layoutBtn.title = layout === "map" ? "Show the dashboard" : "Map only";
+}
+layoutBtn.onclick = () => { layout = layout === "map" ? "auto" : "map"; try { localStorage.setItem("kb.layout", layout); } catch (e) {} applyLayout(); };
+applyLayout();
+
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const UNIT_M = () => (M && M.units === "km") ? 1000 : 1852;
+const UNIT = () => (M && M.units === "km") ? "km" : "nm";
 
 function resize() {
   const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  if (r.width < 2 || r.height < 2) return;               // map page hidden: drawn when it shows
+  const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   draw();
 }
 window.addEventListener("resize", resize);
+if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(document.getElementById("mapwrap"));
+
+// colour by side: "aff" from the tactical picture; the raw enemy lists have none (they are enemies)
+function affOf(u) { return u.aff || (u.neutral ? "neutral" : "hostile"); }
+function sideCol(u) { const a = affOf(u); return css(a === "neutral" ? "--neutral" : a === "unknown" ? "--unknown" : a === "friendly" ? "--friendly" : "--hostile"); }
+const keyOf = u => u.tid || ("id" + u.id);
+let hits = [];             // where each marker was drawn, for clicking
+let selKey = null, voiceTid = null;
 
 function draw() {
   const W = cv.clientWidth, H = cv.clientHeight;
-  ctx.fillStyle = css("--bg"); ctx.fillRect(0, 0, W, H);
+  if (W < 2 || H < 2) return;
+  hits = [];
+  // background: dark terrain-tinted plot
+  const g0 = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.7);
+  g0.addColorStop(0, "#17221f"); g0.addColorStop(0.55, "#111a1b"); g0.addColorStop(1, "#0a1014");
+  ctx.fillStyle = g0; ctx.fillRect(0, 0, W, H);
   orientBtn.textContent = trackUp ? "TU" : "N";
-  if (!M || !M.me) { info.textContent = M ? "No position from DCS yet." : "Waiting for DCS…"; return; }
+  if (!M || !M.me) {
+    info.textContent = M ? "No position from DCS yet." : "Waiting for DCS…";
+    ctx.fillStyle = css("--faint"); ctx.font = "600 20px " + css("--font"); ctx.textAlign = "center";
+    ctx.fillText(M ? "NO POSITION FROM DCS" : "WAITING FOR DCS", W / 2, H / 2); ctx.textAlign = "start";
+    sidePanels(); return;
+  }
   const me = M.me, cx = W / 2, cy = H * (trackUp ? 0.62 : 0.5);
-  const radiusU = ZOOMS[zoom], unitM = UNIT_M(), unit = M.units === "km" ? "km" : "nm";
+  const radiusU = ZOOMS[zoom], unitM = UNIT_M(), unit = UNIT();
   const pxPerM = Math.min(W, H) * 0.45 / (radiusU * unitM);
   const rot = trackUp ? -me.hdg * Math.PI / 180 : 0, cosL = Math.cos(me.lat * Math.PI / 180);
-  const P = (lat, lon) => {
-    const n = (lat - me.lat) * 111320, e = (lon - me.lon) * 111320 * cosL;
+  const Pm = (e, n) => {             // metres east / north of you -> screen
     const x = e * Math.cos(rot) - n * Math.sin(rot), y = e * Math.sin(rot) + n * Math.cos(rot);
     return [cx + x * pxPerM, cy - y * pxPerM];
   };
+  const P = (lat, lon) => Pm((lon - me.lon) * 111320 * cosL, (lat - me.lat) * 111320);
+  const F = css("--font");
+  // grid (half a ring apart, turns with the map)
+  const step = radiusU * 0.5 * unitM, span = Math.ceil(Math.hypot(W, H) / pxPerM / step / 2) + 1;
+  ctx.strokeStyle = css("--grid"); ctx.lineWidth = 1; ctx.beginPath();
+  for (let k = -span; k <= span; k++) {
+    let [a, b] = [Pm(k * step, -span * step), Pm(k * step, span * step)]; ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
+    [a, b] = [Pm(-span * step, k * step), Pm(span * step, k * step)]; ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
+  }
+  ctx.stroke();
   // range rings + compass ticks
-  ctx.strokeStyle = css("--line"); ctx.fillStyle = css("--dim"); ctx.lineWidth = 1; ctx.font = "16px Segoe UI, sans-serif";
+  ctx.strokeStyle = css("--rangering"); ctx.fillStyle = css("--dim"); ctx.lineWidth = 1; ctx.font = "15px " + F;
   for (const f of [0.5, 1, 1.5]) {
     const r = radiusU * f * unitM * pxPerM;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.stroke();
@@ -204,14 +481,16 @@ function draw() {
   }
   for (let b = 0; b < 360; b += 30) {
     const a = (b * Math.PI / 180) + rot, r1 = radiusU * unitM * pxPerM, r2 = r1 + 12;
+    ctx.strokeStyle = css("--rangering");
     ctx.beginPath(); ctx.moveTo(cx + Math.sin(a) * r1, cy - Math.cos(a) * r1); ctx.lineTo(cx + Math.sin(a) * r2, cy - Math.cos(a) * r2); ctx.stroke();
     const lab = b === 0 ? "N" : b === 90 ? "E" : b === 180 ? "S" : b === 270 ? "W" : String(b / 10).padStart(2, "0");
-    ctx.fillStyle = b % 90 === 0 ? css("--text") : css("--dim");
+    ctx.fillStyle = b === 0 ? css("--amber") : b % 90 === 0 ? css("--text") : css("--dim");
+    ctx.font = (b % 90 === 0 ? "bold 16px " : "15px ") + F;
     ctx.fillText(lab, cx + Math.sin(a) * (r2 + 14) - 8, cy - Math.cos(a) * (r2 + 14) + 6);
   }
   // your track since mission start: a thin line under everything else
-  if (T && T.on && T.segs) {
-    ctx.strokeStyle = css("--me"); ctx.globalAlpha = 0.4; ctx.lineWidth = 2; ctx.lineJoin = "round";
+  if (L.track && T && T.on && T.segs) {
+    ctx.strokeStyle = css("--track"); ctx.lineWidth = 2; ctx.lineJoin = "round";
     for (const seg of T.segs) {
       if (seg.length < 1) continue;
       ctx.beginPath();
@@ -220,86 +499,102 @@ function draw() {
       if (seg === T.segs[T.segs.length - 1]) ctx.lineTo(mx, my);      // up to where you are now
       ctx.stroke();
     }
-    ctx.globalAlpha = 1;
   }
   // a stale enemy picture (Export.lua's scan stopped): drawn dimmed, age on the info line
   const staleEnemy = M.enemy_age !== null && M.enemy_age !== undefined;
+  const showG = g => g.cat === "naval" ? L.naval : L.ground;
   ctx.globalAlpha = staleEnemy ? 0.35 : 1;
   // threat rings
-  for (const g of M.ground) if (g.ring_m) {
+  if (L.rings) for (const g of M.ground) if (g.ring_m && showG(g)) {
     const [x, y] = P(g.lat, g.lon), r = g.ring_m * pxPerM;
     if (r < 3) continue;
-    ctx.strokeStyle = css("--ring"); ctx.setLineDash([8, 6]); ctx.lineWidth = 2;
+    ctx.strokeStyle = affOf(g) === "hostile" ? css("--ring") : sideCol(g); ctx.setLineDash([8, 6]); ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
   }
   ctx.globalAlpha = 1;
   // route
-  if (M.route.length) {
+  if (L.route && M.route.length) {
     ctx.strokeStyle = css("--route"); ctx.lineWidth = 2; ctx.setLineDash([10, 8]); ctx.beginPath();
     M.route.forEach((p, i) => { const [x, y] = P(p.lat, p.lon); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
     ctx.stroke(); ctx.setLineDash([]);
     for (const p of M.route) {
       const [x, y] = P(p.lat, p.lon), next = p.n === M.wp_next;
-      ctx.fillStyle = next ? css("--text") : css("--bg"); ctx.strokeStyle = css("--route");
+      ctx.fillStyle = next ? css("--amber") : "#0c1216"; ctx.strokeStyle = next ? css("--amber") : css("--route"); ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(x, y, 12, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = next ? css("--bg") : css("--route"); ctx.font = "bold 14px Segoe UI, sans-serif";
+      ctx.fillStyle = next ? "#0c1216" : css("--route"); ctx.font = "bold 14px " + F;
       ctx.fillText(p.n, x - (p.n > 9 ? 8 : 4), y + 5);
     }
   }
   // labels: skipped when they would land on one already drawn (they're drawn most important last)
   const placed = [];
   const label = (x, y, text, color, force) => {
-    ctx.font = "15px Segoe UI, sans-serif";
+    if (!L.labels && !force) return;
+    ctx.font = "15px " + F;
     const w = ctx.measureText(text).width, bx = x + 12, by = y - 8;
     const hit = placed.some(p => bx < p[0] + p[2] && bx + w > p[0] && by - 15 < p[1] && by > p[1] - 15);
     if (hit && !force) return;
-    placed.push([bx, by, w]); ctx.fillStyle = color; ctx.fillText(text, bx, by);
+    placed.push([bx, by, w]);
+    ctx.fillStyle = "rgba(8,13,17,.72)"; ctx.fillRect(bx - 3, by - 14, w + 6, 19);
+    ctx.fillStyle = color; ctx.fillText(text, bx, by);
   };
   // the JTAC target: by its track number when the picture has one (it follows a moving target), else by position
   const jtacId = M.jtac ? (M.jtac.tid ? M.ground.find(g => g.tid === M.jtac.tid)
                                       : M.ground.find(g => Math.abs(g.lat - M.jtac.lat) < 1e-5 && Math.abs(g.lon - M.jtac.lon) < 1e-5)) : null;
   if (M.jtac) { const [x, y] = P(M.jtac.lat, M.jtac.lon); label(x + 10, y, "JTAC: " + short(M.jtac.type), css("--jtac"), true); }
   // named waypoints
-  for (const w of M.named) {
+  if (L.wpts) for (const w of M.named) {
     const [x, y] = P(w.lat, w.lon); ctx.strokeStyle = css("--named"); ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 9, y); ctx.lineTo(x, y + 9); ctx.lineTo(x - 9, y); ctx.closePath(); ctx.stroke();
     label(x, y, w.name, css("--named"));
   }
-  ctx.globalAlpha = staleEnemy ? 0.35 : 1;
-  // enemy ground: filled = in the latest scan; hollow = last known position (out of coverage / lost), with its age
-  const sel = M.panel ? M.panel.tid : null;
+  // the selected contact: a voice "kneeboard, contact 42" (M.panel) or a tap on the map, whichever came last
+  const sel = selKey || (M.panel ? M.panel.tid : null);
+  const bracket = (x, y, r) => {
+    ctx.strokeStyle = css("--amber"); ctx.lineWidth = 2.5; ctx.beginPath();
+    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      ctx.moveTo(x + sx * r, y + sy * (r - 6)); ctx.lineTo(x + sx * r, y + sy * r); ctx.lineTo(x + sx * (r - 6), y + sy * r);
+    }
+    ctx.stroke();
+  };
+  // enemy (and neutral / unknown) ground: filled = in the latest scan; hollow = last known position, with its age
   for (const g of M.ground) {
+    if (!showG(g)) continue;
     const [x, y] = P(g.lat, g.lon); if (x < -40 || y < -40 || x > W + 40 || y > H + 40) continue;
-    const old = isOld(g), col = g.neutral ? css("--dim") : css("--enemy");
+    const old = isOld(g), col = sideCol(g), k = keyOf(g);
     ctx.globalAlpha = (staleEnemy ? 0.35 : 1) * (old ? 0.6 : 1);
     if (old) { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(x - 6, y - 6, 12, 12); }
-    else { ctx.fillStyle = col; ctx.fillRect(x - 6, y - 6, 12, 12); }
-    if (g.tid && g.tid === sel) { ctx.strokeStyle = css("--text"); ctx.lineWidth = 2; ctx.strokeRect(x - 11, y - 11, 22, 22); }
+    else { ctx.fillStyle = col; ctx.fillRect(x - 6, y - 6, 12, 12); ctx.strokeStyle = "#05080a"; ctx.lineWidth = 1; ctx.strokeRect(x - 6.5, y - 6.5, 13, 13); }
+    hits.push([x, y, k, "g", g]);
+    if (k === sel) { ctx.globalAlpha = 1; bracket(x, y, 13); }
     if (jtacId && g === jtacId) continue;
     const ringTxt = g.ring_m ? ` · ring ~${Math.round(g.ring_m / unitM)} ${unit}` : "";
-    if (g.ad || radiusU <= 10 || g.george || g.tid === sel) label(x, y, short(g.type) + ringTxt + tags(g, radiusU), col);
+    if (g.ad || radiusU <= 10 || g.george || k === sel) label(x, y, short(g.type) + ringTxt + tags(g, radiusU), col, k === sel);
   }
   // enemy air
-  for (const a of M.air) {
-    const [x, y] = P(a.lat, a.lon), old = isOld(a), col = a.neutral ? css("--dim") : css("--enemy");
+  if (L.air) for (const a of M.air) {
+    const [x, y] = P(a.lat, a.lon), old = isOld(a), col = sideCol(a), k = keyOf(a);
     ctx.globalAlpha = (staleEnemy ? 0.35 : 1) * (old ? 0.6 : 1);
     ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 8, y + 7); ctx.lineTo(x - 8, y + 7); ctx.closePath();
     old ? ctx.stroke() : ctx.fill();
-    label(x, y, `${short(a.type)} ${Math.round(a.alt_ft / 1000)}k` + tags(a, 0), col);
+    hits.push([x, y, k, "a", a]);
+    if (k === sel) { ctx.globalAlpha = 1; bracket(x, y, 14); }
+    label(x, y, `${short(a.type)} ${Math.round(a.alt_ft / 1000)}k` + tags(a, 0), col, k === sel);
   }
   ctx.globalAlpha = 1;
   // Overlord's flights
-  for (const f of M.flights) for (const [i, p] of f.pts.entries()) {
+  if (L.friendly) for (const f of M.flights) for (const [i, p] of f.pts.entries()) {
     const [x, y] = P(p[0], p[1]); ctx.fillStyle = css("--flight");
     ctx.beginPath(); ctx.arc(x, y, 7, 0, 2 * Math.PI); ctx.fill();
-    if (i === 0) label(x, y, `${f.cs} (${f.kind})`, css("--flight"));
+    const k = "fl:" + f.cs;
+    if (i === 0) { hits.push([x, y, k, "f", f]); if (k === sel) bracket(x, y, 13); label(x, y, `${f.cs} (${f.kind})`, css("--flight"), k === sel); }
   }
   // Outcasts
-  for (const o of M.outcasts) {
-    const [x, y] = P(o.lat, o.lon); ctx.fillStyle = css("--outcast");
+  if (L.friendly) for (const o of M.outcasts) {
+    const [x, y] = P(o.lat, o.lon), k = "oc:" + o.n; ctx.fillStyle = css("--outcast");
     ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 9, y); ctx.lineTo(x, y + 9); ctx.lineTo(x - 9, y); ctx.closePath(); ctx.fill();
-    label(x, y, `Outcast ${o.n}`, css("--outcast"));
+    hits.push([x, y, k, "o", o]); if (k === sel) bracket(x, y, 14);
+    label(x, y, `Outcast ${o.n}`, css("--outcast"), k === sel);
   }
   // JTAC target
   if (M.jtac) {
@@ -308,14 +603,15 @@ function draw() {
   }
   // you
   ctx.save(); ctx.translate(cx, cy); ctx.rotate((me.hdg * Math.PI / 180) + rot);
-  ctx.fillStyle = css("--me"); ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(10, 12); ctx.lineTo(0, 6); ctx.lineTo(-10, 12); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = css("--me"); ctx.strokeStyle = "#05080a"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(10, 12); ctx.lineTo(0, 6); ctx.lineTo(-10, 12); ctx.closePath(); ctx.stroke(); ctx.fill();
   ctx.restore();
   // George's entries the picture can't place (a class only, or no unit fits): listed, never drawn
   note.style.display = (M.george && M.george.length) ? "block" : "none";
   note.textContent = (M.george && M.george.length) ? "George: " + M.george.join(" · ") : "";
-  showPanel(M.panel);
   info.textContent = `${me.ac || "aircraft"} · hdg ${String(Math.round(me.hdg)).padStart(3, "0")} · ${me.alt_ft.toLocaleString()} ft · ${me.kts} kt · ${trackUp ? "track up" : "north up"}`
     + (staleEnemy ? (M.enemy_age < 0 ? " · no enemy picture" : ` · enemy picture ${M.enemy_age}+ s old`) : "");
+  sidePanels();
 }
 function short(t) { return String(t || "").replace(/_/g, " ").slice(0, 22); }
 const isOld = u => u.status === "out_of_coverage" || u.status === "lost";
@@ -330,19 +626,156 @@ function tags(u, radiusU) {
   return t;
 }
 const note = document.getElementById("mapnote"), panelEl = document.getElementById("panel");
-function showPanel(p) {        // "kneeboard, contact 42": the track's details, from the picture only
-  if (!p) { panelEl.style.display = "none"; return; }
-  panelEl.innerHTML = `<h3>${esc(p.tid)} · ${esc(p.title)}</h3><table>`
-    + p.rows.map(r => `<tr><td class="k">${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("")
-    + `</table><div class="hint">"Kneeboard, close contact" to close</div>`;
-  panelEl.style.display = "block";
+
+// tap a marker: show what the map knows about it (display only; orders still need "kneeboard, contact N")
+cv.addEventListener("click", ev => {
+  const r = cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
+  let best = null, bd = 24 * 24;
+  for (const h of hits) { const d = (h[0] - x) ** 2 + (h[1] - y) ** 2; if (d < bd) { bd = d; best = h; } }
+  selKey = best ? best[2] : null;
+  draw();
+});
+$("threats").addEventListener("click", ev => {
+  const row = ev.target.closest(".trow"); if (!row) return;
+  selKey = row.dataset.k === selKey ? null : row.dataset.k; draw();
+});
+
+// ---------------------------------------------------------------- dashboard panels around the map (from the map feed)
+function geo(u) {            // distance (map units) and bearing from you
+  const me = M.me, cosL = Math.cos(me.lat * Math.PI / 180);
+  const n = (u.lat - me.lat) * 111320, e = (u.lon - me.lon) * 111320 * cosL;
+  return { m: Math.hypot(n, e), brg: (Math.atan2(e, n) * 180 / Math.PI + 360) % 360 };
+}
+const fmtD = m => `${(m / UNIT_M()).toFixed(m / UNIT_M() < 10 ? 1 : 0)} ${UNIT()}`;
+const brg3 = b => String(Math.round(b) % 360).padStart(3, "0") + "°";
+const kv = (k, v, cls) => `<div class="kv"><span>${k}</span><b${cls ? ` class="${cls}"` : ""}>${v}</b></div>`;
+const AFF_T = { hostile: ["Hostile", "hostile-t"], neutral: ["Neutral", "neutral-t"], unknown: ["Unknown", "unknown-t"], friendly: ["Friendly", "friendly-t"] };
+const CONF = { high: 100, medium: 66, low: 33 };
+let lastAlerts = null, lastStatus = null;
+
+function threatList() {      // air defence with a ring, nearest edge first, and enemy aircraft
+  if (!M || !M.me) return [];
+  const out = [];
+  for (const g of M.ground) if (g.ring_m && affOf(g) === "hostile") {
+    const d = geo(g); out.push({ u: g, d, edge: d.m - g.ring_m, air: false });
+  }
+  for (const a of M.air) if (affOf(a) === "hostile") { const d = geo(a); out.push({ u: a, d, edge: d.m, air: true }); }
+  return out.sort((a, b) => a.edge - b.edge);
+}
+function threatLevel(list) {
+  const crit = lastAlerts && lastAlerts.top && lastAlerts.top.severity === "critical";
+  const inside = list.filter(t => !t.air && t.edge <= 0), near = list.filter(t => !t.air && t.edge > 0 && t.edge < 5000);
+  const air = list.filter(t => t.air && t.d.m < 37000);
+  const hostiles = M && M.me ? M.ground.filter(g => affOf(g) === "hostile").length + M.air.length : 0;
+  if (crit) return [4, "CRITICAL", "--hostile", lastAlerts.top.text];
+  if (inside.length) return [3, "HIGH", "--hostile", `Inside ${inside.length} threat ring${inside.length > 1 ? "s" : ""}: ${short(inside[0].u.type)}`];
+  if (near.length || air.length) return [2, "ELEVATED", "--warning",
+    near.length ? `${short(near[0].u.type)} ring ${fmtD(near[0].edge)} away` : `${short(air[0].u.type)} at ${fmtD(air[0].d.m)}`];
+  if (hostiles) return [1, "LOW", "--amber", `${hostiles} hostile${hostiles > 1 ? "s" : ""} known, outside all rings`];
+  return [0, "CLEAR", "--ok", M && M.me ? "No hostiles in the picture" : "No position yet"];
+}
+
+function sidePanels() {
+  const me = M && M.me;
+  // mission overview
+  if (me) {
+    let wp = "—";
+    const nx = (M.route || []).find(p => p.n === M.wp_next);
+    if (nx) { const d = geo(nx); wp = `WP ${nx.n} · ${brg3(d.brg)} ${fmtD(d.m)}`; }
+    setHTML($("ovac"), esc(short(me.ac)));
+    setHTML($("ovw"), kv("Heading", String(Math.round(me.hdg)).padStart(3, "0") + "°") + kv("Altitude", `${me.alt_ft.toLocaleString()} ft`)
+      + kv("Speed", `${me.kts} kt`) + kv("Next", wp) + kv("Map range", `${ZOOMS[zoom]} ${UNIT()} · ${trackUp ? "TU" : "N up"}`));
+  } else {
+    setHTML($("ovac"), ""); setHTML($("ovw"), `<div class="muted">${M ? "No position from DCS yet." : "Waiting for DCS…"}</div>`);
+  }
+  // tactical summary
+  if (M) {
+    const all = [...M.ground, ...M.air], cnt = a => all.filter(u => affOf(u) === a && !isOld(u)).length;
+    const fr = M.outcasts.length + M.flights.reduce((s, f) => s + f.pts.length, 0), lastKnown = all.filter(isOld).length;
+    const sym = c => `<i class="sym" style="background:var(${c})"></i>`;
+    setHTML($("tsrc"), M.source === "picture" ? "PICTURE" : "LISTS");
+    setHTML($("tsum"), kv(sym("--friendly") + "Friendly", fr) + kv(sym("--hostile") + "Hostile", cnt("hostile"))
+      + kv(sym("--neutral") + "Neutral", cnt("neutral")) + kv(sym("--unknown") + "Unknown", cnt("unknown"))
+      + (lastKnown ? kv("<span class='faint'>□</span>&nbsp; Last known", lastKnown) : "")
+      + kv("◌&nbsp; Threat rings", M.ground.filter(g => g.ring_m).length)
+      + (M.jtac ? kv("✛&nbsp; JTAC", esc(short(M.jtac.type)), "txt") : ""));
+  }
+  // threat level + threat assessment
+  const list = threatList(), [lv, word, col, why] = threatLevel(list);
+  setHTML($("tlev"), `<div class="lvl"><div class="segs">${[1, 2, 3, 4].map(i => `<i${i <= lv ? ` style="background:var(${col})"` : ""}></i>`).join("")}</div>`
+    + `<div><b style="color:var(${col})">${word}</b><small>${esc(why)}</small></div></div>`);
+  const sel = selKey || (M && M.panel ? M.panel.tid : null);
+  setHTML($("thcount"), list.length ? String(list.length) : "");
+  setHTML($("threats"), list.length ? list.slice(0, 7).map(t => {
+    const u = t.u, k = keyOf(u);
+    const badge = t.air ? `<span class="d">${Math.round(u.alt_ft / 1000)}k ft</span>`
+      : t.edge <= 0 ? `<span class="badge in">INSIDE</span>` : t.edge < 5000 ? `<span class="badge near">NEAR</span>` : "";
+    return `<div class="trow${k === sel ? " sel" : ""}" data-k="${esc(k)}"><span style="color:${sideCol(u)}">${t.air ? "▲" : "■"}</span>`
+      + `<span class="n">${esc(short(u.type))}${u.tid ? ` <span class="faint">${esc(u.tid)}</span>` : ""}</span>${badge}`
+      + `<span class="d">${brg3(t.d.brg)} ${fmtD(t.d.m)}</span></div>`;
+  }).join("") : `<div class="muted">${me ? "No air defence or enemy aircraft in the picture." : "Waiting for DCS…"}</div>`);
+  showPanel(M && M.panel);
+}
+
+function showPanel(p) {        // "kneeboard, contact 42" (from the picture), or the marker tapped on the map
+  const voice = p ? p.tid : null;
+  if (voice !== voiceTid) { voiceTid = voice; if (voice) selKey = null; }        // a new voice request wins
+  let u = null, kind = null;
+  if (selKey && M) for (const h of hits) if (h[2] === selKey) { u = h[4]; kind = h[3]; break; }
+  if (selKey && !u && M) {      // not drawn (filtered, off screen): look it up in the feed
+    u = [...M.ground, ...M.air].find(x => keyOf(x) === selKey) || null; kind = u ? (u.alt_ft !== undefined ? "a" : "g") : null;
+  }
+  if (selKey && !u) selKey = null;                 // gone from the picture
+  document.body.classList.toggle("has-sel", !!(u || p));
+  if (u) { setHTML($("seltid"), esc(u.tid || (kind === "o" ? "OUTCAST" : kind === "f" ? "OVERLORD" : ""))); setHTML(panelEl, tappedPanel(u, kind)); return; }
+  if (!p) {
+    setHTML($("seltid"), "");
+    setHTML(panelEl, `<div class="muted">Tap a marker on the map, or say “kneeboard, contact 42”.</div>`); return;
+  }
+  setHTML($("seltid"), esc(p.tid));
+  setHTML(panelEl, `<span class="src">Track details · voice</span><h3>${esc(p.title)}</h3><table>`
+    + p.rows.map(r => {
+      const v = String(r[1] ?? ""), c = r[0] === "Threat" ? "hostile-t" : r[0] === "Side" ? (AFF_T[v.split(" ")[0]] || [0, ""])[1] : "";
+      return `<tr><td class="k">${esc(r[0])}</td><td${c ? ` class="${c}"` : ""}>${esc(v)}</td></tr>`;
+    }).join("")
+    + `</table><div class="hint">“Kneeboard, close contact” to close</div>`);
+}
+function tappedPanel(u, kind) {
+  const d = M.me ? geo(kind === "f" ? { lat: u.pts[0][0], lon: u.pts[0][1] } : u) : null;
+  const rows = [];
+  if (kind === "o" || kind === "f") {
+    rows.push(["Side", "Friendly", "friendly-t"]);
+    if (kind === "f") rows.push(["Flight", `${esc(u.kind)}, ${u.pts.length} aircraft`], ["State", esc(u.state || "")]);
+    else rows.push(["Wingman", "Independent (Outcast)"]);
+    if (d) rows.push(["From you", `${brg3(d.brg)} ${fmtD(d.m)}`]);
+    const title = kind === "f" ? `${esc(u.cs)} (${esc(u.kind)})` : `Outcast ${esc(u.n)}`;
+    return `<span class="src">Tapped on the map</span><h3><span class="ic friendly-t">${kind === "f" ? "●" : "◆"}</span>${title}</h3><table>`
+      + rows.map(r => `<tr><td class="k">${r[0]}</td><td${r[2] ? ` class="${r[2]}"` : ""}>${r[1]}</td></tr>`).join("") + `</table>`;
+  }
+  const a = AFF_T[affOf(u)] || AFF_T.hostile;
+  rows.push(["Side", a[0], a[1]]);
+  rows.push(["Kind", kind === "a" ? "Aircraft" : u.cat ? esc(cap(u.cat.replace("_", " "))) : (u.ad ? "Air defence" : "Ground")]);
+  if (d) rows.push(["From you", `${brg3(d.brg)} ${fmtD(d.m)}`]);
+  if (kind === "a") rows.push(["Altitude", `${u.alt_ft.toLocaleString()} ft`]);
+  if (u.status) rows.push(["Status", esc(u.status.replace(/_/g, " ")) + (isOld(u) && u.age_s != null ? `, ${ago(u.age_s)} ago` : "")]);
+  if (u.ring_m) {
+    const inside = d && d.m <= u.ring_m;
+    rows.push(["Threat ring", `~${Math.round(u.ring_m / UNIT_M())} ${UNIT()}` + (d ? (inside ? " · <b class='hostile-t'>you are inside</b>" : ` · ${fmtD(d.m - u.ring_m)} outside`) : ""), ""]);
+  }
+  if (u.conf) rows.push(["Confidence", `${esc(cap(u.conf))}<div class="bar"><i style="width:${CONF[u.conf] || 50}%"></i></div>`]);
+  if (u.george) rows.push(["George", `his list #${u.george}`]);
+  if (M.jtac && ((M.jtac.tid && M.jtac.tid === u.tid) || (Math.abs(M.jtac.lat - u.lat) < 1e-5 && Math.abs(M.jtac.lon - u.lon) < 1e-5))) rows.push(["JTAC", "the current JTAC target", ""]);
+  const n = u.tid ? u.tid.slice(1) : null;
+  return `<span class="src">Tapped on the map</span><h3><span class="ic" style="color:${sideCol(u)}">${kind === "a" ? "▲" : "■"}</span>${esc(short(u.type))}</h3><table>`
+    + rows.map(r => `<tr><td class="k">${r[0]}</td><td${r[2] ? ` class="${r[2]}"` : ""}>${r[1]}</td></tr>`).join("") + `</table>`
+    + `<div class="hint">${n ? `Full track: “kneeboard, contact ${n}”` : "From Export.lua's lists (no tactical picture): no track details."}</div>`;
 }
 
 // ---------------------------------------------------------------- comms
 const commsEl = document.getElementById("comms");
 const WHO = { pilot: "You", george: "Crew", overlord: "Overlord", order: "Order", instructor: "Instructor",
               picture: "Picture", warlord: "Warlord", darkside: "Darkside", ai: "AI to AI" };
-function esc(s) { return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 function highlight(s) {
   return esc(s)
     .replace(/(Grid [0-9]{1,2} [A-Z][a-z]+, [A-Z][a-z]+ [A-Z][a-z]+(?:, [0-9 ]+){0,2})/g, "<mark>$1</mark>")
@@ -352,6 +785,7 @@ function highlight(s) {
     .replace(/(\b(?:steer|bearing) \d{3}\b|\bElevation [\d,]+ feet\b|\bangels \d+\b)/g, "<mark>$1</mark>");
 }
 let lastId = 0;                       // a reconnect resends the log: show each line once
+const recent = [];                    // the last few lines, for the summary under the map
 function addComms(list) {
   list = list.filter(m => m.id > lastId);
   if (!list.length) return;
@@ -364,21 +798,38 @@ function addComms(list) {
     const t = new Date(m.t * 1000).toTimeString().slice(0, 8);
     d.innerHTML = `<span class="t">${t}</span><span class="who">${WHO[m.who] || m.who}</span>${highlight(m.text)}`;
     commsEl.appendChild(d);
+    recent.push(m);
   }
   while (commsEl.children.length > 300) commsEl.firstChild.remove();
+  while (recent.length > 4) recent.shift();
   if (atBottom) scrollComms();
+  setHTML($("mcomms"), recent.map(m => `<div class="ln msg ${esc(m.who)}"><span class="who">${esc(WHO[m.who] || m.who)}</span>${highlight(m.text)}</div>`).join(""));
 }
 function scrollComms() { commsEl.scrollTop = commsEl.scrollHeight; }
 
 // ---------------------------------------------------------------- status
 const statusEl = document.getElementById("status");
 function showStatus(s) {
+  lastStatus = s;
   const rows = (s.links || []).map(l => {
     const c = l.ok === true ? "--ok" : l.ok === false ? "--bad" : "--unk";
     return `<tr><td><span class="dot" style="background:var(${c})"></span>${esc(l.name)}</td><td>${esc(l.detail || "")}</td></tr>`;
   }).join("");
   const times = (s.times || []).map(t => `<tr><td>${esc(t.name)}</td><td>${esc(t.value)}</td></tr>`).join("");
-  statusEl.innerHTML = `<table>${rows}</table>` + (times ? `<h3 style="margin:22px 0 6px;color:var(--dim)">Last timings</h3><table>${times}</table>` : "");
+  setHTML(statusEl, `<table>${rows}</table>` + (times ? `<h2>Last timings</h2><table>${times}</table>` : ""));
+  // top bar + DCS link panel + summary
+  const links = s.links || [], tel = links[0];
+  const up = links.filter(l => l.ok === true).length, down = links.filter(l => l.ok === false);
+  liveState = tel && tel.ok ? "ok" : "wait";
+  paintLive();
+  const shortName = n => esc(String(n).replace(/\s*\(.*\)$/, ""));
+  const dot = l => `<span class="dot" style="background:var(${l.ok === true ? "--ok" : l.ok === false ? "--bad" : "--unk"})"></span>`;
+  setHTML($("links"), `<div class="bigstate" style="color:var(${tel && tel.ok ? "--ok" : "--bad"})">${tel && tel.ok ? "● CONNECTED" : "● NO TELEMETRY"}</div>`
+    + links.slice(0, 7).map(l => `<div class="linkrow">${dot(l)}<span>${shortName(l.name)}</span></div>`).join(""));
+  setHTML($("mstatus-n"), `${up} / ${links.length} up`);
+  setHTML($("mstatus"), (down.length ? down.slice(0, 4).map(l => `<div class="ln">${dot(l)}${shortName(l.name)}</div>`).join("")
+    : `<div class="ln ok-t">All links up</div>`)
+    + ((s.times || []).find(t => t.name === "Profile") ? `<div class="ln muted">Profile: ${esc(s.times.find(t => t.name === "Profile").value)}</div>` : ""));
 }
 
 // ---------------------------------------------------------------- briefing
@@ -387,8 +838,9 @@ let briefWhen = null, briefPending = false;
 const openSecs = new Set();
 function para(s) { return highlight(String(s || "")).replace(/\n/g, "<br>"); }
 function showBriefing(b) {
+  briefSummary(b);
   if (!b.sections || !b.sections.length) {
-    briefEl.innerHTML = `<div class="empty">No briefing yet. It arrives when DCS loads a mission (and from data/campaign_briefing.json).</div>`;
+    setHTML(briefEl, `<div class="empty">No briefing yet. It arrives when DCS loads a mission (and from data/campaign_briefing.json).</div>`);
     return;
   }
   briefEl.querySelectorAll("details").forEach(d => d.open ? openSecs.add(d.dataset.k) : openSecs.delete(d.dataset.k));
@@ -405,8 +857,7 @@ function showBriefing(b) {
       html += `<h2>${esc(sec.title)}</h2>${body}`;
     }
   }
-  briefEl.innerHTML = html;
-  briefEl.scrollTop = top;
+  if (briefEl._h !== html) { briefEl._h = html; briefEl.innerHTML = html; briefEl.scrollTop = top; }
   const when = b.last ? b.last.when : null;
   if (when !== briefWhen) {            // a new answer: show where it came from
     briefWhen = when;
@@ -414,6 +865,16 @@ function showBriefing(b) {
   }
 }
 function scrollToHit() { const h = briefEl.querySelector(".entry.hit"); if (h) h.scrollIntoView({ block: "center" }); }
+function briefSummary(b) {
+  const secs = (b.sections || []).filter(s => !s.closed && s.entries.length);
+  setHTML($("mbrief-n"), b.sections && b.sections.length ? `${b.sections.length} sections` : "");
+  setHTML($("briefmeta"), b.sections && b.sections.length ? `${b.sections.length} sections` : "");
+  if (!secs.length) { setHTML($("mbrief"), `<span class="muted">No briefing yet.</span>`); return; }
+  const e = secs[0].entries[0];
+  setHTML($("mbrief"), `<div class="ln"><b>${esc(secs[0].title)}</b></div>`
+    + (b.last ? `<div class="ln" style="color:var(--amber)">Asked: “${esc(b.last.question)}”</div>` : "")
+    + `<div class="clip">${e.title ? `<b>${esc(e.title)}</b> ` : ""}${esc(String(e.text || "").slice(0, 300))}</div>`);
+}
 
 // ---------------------------------------------------------------- checklist
 const checkEl = document.getElementById("check");
@@ -423,14 +884,15 @@ let runningWas = undefined;
 function showChecklist(c) {
   if (c.auto_show && c.running && runningWas !== undefined && c.running !== runningWas) show("pcheck");
   runningWas = c.running || null;
+  checkSummary(c);
   if (!c.lists || !c.lists.length) {
-    checkEl.innerHTML = `<div class="empty">No crew checklists in ${esc(c.aircraft || "this aircraft")}.</div>`;
+    setHTML(checkEl, `<div class="empty">No crew checklists in ${esc(c.aircraft || "this aircraft")}.</div>`);
     return;
   }
   const others = c.lists.filter(l => l.key !== c.shown).map(l => esc(l.title)).join(" · ");
   if (!c.shown) {
-    checkEl.innerHTML = `<div class="empty">No checklist run yet. Say “before start checklist”, or “show the shutdown checklist”.</div>` +
-      `<div class="others">${esc(c.aircraft)}: ${c.lists.map(l => esc(l.title)).join(" · ")}</div>`;
+    setHTML(checkEl, `<div class="empty">No checklist run yet. Say “before start checklist”, or “show the shutdown checklist”.</div>` +
+      `<div class="others">${esc(c.aircraft)}: ${c.lists.map(l => esc(l.title)).join(" · ")}</div>`);
     return;
   }
   const cur = c.items.findIndex(i => i.state === "current");
@@ -445,13 +907,25 @@ function showChecklist(c) {
     return `<div class="item ${cls}"><span class="ic" style="color:var(${col})">${ic}</span><span class="tx">${esc(i.text)}</span>${rd}</div>`;
   }).join("");
   const top = checkEl.scrollTop;
-  checkEl.innerHTML = `<div id="chkhead"><h2>${esc(c.title || c.shown)} · ${esc(c.aircraft)}</h2><span id="chkstate">${esc(state)}</span></div>` +
+  const html = `<div id="chkhead"><h2>${esc(c.title || c.shown)} · ${esc(c.aircraft)}</h2><span id="chkstate">${esc(state)}</span></div>` +
     (c.note ? `<div class="others" style="color:var(--bad)">${esc(c.note)}</div>` : "") +
     rows + (others ? `<div class="others">Other checklists: ${others}</div>` : "");
-  checkEl.scrollTop = top;
+  if (checkEl._h !== html) { checkEl._h = html; checkEl.innerHTML = html; checkEl.scrollTop = top; }
   if (c.running && isOn("pcheck")) scrollToCurrent();
 }
 function scrollToCurrent() { const cur = checkEl.querySelector(".item.current"); if (cur) cur.scrollIntoView({ block: "nearest" }); }
+function checkSummary(c) {
+  if (!c.shown || !c.items || !c.items.length) {
+    setHTML($("mcheck-n"), "");
+    setHTML($("mcheck"), `<span class="muted">${c.lists && c.lists.length ? "No checklist run yet." : "No crew checklists in " + esc(c.aircraft || "this aircraft") + "."}</span>`);
+    return;
+  }
+  const n = c.items.length, done = c.items.filter(i => !["pending", "current"].includes(i.state)).length;
+  const cur = c.items.find(i => i.state === "current");
+  setHTML($("mcheck-n"), `${done} / ${n}`);
+  setHTML($("mcheck"), `<div class="ln"><b>${esc(c.title || c.shown)}</b></div><div class="progress"><i style="width:${Math.round(100 * done / n)}%"></i></div>`
+    + (cur ? `<div class="ln" style="color:var(--amber)">▶ ${esc(cur.text)}</div>` : `<div class="ln muted">${esc(c.outcome || (c.running ? "running" : "not running"))}</div>`));
+}
 
 // ---------------------------------------------------------------- alerts: marker line, banner, Alerts tab
 const alertBar = document.getElementById("alertbar"), alertsEl = document.getElementById("alerts");
@@ -465,6 +939,7 @@ function alertRow(a, done) {
          `<span class="t">${clock(a.last)}</span><span class="tx">${highlight(a.text)}${n}${how}</span></div>`;
 }
 function showAlerts(a) {
+  lastAlerts = a;
   const top = a.top, before = document.body.className;
   document.body.classList.toggle("alerting", !!top);
   document.body.classList.toggle("crit", !!top && top.severity === "critical");
@@ -474,13 +949,20 @@ function showAlerts(a) {
       (top.severity === "critical" ? "  ·  “kneeboard, acknowledge”" : "");
   }
   alertTab.textContent = a.active.length ? `Alerts (${a.active.length})` : "Alerts";
+  const worst = a.active.some(x => x.severity === "critical") ? "crit" : a.active.some(x => x.severity === "warning") ? "warn" : "";
+  alertTab.classList.toggle("crit", worst === "crit"); alertTab.classList.toggle("warn", worst === "warn");
   if (!a.active.length && !a.recent.length) {
-    alertsEl.innerHTML = '<div class="empty">No alerts.</div>';
+    setHTML(alertsEl, '<div class="empty">No alerts.</div>');
   } else {
-    alertsEl.innerHTML = (a.active.length ? a.active.map(x => alertRow(x, false)).join("") : '<div class="empty">No active alerts.</div>') +
-      (a.recent.length ? "<h2>Last 10 minutes</h2>" + a.recent.map(x => alertRow(x, true)).join("") : "");
+    setHTML(alertsEl, (a.active.length ? a.active.map(x => alertRow(x, false)).join("") : '<div class="empty">No active alerts.</div>') +
+      (a.recent.length ? "<h2>Last 10 minutes</h2>" + a.recent.map(x => alertRow(x, true)).join("") : ""));
   }
+  const SEVC = { critical: "--bad", warning: "--amber", info: "--dim" };
+  setHTML($("malerts-n"), a.active.length ? `${a.active.length} active` : "");
+  setHTML($("malerts"), a.active.length ? a.active.slice(0, 3).map(x => `<div class="ln"><b style="color:var(${SEVC[x.severity] || "--dim"})">${esc(x.severity.toUpperCase())}</b>${esc(x.text)}</div>`).join("")
+    : `<span class="muted">No active alerts.</span>`);
   if (document.body.className !== before) resize();          // the pages moved down / up
+  if (M) sidePanels();                                        // a critical alert sets the threat level
 }
 
 // ---------------------------------------------------------------- instructor (Instructor Mode)
@@ -488,8 +970,24 @@ const instrEl = document.getElementById("instr");
 const ISTATE = { idle: "Standing by", selected: "Selected: say “Instructor, begin”", armed: "Armed: waiting to start",
                  running: "Running", evaluating: "Scoring…" };
 const cap = s => s ? s[0].toUpperCase() + s.slice(1) : "";
+function trainingBlock(d) {
+  const t = d.training || {};
+  let h = `<div class="ins-mode">Training mode <b style="color:var(${t.on ? "--ok" : "--dim"})">${t.on ? "ON" : "OFF"}</b></div>`;
+  if (!t.on) return h + `<div class="empty">Say “training mode on” for exercises and training targets.</div>`;
+  if (t.spawn_unavailable) h += `<div class="ins-nj">Training targets unavailable · ${esc(t.spawn_unavailable)}</div>`;
+  const g = t.groups || [];
+  if (g.length) {
+    h += `<h2>Targets</h2>` + g.map(x => `<div class="ins-tgt"><span>${esc(x.what)}</span><span>` +
+         `${x.alive == null ? "spawning" : x.alive + " / " + x.total + " alive"} · ${x.min} min</span></div>`).join("");
+  } else if (!t.spawn_unavailable) {
+    h += `<div class="ins-nj">No targets. “Overlord, spawn two T-72s 5 km north”.</div>`;
+  }
+  return h;
+}
 function showInstructor(d) {
-  let h = "";
+  instrSummary(d);
+  const t = d.training || {};
+  let h = trainingBlock(d);
   if (d.exercise) {
     const ex = d.exercise;
     h += `<h2>${esc(cap(ex.name))} · level ${ex.level}${ex.target ? " · " + esc(ex.target) : ""}</h2>` +
@@ -498,10 +996,11 @@ function showInstructor(d) {
       const c = ok === true ? "--ok" : ok === false ? "--bad" : "--text";
       h += `<div class="ins-live"><span>${esc(k)}</span><b style="color:var(${c})">${esc(v)}</b></div>`;
     }
-  } else {
+  } else if (t.on && d.state !== "off") {
     h += `<div class="empty">No exercise. Say “Instructor, hover exercise”, “hover turn”, “approach to Alpha” or “fuel exercise”.</div>`;
   }
-  const L = d.last;
+  const L = d.last, K = d.kills || [];
+  if (L || (d.levels && d.levels.length) || K.length) h += `<h2 style="color:var(--amber)">Scores</h2>`;
   if (L) {
     h += `<h2>Last: ${esc(L.exercise)} · level ${L.level} · ${esc(L.when)}</h2>`;
     h += L.score != null ? `<div class="ins-score">${L.score}<span>${esc(L.confidence)} confidence${L.outcome === "partial" ? ", partial" : ""}</span></div>`
@@ -515,9 +1014,27 @@ function showInstructor(d) {
   }
   if (d.weak && d.weak.length) h += `<div class="ins-nj" style="color:var(--jtac)">Recurring: ${d.weak.map(esc).join(", ")}</div>`;
   if (d.suggest) h += `<div class="ins-nj">Next: ${esc(d.suggest.exercise)} exercise (${esc(d.suggest.why)})</div>`;
+  if (K.length) {
+    h += `<h2>Training targets destroyed</h2><table>` + K.slice().reverse().map(k => `<tr><td>${esc(k.what)}</td>` +
+         `<td>${k.seconds != null ? mmss(k.seconds) + " after the spawn" : ""}</td><td style="color:var(--dim)">${esc(k.when)}</td></tr>`).join("") + `</table>`;
+  }
   const top = instrEl.scrollTop;
-  instrEl.innerHTML = h;
-  instrEl.scrollTop = top;
+  if (instrEl._h !== h) { instrEl._h = h; instrEl.innerHTML = h; instrEl.scrollTop = top; }
+}
+const mmss = s => { s = Math.round(s); return s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`; };
+function instrSummary(d) {
+  const t = d.training || {};
+  let h = `<div class="ln"><b>Training</b>${t.on ? "on" : "off"}</div>`;
+  if (t.on && (t.groups || []).length) {
+    const alive = t.groups.reduce((n, g) => n + (g.alive == null ? 0 : g.alive), 0);
+    h += `<div class="ln muted">${t.groups.length} target group${t.groups.length > 1 ? "s" : ""}, ${alive} alive</div>`;
+  }
+  if (d.state !== "off") {
+    if (d.exercise) h += `<div class="ln"><b>${esc(cap(d.exercise.name))}</b>level ${d.exercise.level}</div><div class="ln muted">${esc(ISTATE[d.state] || d.state)}</div>`;
+    if (d.last && d.last.score != null) h += `<div class="big">${d.last.score}</div><div class="ln muted">${esc(d.last.exercise)} · ${esc(d.last.confidence)}</div>`;
+    else if (!d.exercise && d.suggest && t.on) h += `<div class="ln">Next: ${esc(d.suggest.exercise)}</div>`;
+  }
+  setHTML($("minstr"), h);
 }
 
 // ---------------------------------------------------------------- voice: "show the briefing", "scroll down"
@@ -530,7 +1047,7 @@ function applyUi(u) {
   if (u.seq === uiSeq) return;
   uiSeq = u.seq;
   if (u.kind === "page" && PAGE_ID[u.page]) { show(PAGE_ID[u.page]); return; }
-  if (u.kind === "contact") { if (!isOn("pmap")) show("pmap"); else draw(); return; }   // the panel comes with the map feed
+  if (u.kind === "contact") { selKey = null; if (!isOn("pmap")) show("pmap"); else draw(); return; }   // the panel comes with the map feed
   if (u.kind === "zoom") {             // "kneeboard, zoom in / out": the map's range
     zoom = Math.max(0, Math.min(ZOOMS.length - 1, zoom + u.by)); save();
     if (!isOn("pmap")) show("pmap"); else draw();
@@ -545,10 +1062,23 @@ function applyUi(u) {
   }
 }
 
+// ---------------------------------------------------------------- top bar: link state and clock
+let liveState = "wait", sseUp = false;
+function paintLive() {
+  const el = $("live"), ac = M && M.me ? short(M.me.ac) : "";
+  const [cls, txt] = !sseUp ? ["off", "PROGRAM OFFLINE"] : liveState === "ok" ? ["ok", "DCS LIVE"] : ["wait", "NO DCS"];
+  el.className = cls;
+  setHTML(el, esc(txt) + (cls === "ok" && ac ? `<span class="ac"> · ${esc(ac)}</span>` : ""));
+}
+const clockEl = $("clock");
+function tick() { clockEl.lastChild.nodeValue = new Date().toTimeString().slice(0, 8); }   // local PC time (the feeds carry no mission clock)
+tick(); setInterval(tick, 1000);
+
 // ---------------------------------------------------------------- live data (SSE; reconnects by itself)
 function connect() {
   const es = new EventSource("/events");
-  es.addEventListener("map", e => { M = JSON.parse(e.data); if (document.getElementById("pmap").classList.contains("on")) draw(); });
+  es.onopen = () => { sseUp = true; paintLive(); };
+  es.addEventListener("map", e => { M = JSON.parse(e.data); sseUp = true; paintLive(); if (document.getElementById("pmap").classList.contains("on")) draw(); });
   es.addEventListener("comms", e => addComms(JSON.parse(e.data)));
   es.addEventListener("status", e => showStatus(JSON.parse(e.data)));
   es.addEventListener("briefing", e => showBriefing(JSON.parse(e.data)));
@@ -560,7 +1090,7 @@ function connect() {
   // the program has a newer page than this one (updated while OpenKneeboard stayed open): load it
   es.addEventListener("page", e => { const v = JSON.parse(e.data).v;
     if (v && PAGE_VERSION.length === 12 && v !== PAGE_VERSION) location.reload(); });
-  es.onerror = () => { info.textContent = "Program not running? Reconnecting…"; };
+  es.onerror = () => { sseUp = false; paintLive(); info.textContent = "Program not running? Reconnecting…"; };
 }
 resize();
 try { const t = localStorage.getItem("kb.tab"); if (t && document.getElementById(t)) show(t); } catch (e) {}

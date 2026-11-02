@@ -17,6 +17,10 @@ units it spawned). This module only builds the request:
 Defaults (approved): weapons hold, static, difficulty average (DCS "Good"), no place = ahead of you
 (5 km in helicopters, 20 nm in jets). Live aircraft / helicopters get the loadout named in
 data/training_units.json; held ones fly clean. Spawns closer than 1 km to you are refused.
+
+1 Nov (one training mode): "Overlord, spawn ..." or "Instructor, spawn ..." while training mode is on;
+every reply and call is in the instructor's voice ("Instructor, ..."), and each kill also goes to the
+instructor's score log (on_kill).
 """
 import json
 import math
@@ -26,6 +30,8 @@ import threading
 import time
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple, Union
+
+from common.training import VOICE as V
 
 UNITS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data",
                           "training_units.json")
@@ -208,8 +214,14 @@ def build_order(req: SpawnRequest, snap: dict) -> Tuple[str, dict]:
     return COMMAND[req.cat], params
 
 
+def unit_label(label: str) -> str:
+    """'two T-72B' -> 'T-72B' (one kill is one unit); 'SA-6 site' stays."""
+    words = (label or "").split()
+    return " ".join(words[1:]) if len(words) > 1 and words[0].lower() in _COUNT_WORDS else (label or "")
+
+
 def describe(req: SpawnRequest, n_units: int) -> str:
-    """What Overlord says back: "two T-72B, 5 kilometres north of you, weapons hold, static"."""
+    """What the instructor says back: "two T-72B, 5 kilometres north of you, weapons hold, static"."""
     name = req.unit.get("name") or req.unit["type"]
     site = n_units > req.count
     what = (f"{name}, {n_units} units" if site and req.count == 1 else
@@ -227,38 +239,43 @@ def describe(req: SpawnRequest, n_units: int) -> str:
 class Spawner:
     def __init__(self, training, snapshot: Callable[[], dict], speak: Callable[[str], None],
                  units: Optional[UnitList] = None, debrief=None,
+                 on_kill: Optional[Callable[[str, float], None]] = None,
                  appear_s: float = APPEAR_S, poll_s: float = POLL_S, kill_poll_s: float = KILL_POLL_S,
                  clock: Callable[[], float] = time.monotonic):
         self.training, self.snapshot, self.speak = training, snapshot, speak
         self.units = units if units is not None else UnitList()
         self.debrief = debrief
+        self.on_kill = on_kill            # (what, seconds after the spawn): the instructor's score log
         self.appear_s, self.poll_s, self.kill_poll_s, self.clock = appear_s, poll_s, kill_poll_s, clock
 
     def wanted(self, rest: str) -> bool:
         return wanted(rest)
 
     def handle(self, rest: str) -> str:
-        """Overlord's answer now; the group is followed on its own thread."""
+        """The answer now (the instructor's voice, 1 Nov); the group is followed on its own thread."""
         tr = self.training
         if not tr.on:
-            return "Overlord, unable, training mode is off."
+            return V + "unable, training mode is off. Say training mode on."
+        why = tr.spawn_unavailable() if hasattr(tr, "spawn_unavailable") else None
+        if why:
+            return V + f"unable, training targets unavailable, {why}."
         snap = self.snapshot()
         req = parse_spawn(rest, snap, self.units)
         if isinstance(req, str):
             if req in ("say what to spawn", "say again"):
-                return f"Overlord, {req}."
+                return V + f"{req}."
             if req == "I can't spawn that":
-                return "Overlord, I can't spawn that."
-            return f"Overlord, unable, {req}."
+                return V + "I can't spawn that."
+            return V + f"unable, {req}."
         client = tr.client()
         if client is None:
-            return "Overlord, unable, no Game Master login in config."
+            return V + "unable, no Game Master login in config."
         cmd, params = build_order(req, snap)
         n_units = tr.units_in(params, ground=(cmd == "spawnGroundUnits")) or req.count
         known = {u[0] for u in snap.get("olympus_enemy") or []}
         ok, why = client.command(cmd, params)                   # the step 7 guard decides
         if not ok:
-            return f"Overlord, unable, {why}."
+            return V + f"unable, {why}."
         said = describe(req, n_units)
         label = said.split(",")[0]                               # "two T-72B" / "SA-6 site"
         entry = tr.add_group(None, [], label, requested=n_units)
@@ -268,7 +285,7 @@ class Spawner:
         print(f"[TRAINING] Spawned {label} ({cmd}, {n_units} unit(s)) at {req.where}.")
         threading.Thread(target=self._follow, args=(entry, req, known, label, record),
                          daemon=True, name="training-spawn").start()
-        return f"Overlord, {said}"
+        return V + said
 
     # -------------------------------------------------------------- after the spawn
     def _follow(self, entry: dict, req: SpawnRequest, known: set, label: str, record) -> None:
@@ -285,7 +302,7 @@ class Spawner:
                 self.training.drop(entry, "failed")
                 print(f"[TRAINING] {label}: no group appeared in {self.appear_s:.0f} s.")
                 if entry.get("ended") == "failed":                   # not cleared meanwhile
-                    self.speak("Overlord, training targets failed to appear. Check Olympus.")
+                    self.speak(V + "training targets failed to appear. Check Olympus.")
                 return
             if not self.training.bind(entry, group, units):            # cleared / new mission meanwhile
                 if entry.get("ended") == "cleared":
@@ -293,7 +310,7 @@ class Spawner:
                 return
             self._task(req, units)
             print(f"[TRAINING] {label} is up: {group}, {len(units)} unit(s).")
-            self.speak("Overlord, training group is up.")
+            self.speak(V + "training group is up.")
             self._watch(entry, units, t0, label, record)
         except Exception as e:
             print(f"[TRAINING] {label}: {type(e).__name__}: {e}")
@@ -340,6 +357,11 @@ class Spawner:
                     print(f"[TRAINING] {label}: unit {uid} destroyed after {secs:.0f} s.")
                     if record is not None and self.debrief is not None:
                         self.debrief.training_kill(record, secs)
+                    if self.on_kill is not None:
+                        try:
+                            self.on_kill(unit_label(label), secs)
+                        except Exception as e:
+                            print(f"[TRAINING] score log: {type(e).__name__}: {e}")
             if entry.get("ended") == "destroyed" and dead == ids:
                 return
             time.sleep(self.kill_poll_s)

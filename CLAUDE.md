@@ -45,6 +45,9 @@ router (qwen3:8b on Ollama, only when nothing matched) -> handler -> gates -> Pi
 - Every LLM answer passes the gates (what was said + live state) before it acts or is spoken.
 - Overlord's voice only for Overlord / Olympus replies, and he only acts on utterances that start
   with "Overlord". Wingmen, Outcasts and radio-menu replies use the crew voice.
+- One training mode (1 Nov): "Training mode on / off", spawns ("Overlord / Instructor, spawn ...") and
+  the instructor's exercises are routed by common/training_mode.py and answered in the instructor's
+  voice, even after "Overlord,". Exercises need training mode on.
 - Olympus first for wingman orders, radio menu as the fallback.
 - Training targets only while training mode is on, through the Game Master client and the gate in
   common/training.py. Keep the Blue commander and Game Master logins separate.
@@ -97,7 +100,8 @@ router (qwen3:8b on Ollama, only when nothing matched) -> handler -> gates -> Pi
 - `apache/` George; `huey/` UH-1H crew; `instructor/` adaptive instructor (hover, approach, fuel,
   hover turn); `tactical/` tactical picture and threat fusion (tracks, fusion, threats, service).
 - `common/` comms_menu (radio menu + hook messages), wingmen, olympus (REST client), independents
-  (Outcasts), overlord, jtac, carrier, training (gate) and training_targets, briefing (BM25),
+  (Outcasts), overlord, jtac, carrier, training (gate), training_targets and training_mode (one
+  training mode: switch, spawns and the instructor, all in the instructor's voice), briefing (BM25),
   position, airfields, debrief, orders, aircraft, fuel_watch, nav, user_waypoints ...
 - `kneeboard/` server (HTTP + SSE), model (map, threat rings), pages, alerts, track, comms_log,
   static/index.html.

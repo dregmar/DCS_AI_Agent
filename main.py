@@ -184,16 +184,19 @@ def _training_client(guard):
                            pw, allowed=training_mod.TRAINING_COMMANDS, guard=guard)
 
 
-TRAINING = training_mod.Training(state_store.snapshot, _training_client, mission_name=KB.mission_name)
+TRAINING = training_mod.Training(state_store.snapshot, _training_client, mission_name=KB.mission_name,
+                                 olympus_enabled=lambda: bool(getattr(config, "OLYMPUS_ENABLED", False)))
 comms_menu.ON_PLAYERS = TRAINING.note_players
 TRAINING.on_destroyed = lambda names: _alert_training(names)     # Alerts tab (defined below)
 atexit.register(TRAINING.shutdown)
 # Feature 8: "Overlord, spawn two T-72s 5 km north of me" (common/training_targets.py), through the gate.
-# "Group is up" / "failed to appear" come later, from its own thread, in Overlord's voice.
+# "Group is up" / "failed to appear" come later, from its own thread, in the instructor's voice (1 Nov:
+# one training mode); each kill also goes to the instructor's score log.
 from common import training_targets as training_targets_mod
 SPAWNER = training_targets_mod.Spawner(
     TRAINING, state_store.snapshot,
-    lambda text: _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_PILOT)), debrief=DEBRIEF)
+    lambda text: _unprompted(text, lambda t: speak_instructor(t, priority=PRIORITY_PILOT)), debrief=DEBRIEF,
+    on_kill=lambda what, secs: INSTRUCTOR.record_kill(what, secs) if INSTRUCTOR is not None else None)
 from common.unit_types import TYPES as UNIT_TYPES
 comms_menu.ON_TYPES = UNIT_TYPES.on_types_message   # ... and "TYPES ..." (what each unit type is)
 
@@ -289,8 +292,12 @@ def _instructor_fast(on: bool) -> None:
 INSTRUCTOR = (instructor_mod.build(config, state_store.snapshot, lambda text: _speak_instructor(text),
                                    mission_name=KB.mission_name, targets=_instructor_target, fuel=_instructor_fuel,
                                    reserve=_instructor_reserve, flight=state_store.flight_since,
-                                   fast=_instructor_fast)
+                                   fast=_instructor_fast, enabled=lambda: TRAINING.on)
               if getattr(config, "INSTRUCTOR_ENABLED", True) else None)
+# One training mode (1 Nov): "Training mode on / off", spawns and the instructor's exercises together,
+# all in the instructor's voice. The gate (TRAINING) and the instructor stay separate modules.
+from common import training_mode as training_mode_mod
+TRAINING_MODE = training_mode_mod.TrainingMode(TRAINING, SPAWNER, INSTRUCTOR)
 
 
 def _active_prompt():
@@ -653,19 +660,14 @@ def role_reply(text: str):
 
 
 def _shared_reply(text: str):
+    tm = TRAINING_MODE.wanted(text)                  # "Training mode on", "Overlord / Instructor, spawn ..."
+    if tm is not None:
+        return TRAINING_MODE.handle(*tm), "instructor", "instructor"
     got = role_reply(text)                           # "Warlord, ..." / "Darkside, ..." (P2-3)
     if got is not None:
         return got
     rest = overlord_mod.addressed(text)
     if rest is not None:                             # "Overlord, ...": only Overlord answers
-        if TRAINING.wanted(rest):                    # "Overlord, training mode on" / "clear training targets"
-            if not getattr(config, "OLYMPUS_ENABLED", False):
-                return "Overlord, unable, Olympus is turned off in config.", "overlord", "overlord"
-            return TRAINING.handle(rest), "overlord", "overlord"
-        if SPAWNER.wanted(rest):                     # "Overlord, spawn two T-72s 5 km north of me"
-            if not getattr(config, "OLYMPUS_ENABLED", False):
-                return "Overlord, unable, Olympus is turned off in config.", "overlord", "overlord"
-            return SPAWNER.handle(rest), "overlord", "overlord"
         said = tactical_answer(rest)                 # "Overlord, threats" / "Overlord, tactical picture" (T6)
         if said is not None:                         # ("Overlord, picture" stays his air picture)
             return "Overlord, " + said[0].lower() + said[1:], "overlord", "overlord"
@@ -1034,7 +1036,10 @@ def kneeboard_briefing() -> dict:
 
 
 def kneeboard_instructor() -> dict:
-    return INSTRUCTOR.view() if INSTRUCTOR is not None else {"state": "off"}
+    """The kneeboard Training tab (1 Nov): the instructor's view plus the training targets."""
+    d = INSTRUCTOR.view() if INSTRUCTOR is not None else {"state": "off"}
+    d["training"] = TRAINING.view()
+    return d
 
 
 def _latency_rows() -> list:

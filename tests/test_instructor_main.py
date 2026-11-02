@@ -20,8 +20,10 @@ class TestInstructorWiring(unittest.TestCase):
         pipeline.OVERLORD_SPOKEN.clear()
         send_telemetry(DEFAULT_CONTACTS)
         main.INSTRUCTOR.handle("Instructor, off")
+        main.TRAINING.on = True                 # 1 Nov: exercises need training mode on
 
     def tearDown(self):
+        main.TRAINING.on = False
         self._p.stop()
 
     def test_history_is_memory_only_in_tests(self):

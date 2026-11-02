@@ -398,7 +398,7 @@
  {
   "type": "BMP-1",
   "display": "IFV BMP-1",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "ATGM",
    "All",
@@ -600,7 +600,7 @@
  {
   "type": "Bunker",
   "display": "Bunker 2",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "AntiAir Armed Vehicles",
@@ -641,6 +641,19 @@
  {
   "type": "CH-47D",
   "display": "ch-47d chinook",
+  "cat": "static",
+  "attrs": [
+   "Air",
+   "All",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Transport helicopters"
+  ]
+ },
+ {
+  "type": "CH-47Fbl1",
+  "display": "CH-47Fbl1",
   "cat": "static",
   "attrs": [
    "Air",
@@ -937,6 +950,56 @@
   ]
  },
  {
+  "type": "CVN_73",
+  "display": "CVN-73 George Washington",
+  "cat": "ship",
+  "attrs": [
+   "ACLS",
+   "Aircraft Carriers",
+   "AircraftCarrier",
+   "AircraftCarrier With Arresting Gear",
+   "AircraftCarrier With Catapult",
+   "All",
+   "Armed Air Defence",
+   "Armed Ship",
+   "Armed ships",
+   "Arresting Gear",
+   "Datalink",
+   "Heavy armed ships",
+   "HeavyArmoredUnits",
+   "Link4",
+   "Naval",
+   "RADAR_BAND1_FOR_ARM",
+   "RADAR_BAND2_FOR_ARM",
+   "Ships",
+   "catapult"
+  ]
+ },
+ {
+  "type": "Cargo06",
+  "display": "M92 Cargo 06",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Carrier LSO Personell",
+  "display": "Carrier LSO Personell",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Carrier LSO Personell 1",
+  "display": "Carrier LSO Personell 1",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Carrier Seaman",
+  "display": "Carrier Seaman",
+  "cat": "static",
+  "attrs": []
+ },
+ {
   "type": "Chemical tank A",
   "display": "Chemical tank A",
   "cat": "static",
@@ -954,6 +1017,26 @@
    "NonAndLightArmoredUnits",
    "NonArmoredUnits",
    "Planes"
+  ]
+ },
+ {
+  "type": "Cobra",
+  "display": "Scout Cobra",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
   ]
  },
  {
@@ -1094,7 +1177,7 @@
  {
   "type": "F-14B",
   "display": "F-14B",
-  "cat": "static",
+  "cat": "plane",
   "attrs": [
    "Air",
    "All",
@@ -1211,7 +1294,7 @@
  {
   "type": "F-4E-45MC",
   "display": "F-4E-45MC",
-  "cat": "static",
+  "cat": "plane",
   "attrs": [
    "Air",
    "All",
@@ -1240,7 +1323,7 @@
  {
   "type": "F-5E-3",
   "display": "F-5E-3",
-  "cat": "plane",
+  "cat": "static",
   "attrs": [
    "Air",
    "All",
@@ -1348,6 +1431,12 @@
   "attrs": []
  },
  {
+  "type": "FireExtinguisher03",
+  "display": "M92 Fire Extinguisher 03",
+  "cat": "static",
+  "attrs": []
+ },
+ {
   "type": "Fuel tank",
   "display": "Fuel tank",
   "cat": "static",
@@ -1404,6 +1493,12 @@
  {
   "type": "Garage A",
   "display": "Garage A",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Garage small A",
+  "display": "Garage small A",
   "cat": "static",
   "attrs": []
  },
@@ -1513,6 +1608,26 @@
    "SAM TR",
    "SAM elements",
    "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "HL_DSHK",
+  "display": "Scout HL with DSHK 12.7mm",
+  "cat": "ground",
+  "attrs": [
+   "APC",
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Infantry carriers",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
    "Vehicles"
   ]
  },
@@ -2058,7 +2173,7 @@
  {
   "type": "M 818",
   "display": "Truck M939 Heavy",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Datalink",
@@ -2365,7 +2480,7 @@
  {
   "type": "M978 HEMTT Tanker",
   "display": "Refueler M978 HEMTT",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Ground Units",
@@ -2438,7 +2553,7 @@
  {
   "type": "MQ-9 Reaper",
   "display": "MQ-9 Reaper",
-  "cat": "static",
+  "cat": "plane",
   "attrs": [
    "Air",
    "All",
@@ -2555,7 +2670,7 @@
  {
   "type": "Mi-8MT",
   "display": "mi-8mt",
-  "cat": "helicopter",
+  "cat": "static",
   "attrs": [
    "Air",
    "All",
@@ -2661,6 +2776,12 @@
    "Unarmed vehicles",
    "Vehicles"
   ]
+ },
+ {
+  "type": "NF-2_LightOn",
+  "display": "M92 NF-2 LightOn",
+  "cat": "static",
+  "attrs": []
  },
  {
   "type": "Nodding_Donkey_Pump",
@@ -3366,6 +3487,19 @@
   ]
  },
  {
+  "type": "SA342L",
+  "display": "SA342",
+  "cat": "helicopter",
+  "attrs": [
+   "Air",
+   "All",
+   "Attack helicopters",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits"
+  ]
+ },
+ {
   "type": "SAU 2-C9",
   "display": "SPM 2S9 Nona 120mm M",
   "cat": "ground",
@@ -3404,7 +3538,7 @@
  {
   "type": "SH-60B",
   "display": "sh-60b sea hawk",
-  "cat": "helicopter",
+  "cat": "static",
   "attrs": [
    "Air",
    "All",
@@ -3556,6 +3690,18 @@
  {
   "type": "Shelter B",
   "display": "Shelter B",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Small house 1A area",
+  "display": "Small house 1A area",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "Small house 1B area",
+  "display": "Small house 1B area",
   "cat": "static",
   "attrs": []
  },
@@ -4002,6 +4148,20 @@
   ]
  },
  {
+  "type": "TACAN_beacon",
+  "display": "Beacon TACAN Portable TTS 3030",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Fortifications",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "HeavyArmoredUnits"
+  ]
+ },
+ {
   "type": "TICONDEROG",
   "display": "CG Ticonderoga",
   "cat": "ship",
@@ -4188,7 +4348,7 @@
  {
   "type": "UH-1H",
   "display": "UH-1H",
-  "cat": "static",
+  "cat": "helicopter",
   "attrs": [
    "Air",
    "All",
@@ -4246,9 +4406,25 @@
   ]
  },
  {
+  "type": "Ural ATsP-6",
+  "display": "Firefighter Ural ATsP-6",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Trucks",
+   "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
   "type": "Ural-375",
   "display": "Truck Ural-4320",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Ground Units",
@@ -4264,7 +4440,7 @@
  {
   "type": "Ural-375 PBU",
   "display": "Truck Ural-4320 MCC",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Ground Units",
@@ -4274,6 +4450,25 @@
    "NonArmoredUnits",
    "Trucks",
    "Unarmed vehicles",
+   "Vehicles"
+  ]
+ },
+ {
+  "type": "Ural-375 ZU-23",
+  "display": "AAA ZU-23 on Ural-4320",
+  "cat": "ground",
+  "attrs": [
+   "AAA",
+   "AA_flak",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "Mobile AAA",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Rocket Attack Valid AirDefence",
    "Vehicles"
   ]
  },
@@ -4347,7 +4542,7 @@
  {
   "type": "VAZ Car",
   "display": "Car VAZ-2109",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Cars",
@@ -4713,6 +4908,20 @@
   ]
  },
  {
+  "type": "houseA_arm",
+  "display": "Building armed",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Fortifications",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "HeavyArmoredUnits"
+  ]
+ },
+ {
   "type": "iso_container",
   "display": "ISO container",
   "cat": "static",
@@ -4737,6 +4946,25 @@
   ]
  },
  {
+  "type": "leopard-2A4_trs",
+  "display": "MBT Leopard-2A4 Trs",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "AntiAir Armed Vehicles",
+   "Armed ground units",
+   "Armed vehicles",
+   "Armored vehicles",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "HeavyArmoredUnits",
+   "Modern Tanks",
+   "Tanks",
+   "Vehicles"
+  ]
+ },
+ {
   "type": "m117_cargo",
   "display": "M117 bombs",
   "cat": "static",
@@ -4755,7 +4983,7 @@
  {
   "type": "outpost",
   "display": "Outpost",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "AntiAir Armed Vehicles",
@@ -5018,6 +5246,12 @@
  {
   "type": "us carrier shooter",
   "display": "us carrier shooter",
+  "cat": "static",
+  "attrs": []
+ },
+ {
+  "type": "us carrier tech",
+  "display": "us carrier tech",
   "cat": "static",
   "attrs": []
  },

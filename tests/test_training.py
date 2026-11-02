@@ -66,7 +66,8 @@ class _Base(unittest.TestCase):
     def tearDown(self):
         self.dir.cleanup()
 
-    def make(self, enabled=False, voice_switch=True, client=True, path="default", templates="sizes"):
+    def make(self, enabled=False, voice_switch=True, client=True, path="default", templates="sizes",
+             olympus_enabled=lambda: True):
         def make_client(guard):
             if not client:
                 return None
@@ -75,7 +76,8 @@ class _Base(unittest.TestCase):
         return Training(lambda: self.snap, make_client, mission_name=lambda: self.mission, enabled=enabled,
                         voice_switch=voice_switch, max_groups=6, max_units=24, max_range_km=50,
                         path=self.path if path == "default" else path, printer=self.printed.append,
-                        templates={"SA-11 SAM Battery": 12, "Patriot site": 20} if templates == "sizes" else templates)
+                        templates={"SA-11 SAM Battery": 12, "Patriot site": 20} if templates == "sizes" else templates,
+                        olympus_enabled=olympus_enabled)
 
     def sent(self):
         return [next(iter(c)) for c in self.http.sent]
@@ -217,31 +219,41 @@ class TestFence(_Base):
 class TestVoiceAndClearing(_Base):
     def test_on_off_clears_first(self):
         self.alone()
-        self.assertEqual(self.t.handle("training mode on"), "Overlord, training mode on. Training targets allowed.")
+        self.assertEqual(self.t.handle("training mode on"), "Instructor, training mode on. Training targets allowed.")
         self.track()
         self.track(group="Olympus-8", ids=(801,))
-        self.assertEqual(self.t.handle("training status"), "Overlord, training mode on, 2 groups, 3 units alive.")
-        self.assertEqual(self.t.handle("training mode off"), "Overlord, 2 training groups removed. Training mode off.")
+        self.assertEqual(self.t.handle("training status"), "Instructor, training mode on, 2 groups, 3 units alive.")
+        self.assertEqual(self.t.handle("training mode off"), "Instructor, 2 training groups removed. Training mode off.")
         self.assertEqual(sorted(c["deleteUnit"]["ID"] for c in self.http.sent), [701, 702, 801])
         self.assertFalse(self.t.on)
-        self.assertEqual(self.t.handle("training status"), "Overlord, training mode off.")
+        self.assertEqual(self.t.handle("training status"), "Instructor, training mode off.")
 
     def test_clear(self):
-        self.assertEqual(self.t.handle("clear training targets"), "Overlord, no training targets.")
+        self.assertEqual(self.t.handle("clear training targets"), "Instructor, no training targets.")
         self.track()
-        self.assertEqual(self.t.handle("clear the training targets"), "Overlord, 1 training group removed.")
+        self.assertEqual(self.t.handle("clear the training targets"), "Instructor, 1 training group removed.")
         self.assertFalse(self.t.has_groups())
 
     def test_refusals(self):
         self.alone()
-        self.assertEqual(self.make(client=False).handle("training mode on"),
-                         "Overlord, unable, no Game Master login in config.")
-        self.assertEqual(self.make(voice_switch=False).handle("training mode on"),
-                         "Overlord, unable, training mode is switched off in config.")
+        """1 Nov (one training mode): training turns on anyway (the instructor's exercises work) and
+        says why there are no training targets; only the config switch refuses."""
+        self.alone()
+        t = self.make(client=False)
+        self.assertEqual(t.handle("training mode on"),
+                         "Instructor, training mode on. Training targets unavailable, no Game Master login in config.")
+        self.assertTrue(t.on)
+        t = self.make(voice_switch=False)
+        self.assertEqual(t.handle("training mode on"), "Instructor, unable, training mode is switched off in config.")
+        self.assertFalse(t.on)
         t = self.make()
         t.note_players("PLAYERS 2 mp")
-        self.assertEqual(t.handle("training mode on"), "Overlord, unable, other players are in the mission.")
-        self.assertFalse(t.on)
+        self.assertEqual(t.handle("training mode on"),
+                         "Instructor, training mode on. Training targets unavailable, other players are in the mission.")
+        self.assertTrue(t.on)
+        self.assertEqual(t.spawn_refusal({"coalition": "red"}), "other players are in the mission")   # gate unchanged
+        t = self.make(olympus_enabled=lambda: False)
+        self.assertIn("Olympus is turned off in config", t.handle("training mode on"))
 
     def test_flown_phrases_to_end_and_start(self):
         """30 Oct flight: none of these ended training; "cancel / abort training" went to Overlord's cancel."""
@@ -352,12 +364,17 @@ class TestNoSecret(_Base):
 class TestMainWiring(unittest.TestCase):
     def test_overlord_training_phrases(self):
         main = fakes.pipeline_module().main
-        said, who, _ = main.shared_reply("Overlord, training status")
-        self.assertEqual((said, who), ("Overlord, training mode off.", "overlord"))
-        said, _, _ = main.shared_reply("Overlord, training mode on")
-        self.assertEqual(said, "Overlord, unable, no Game Master login in config.")   # tests have none
+        said, who, _ = main.shared_reply("Instructor, training status")
+        self.assertEqual((said, who), ("Instructor, training mode off.", "instructor"))
+        try:
+            said, who, _ = main.shared_reply("Instructor, training mode on")
+            self.assertEqual(who, "instructor")
+            self.assertTrue(main.TRAINING.on)                  # on, without training targets
+            self.assertIn("Training targets unavailable", said)
+            self.assertIn("no Game Master login", main.TRAINING.link()["detail"])
+        finally:
+            main.TRAINING.set_mode(False)
         self.assertFalse(main.TRAINING.on)
-        self.assertIn("no Game Master login", main.TRAINING.link()["detail"])
         self.assertIsNone(main.TRAINING.path)
 
     def test_players_message_reaches_the_gate(self):
