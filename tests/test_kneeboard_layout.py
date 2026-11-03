@@ -47,6 +47,19 @@ class Layout(unittest.TestCase):
         for var in ("--friendly", "--hostile", "--neutral", "--unknown"):
             self.assertIn(var + ":", self.src)
 
+    def test_track_up_turns_the_map_like_the_compass(self):
+        """1 Nov: in track up the map was mirrored against your symbol and the compass ticks. A point at
+        true bearing b must land at screen angle b + rot, like the ticks (rot = -heading)."""
+        self.assertIn("const x = e * Math.cos(rot) + n * Math.sin(rot), y = n * Math.cos(rot) - e * Math.sin(rot);", self.src)
+        import math
+        for hdg, brg in ((90, 0), (270, 0), (45, 0), (180, 90), (10, 18)):
+            rot = -math.radians(hdg)
+            e, n = math.sin(math.radians(brg)), math.cos(math.radians(brg))
+            x, y = e * math.cos(rot) + n * math.sin(rot), n * math.cos(rot) - e * math.sin(rot)
+            want = math.radians(brg) + rot                                    # the compass tick's angle
+            self.assertAlmostEqual(x, math.sin(want))
+            self.assertAlmostEqual(y, math.cos(want))
+
     def test_still_light_for_vr(self):
         self.assertNotIn("@keyframes", self.src)
         self.assertNotRegex(self.src, r"\banimation\s*:|\btransition\s*:|backdrop-filter\s*:")

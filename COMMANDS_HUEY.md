@@ -2,7 +2,9 @@
 
 Fly the UH-1H and the program switches to the Huey crew by itself (the console prints
 `[PROFILE] UH-1H: Huey crew ... active`). Same push-to-talk: **SPACE** or your stick button.
-The phrases below are handled instantly; anything else goes to the LLM (2–5 s).
+The phrases below are handled instantly; anything else goes to the local model (about 1–1.5 s), whose
+answer is checked before the crew acts on it. A short "cease fire" / "hold fire" / "check fire" /
+"weapons hold" runs at once, ahead of anything still waiting, and cancels the orders given before it.
 
 Needs `george_huey_export.lua` (gunners, autopilot, gauges, cautions) and DCS-BIOS (switches,
 radios, flares). See README.
@@ -43,12 +45,14 @@ confirmed.
 |---|---|
 | **master arm on** · **arm up** · **master arm safe** · **master arm off** | Armament OFF / SAFE / ARMED |
 | **select rockets** · **select guns** · **grenades** | 2.75 / 7.62 / 40 mm selector |
+| **gun selector left / right / both** · **left guns only** · **both guns** | Gun selector |
 | **rocket pairs three** | Rocket pair selector (0–7) |
 | **flares** · **pop flares** | One flare (arms the dispenser first if it's safe) |
 | **flares armed** · **flares safe** | Dispenser ARM switch |
 | **landing light on/off** · **search light on/off/stow** | Also "turn off the landing light". Just "lights off": George asks which |
 | **anti-collision on/off** · **nav lights steady/flash/off** · **position lights dim/bright** | |
-| **pitot heat on/off** · **battery on** · **main fuel on** · **force trim on** · **hydraulics on** · **inverter main** | |
+| **pitot heat on/off** · **battery on/off** · **main fuel on/off** · **force trim on/off** · **hydraulics on/off** · **inverter main/off** | |
+| **main generator on** · **starter generator standby** · **starter generator start** · **low RPM audio on/off** | |
 | **UHF 251.0** · **VHF 124 decimal 75** · **FM 30.5** | Turns that radio's dials click by click and reads them back (UHF 225–399.95 in 50 kHz steps, VHF 116–149.975, FM 30–75.95). UHF only follows its dials with the mode dial on manual; George tells you if it isn't |
 | **nav 112.5** · **navigation 108 decimal 05** | Tunes the VHF NAV receiver the same way (108–117.95) |
 | **radio 124.75** · **set radio to frequency 241** | No radio named: the frequency picks it (225 and up UHF, 116–149.975 VHF, 108–115.95 NAV, 30–75.95 FM) |
@@ -116,9 +120,15 @@ load you've selected first in the radio menu (F6, cargo list): "radio menu", the
 - Landing and hover (heights are skid heights): "Twenty feet." "Ten." "Five." "Three." "Skids down.",
   "Drifting back and left." ... "Steady.", "Easy, slow your descent!", and "Skids up." on lift-off.
   The first time you sit still on the ground he learns what "on the ground" reads.
+  While an Instructor exercise is armed or running (training mode), the height countdown and drift
+  calls stop so the Instructor can judge you; "Easy, slow your descent!", "Skids down/up" and the
+  sling-load talk-on still play.
 - Sling loads (after "talk me onto the load"): "Load, 12 o'clock, 40 meters." then "Forward ten,
   left five, down five." ... "Steady, hold.", "You're in range. Say hook the load." when you've
   landed next to it, and "Load's off the ground." when it lifts.
-- "Bingo fuel. Home is 12 miles, steer 225." when flying home would leave less than 185 lbs.
+- "Bingo fuel. Home is 12 miles, steer 225." when flying home would leave you under the reserve
+  (`HUEY_FUEL_RESERVE_LBS` in config.py; burn `HUEY_FUEL_BURN_LBS_HR`, 555 lb/h). Once per flight.
 
-Radio menu and navigation: see `COMMANDS_COMMON.md`.
+Radio menu, wingmen, Overlord, Darkside, Warlord, briefing, position, training mode (the Instructor's
+hover, hover turn, approach and fuel exercises) and the kneeboard: see `COMMANDS_COMMON.md` and
+`KNEEBOARD.md`.

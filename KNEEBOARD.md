@@ -6,6 +6,8 @@ The program serves a kneeboard page on your PC only: **http://127.0.0.1:5000/**
 1. Start the program (main.py). The console says `[KNEEBOARD] http://127.0.0.1:5000/`.
 2. In OpenKneeboard: Settings > Tabs > Add tab > **Web Dashboard**, URL `http://127.0.0.1:5000/`.
 3. It's also fine in a normal browser on the same PC (useful for checking).
+4. After the program is updated, an open page reloads itself within a few seconds (it compares its
+   version with the one on disk), so OpenKneeboard doesn't need a manual reload.
 
 Port taken by something else? Set `KNEEBOARD_PORT` in config.py (and the tab's URL). Off: `KNEEBOARD_ENABLED = False`.
 
@@ -30,11 +32,22 @@ when hostiles are known, else CLEAR.
   enemies, so red). The JTAC target is an amber crosshair; threat rings are dashed red. Range rings in
   nm (jets) or km (helicopters). Buttons: **+ / −** zoom (2.5 to 160), **N / TU** north up or track
   up, **LYR** layers (threat rings, your track, route, named waypoints, ground, aircraft, ships,
-  friendly flights, labels), **⛶** map only / dashboard. Your choices are remembered.
+  friendly units, labels; and the position format), **⛶** map only / dashboard. Your choices are remembered.
   **Tap a marker** to see what the map knows about it in the Selected contact panel (side, kind,
   bearing and distance, status, threat ring and whether you're inside it, confidence, George's list
   number); tap empty map to clear. This is display only: nothing is ordered from a tap (that is
   feature 3, still to do), and "kneeboard, contact 42" still gives the full track details.
+  **Your grid** (1 Nov): bottom left of the map, in amber ("GRID 38T LM 7218 4018"), and first in Mission
+  overview: MGRS at the precision your aircraft uses for target grids (8 digits; 10 in the A-10C).
+  **LYR > Position format** switches it to latitude / longitude in degrees, minutes, seconds (DMS,
+  "N 42°23'03.4\" E 043°26'56.5\"") or degrees and decimal minutes (DDM, "N 42°23.056' E 043°26.941'",
+  as the Hornet's UFC takes it); Mission overview then shows Lat and Long rows. The choice is remembered.
+  **Friendly units within 5 km** (1 Nov): your side's ground units, ships and aircraft (from Export.lua's
+  own-side list, not you, your group or Overlord's flights) and your wingmen, drawn in blue with a light
+  fill (square ground, triangle aircraft, diamond ship). Wingmen are always labelled, others when zoomed to
+  5 or less. They disappear beyond 5 km (`FRIENDLY_SHOW_M` in config.py, in metres, changes it; the
+  legend and the tapped panel show the range in use, e.g. "friendly ≤20 km") and count in the
+  tactical summary's Friendly row. The LYR layer "Friendly units" hides them with the Outcasts and flights.
   **From the tactical picture** (31 Oct, step T5) while it's running: enemy units are drawn from the
   picture, one marker per DCS unit. A filled marker is in DCS's latest scan; a **hollow** one is where
   the unit was last seen (out of the lists' range, or lost), with how long ago ("1 min ago"). Green =
@@ -44,12 +57,12 @@ when hostiles are known, else CLEAR.
   moves. If the picture stops updating, the map goes back to Export.lua's lists by itself.
 - **Brief**: the DCS mission's briefing (arrives when the mission loads), your campaign briefing
   (data/campaign_briefing.json), and this aircraft's procedures (closed; tap to open). When George or
-  Overlord answers a briefing question, the entry it came from is marked yellow and scrolled to, with
+  Overlord answers a briefing question, the entry it came from is marked amber and scrolled to, with
   the question at the top. Frequencies and grids are highlighted (amber).
   After an answer from an imported aircraft manual, that manual section is shown in full under
   "Manual: <section>" (only that section: a manual is thousands of entries).
 - **Checklist**: the running Apache / Huey checklist: done items ticked (green tick = George saw it,
-  white = you said check, gear = George set it, dash = skipped), the current item in yellow, and what
+  white = you said check, gear = George set it, dash = skipped), the current item in amber, and what
   George sees for the items still to come ("reads off" in red, "reads battery" in green). When a
   checklist starts, the kneeboard turns to this page (`KNEEBOARD_AUTO_CHECKLIST = False` stops that).
   After it ends, the last one stays up.
@@ -60,7 +73,10 @@ when hostiles are known, else CLEAR.
   checklist" picks one. Switch positions are read from DCS-BIOS's own data
   (`Saved Games\DCS\Scripts\DCS-BIOS\doc\json`); run `python jet_probe.py` once per jet and flip the
   switches to check they read right.
-- **Comms**: everything said, newest at the bottom: you, the crew, Overlord. "Picture" lines (dimmed)
+- **Comms**: everything said, newest at the bottom: you, the crew, Overlord, Warlord, Darkside, the
+  Instructor. "Order" lines (dimmed; red when failed) are what happened to an order sent to Olympus or
+  the radio menu. "AI to AI" lines are calls between AI flights and Darkside (spoken only with
+  `AI_TO_AI_SPOKEN = True`). "Picture" lines (dimmed)
   are changes in the tactical picture: enemy units destroyed or gone, and new / lost air defence,
   aircraft and other serious threats ("New: Osa 9A33 ln (T51), 9 km north of you."), plus the
   picture going stale or current again. Nothing is spoken. Grids, lat/long,
@@ -72,8 +88,19 @@ when hostiles are known, else CLEAR.
   tolerance, red out); then **Scores**: the last result with every deduction, your levels, recurring
   weaknesses, the suggested next exercise, and the training targets you destroyed with the time after
   the spawn. "Show the training / scores / instructor" opens it.
-- **Status**: green / red for DCS telemetry, DCS-BIOS, the comms hook, DCS fuel, Olympus, Ollama and the
-  voices, with how long ago each was heard; the last speech recognition time.
+- **Alerts** (30 Oct): active alerts newest first (critical red, warning amber, info grey), and below
+  them the ones resolved or acknowledged in the last 10 minutes. Critical: Overlord's close-bandit call,
+  bingo fuel, Apache EUFD warnings and threat warnings. Warning: joker fuel, EUFD cautions, low
+  altitude, a lost link (telemetry, DCS-BIOS, comms hook, Olympus, Ollama, enemy picture stale). Info:
+  pop-up groups, a link back up, training targets destroyed (clears after 60 s). A thin marker line
+  under the tabs shows on every page while any alert is up ("▲ 2 alerts: bingo fuel"); a critical one
+  makes it a red banner until acknowledged or cleared. Tap the line to open Alerts; the Alerts tab shows
+  the count. Failed orders are not alerts (they stay on Comms).
+- **Status**: green / red / grey for DCS telemetry, DCS-BIOS, the enemy picture (Export.lua's scan), the
+  tactical picture, the comms hook, DCS fuel, Olympus (with its last error), command roles (permissions,
+  refusals), your callsign, training mode, the instructor, Ollama and the voices, with how long ago each
+  was heard; then the last timings (profile, per-step latency of the last commands, speech recognition,
+  dropped / failed speech, carrier quiet window).
 
 ## Voice (any aircraft; whole sentences only, answered by the page, not a voice)
 - "Show the map / briefing / manual / checklist / comms / status / training" (also "kneeboard, briefing", "open the comms log")
@@ -81,6 +108,11 @@ when hostiles are known, else CLEAR.
 - "Page down / page up", "next page / previous page", "scroll to the top / bottom"
 - "Scroll down / up" too, except in the Apache, where it moves George's target list: there say "kneeboard, scroll down" or "page down"
 - A checklist still starts the usual way ("before start checklist").
+- "Kneeboard, zoom in / out": the map's range (plain "zoom in" stays George's TADS zoom)
+- "Show alerts" (also "kneeboard, alerts", "show the warnings"); "kneeboard, acknowledge" (the newest
+  alert) and "kneeboard, acknowledge all". A bare "acknowledge" does nothing here.
+- "Kneeboard, track on / off" (also "show / hide the track"): your track on the map, for this session
+  (recording carries on while it's hidden; `KNEEBOARD_TRACK` in config.py sets the default)
 - "Kneeboard, contact 42" (also "contact tango four two", "track 42"): the details of unit T42 on the
   map: status and why, where, side, how we know (DCS's world scan is simulator truth, not a sensor
   detection), when seen, how sure, George's list entry, and why it's a threat. "Kneeboard, close

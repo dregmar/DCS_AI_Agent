@@ -14,7 +14,12 @@ With a tactical picture the enemy markers come from its tracks (one per DCS obje
 the same keys as before plus "tid" (T42), "status", "age_s" (last seen, for markers that aren't
 current), "conf", "george" (his list number), "neutral", and (1 Nov) "aff" (hostile / neutral /
 unknown: the page colours by it) and "cat" (air / ground / naval ...: the page's layer filters).
-Markers from the raw lists have no "aff" / "cat": they're enemy lists, so the page draws them hostile. Units out of coverage or lost are
+Markers from the raw lists have no "aff" / "cat": they're enemy lists, so the page draws them hostile.
+
+1 Nov (evening): "me" carries "grid", your MGRS position at the precision your aircraft uses for target
+grids (8 digits; 10 in the A-10C), and "friends" lists your own side's units within FRIENDLY_SHOW_M
+(config, default 5 km): Export.lua's own-side list (already without you, your group and Olympus flights)
+plus your wingmen, nearest first. Units out of coverage or lost are
 drawn hollow at their last known position. Without a picture (service off, not started, not
 updating) the map is built from the raw lists exactly as before.
 
@@ -28,6 +33,9 @@ from typing import Callable, Dict, List, Optional
 FT_PER_M = 3.28084
 MAX_GROUND = 120
 MAX_AIR = 40
+MAX_FRIENDS = 40
+FRIENDLY_SHOW_M = 5000.0      # default for config FRIENDLY_SHOW_M
+SELF_GUARD_M = 15.0           # a friendly row this close to you is taken to be you (Export's name mix-ups)
 AGE_STEP_S = 10            # ages on the map move in 10 s steps, so the feed doesn't change every second
 
 # (pattern on the DCS type name, radius km) - first match wins. Typical max engagement ranges.
@@ -73,7 +81,7 @@ def build_map(snap: dict, ctx) -> Dict:
     if me_ll:
         me = {"lat": round(me_ll[0], 6), "lon": round(me_ll[1], 6), "hdg": round(snap.get("hdg") or 0.0, 1),
               "alt_ft": round(snap.get("alt_ft") or 0.0), "kts": round(snap.get("speed_kts") or 0.0),
-              "ac": snap.get("aircraft") or ""}
+              "ac": snap.get("aircraft") or "", "grid": _grid(me_ll[0], me_ll[1], snap)}
     route = []
     for p in snap.get("route") or []:
         try:
@@ -100,6 +108,8 @@ def build_map(snap: dict, ctx) -> Dict:
         "ground": ground[:MAX_GROUND],
         "air": air[:MAX_AIR],
         "jtac": jtac,
+        "friends": friends_near(snap, me_ll),
+        "friends_m": friendly_radius_m(),
         "enemy_age": enemy_age(snap),
         "source": "picture" if pic is not None else "lists",
         "george": notes,
@@ -110,6 +120,74 @@ def build_map(snap: dict, ctx) -> Dict:
     if n is not None:
         out["panel"] = contact_panel(pic, n, snap, ctx.imperial(snap))
     return out
+
+
+def _grid(lat: float, lon: float, snap: dict) -> Optional[str]:
+    """"38T LM 72180 40180": MGRS at the aircraft's target-grid precision (common/aircraft.py)."""
+    try:
+        from common.aircraft import profile
+        digits = int(profile(snap).target_grid_digits)
+    except Exception:
+        digits = 4
+    try:
+        from common.position import mgrs_text
+        return mgrs_text(lat, lon, max(1, min(5, digits)))
+    except Exception:
+        return None
+
+
+def _flat_m(a, b) -> float:
+    n = (b[0] - a[0]) * 111_320.0
+    e = (b[1] - a[1]) * 111_320.0 * math.cos(math.radians((a[0] + b[0]) / 2))
+    return math.hypot(n, e)
+
+
+_FR_CAT = {"a": "air", "g": "ground", "n": "naval"}
+
+
+def friendly_radius_m() -> float:
+    """config FRIENDLY_SHOW_M (metres), else 5 km; the page shows it in the legend."""
+    try:
+        import config
+        v = float(getattr(config, "FRIENDLY_SHOW_M", FRIENDLY_SHOW_M) or FRIENDLY_SHOW_M)
+        return v if v > 0 else FRIENDLY_SHOW_M
+    except Exception:
+        return FRIENDLY_SHOW_M
+
+
+def friends_near(snap: dict, me_ll, radius_m: Optional[float] = None) -> List[Dict]:
+    """Your side's units within radius_m (config FRIENDLY_SHOW_M, 5 km): Export.lua's "fr" rows
+    [type, id, lat, lon, alt m, "a"|"g"|"n"] and your wingmen [unit name, id, lat, lon]. Nearest first."""
+    if not me_ll:
+        return []
+    if radius_m is None:
+        radius_m = friendly_radius_m()
+    me = (float(me_ll[0]), float(me_ll[1]))
+    out, seen = [], set()
+    rows = [(r, False) for r in snap.get("wing") or []] + [(r, True) for r in snap.get("friendly_units") or []]
+    for r, side_list in rows:
+        try:
+            if side_list:
+                typ, oid, lat, lon, alt = str(r[0]), int(r[1]), float(r[2]), float(r[3]), float(r[4])
+                cat, name = _FR_CAT.get(str(r[5]), "ground"), None
+            else:
+                name, oid, lat, lon = str(r[0]), int(r[1]), float(r[2]), float(r[3])
+                typ, alt, cat = name, None, "air"
+        except (TypeError, ValueError, IndexError):
+            continue
+        if oid in seen:
+            continue
+        d = _flat_m(me, (lat, lon))
+        if d > radius_m or d < SELF_GUARD_M:
+            continue
+        seen.add(oid)
+        f = {"id": oid, "type": typ, "lat": round(lat, 6), "lon": round(lon, 6), "cat": cat, "wing": not side_list,
+             "d": int(d // 50 * 50)}
+        if alt is not None and cat == "air":
+            f["alt_ft"] = round(alt * FT_PER_M)
+        out.append(f)
+    out.sort(key=lambda f: f["d"])
+    return out[:MAX_FRIENDS]
 
 
 def _picture(ctx):

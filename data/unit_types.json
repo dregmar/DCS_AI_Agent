@@ -40,6 +40,32 @@
   ]
  },
  {
+  "type": "2S6 Tunguska",
+  "display": "SAM SA-19 Tunguska \"Grison\" ",
+  "cat": "ground",
+  "attrs": [
+   "AAA",
+   "AA_flak",
+   "AA_missile",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "Mobile AAA",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "RADAR_BAND1_FOR_ARM",
+   "Rocket Attack Valid AirDefence",
+   "SAM SR",
+   "SAM TR",
+   "SAM elements",
+   "SAM related",
+   "SR SAM",
+   "Vehicles"
+  ]
+ },
+ {
   "type": "345 Excavator",
   "display": "Excavator",
   "cat": "static",
@@ -2568,7 +2594,7 @@
  {
   "type": "MTLB",
   "display": "APC MTLB",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "APC",
    "All",
@@ -2630,7 +2656,7 @@
  {
   "type": "Mi-24P",
   "display": "Mi-24P",
-  "cat": "static",
+  "cat": "helicopter",
   "attrs": [
    "Air",
    "All",
@@ -2665,6 +2691,19 @@
    "NonAndLightArmoredUnits",
    "NonArmoredUnits",
    "Transport helicopters"
+  ]
+ },
+ {
+  "type": "Mi-28N",
+  "display": "Mi-28N",
+  "cat": "helicopter",
+  "attrs": [
+   "Air",
+   "All",
+   "Attack helicopters",
+   "Helicopters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits"
   ]
  },
  {
@@ -3518,6 +3557,24 @@
   ]
  },
  {
+  "type": "SAU Gvozdika",
+  "display": "SPH 2S1 Gvozdika 122mm",
+  "cat": "ground",
+  "attrs": [
+   "All",
+   "Armed ground units",
+   "Armed vehicles",
+   "Artillery",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "Indirect fire",
+   "LightArmoredUnits",
+   "NonAndLightArmoredUnits",
+   "Vehicles"
+  ]
+ },
+ {
   "type": "SAU Msta",
   "display": "SPH 2S19 Msta 152mm",
   "cat": "ground",
@@ -3840,6 +3897,30 @@
   ]
  },
  {
+  "type": "Soldier stinger",
+  "display": "MANPADS Stinger",
+  "cat": "ground",
+  "attrs": [
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Armed ground units",
+   "Ground Units",
+   "Ground Units Non Airdefence",
+   "Ground vehicles",
+   "IR Guided SAM",
+   "Infantry",
+   "MANPADS",
+   "New infantry",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Rocket Attack Valid AirDefence",
+   "SAM",
+   "SAM related",
+   "Vehicles"
+  ]
+ },
+ {
   "type": "SpGH_Dana",
   "display": "SPH Dana vz77 152mm",
   "cat": "ground",
@@ -3950,7 +4031,7 @@
  {
   "type": "Su-25",
   "display": "su-25",
-  "cat": "static",
+  "cat": "plane",
   "attrs": [
    "Air",
    "All",

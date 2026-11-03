@@ -97,14 +97,16 @@ router (qwen3:8b on Ollama, only when nothing matched) -> handler -> gates -> Pi
   orders), metrics (latency per utterance).
 - `intelligence/` ollama_chat, llm_client (George prompt + gates), fast_path, router (ROUTE
   rewrites, learned phrases), threat_engine, engagement_monitor.
+- `command/` command roles (Phase 2): roles, tasking registry, permission table, rules, wake words,
+  exchange form (Warlord and Darkside themselves are common/warlord.py and common/darkside.py).
 - `apache/` George; `huey/` UH-1H crew; `instructor/` adaptive instructor (hover, approach, fuel,
   hover turn); `tactical/` tactical picture and threat fusion (tracks, fusion, threats, service).
 - `common/` comms_menu (radio menu + hook messages), wingmen, olympus (REST client), independents
   (Outcasts), overlord, jtac, carrier, training (gate), training_targets and training_mode (one
   training mode: switch, spawns and the instructor, all in the instructor's voice), briefing (BM25),
   position, airfields, debrief, orders, aircraft, fuel_watch, nav, user_waypoints ...
-- `kneeboard/` server (HTTP + SSE), model (map, threat rings), pages, alerts, track, comms_log,
-  static/index.html.
+- `kneeboard/` server (HTTP + SSE), model (map, threat rings, your grid, friendlies within 5 km), pages,
+  alerts, track, comms_log, static/index.html (amber dashboard, 1 Nov).
 - `audio/` tts and dsp. `dcs_scripts/` Lua. `data/` JSON knowledge and learned data. `tests/`.
 - Ports (localhost): 5005 Export, 5006/5007 George UI / weapons, 5008/5009 Huey, 5010/7778
   DCS-BIOS, 5011/5012 comms hook, 4512 Olympus, 11434 Ollama, 5000 kneeboard.

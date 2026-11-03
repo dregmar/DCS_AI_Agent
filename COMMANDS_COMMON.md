@@ -192,7 +192,8 @@ Dynamics' text: they stay on your PC.
 | "say bullseye" | "Bullseye 106 for 21." (true bearing and nautical miles from your coalition's bullseye; needs Olympus) |
 | "Overlord, request our grid" · "Overlord, say bullseye" | the same, from Overlord on the radio |
 
-The grid is worked out from your aircraft's position (the same MGRS grid as the F10 map).
+The grid is worked out from your aircraft's position (the same MGRS grid as the F10 map). It is also
+always shown on the kneeboard map (bottom left) and in its Mission overview.
 
 **Other aircraft** (not the Apache or Huey, e.g. the Hornet): there's no crew, so George and the
 crew stay out of it (no wheel keys, no Apache callouts). Navigation, grid, briefing questions, the
@@ -258,7 +259,9 @@ current position), else your first route point, else the nearest friendly field.
 Home plate CVN-73, 100 miles, steer 180." "Fuel to home" / "can we make it home" use the same
 numbers. Off: `FUEL_CALLS = False` in config.py.
 
-**Overlord as JTAC** (any aircraft; made for the A-10C and Hornet). Say "Overlord, ..." or "JTAC, ...":
+**Overlord as JTAC** (any aircraft; made for the A-10C and Hornet). Say "Overlord, ..." or "JTAC, ...".
+With command roles on (the default, see "Warlord and Darkside" below) Overlord hands these to Darkside
+("Overlord, contact Darkside.") and Darkside answers in his own voice; "Darkside, ..." works directly:
 
 | Say | Overlord |
 |---|---|
@@ -418,6 +421,8 @@ is answered by the instructor, starting "Instructor, ...".
 - "Show the map / briefing / checklist / comms / status / training", "kneeboard, briefing"
 - "Show the shutdown checklist" (shows it, doesn't start it)
 - "Page down / up", "next / previous page", "scroll to the top / bottom"; "scroll down / up" except in the Apache (George's list there: say "kneeboard, scroll down")
+- "Kneeboard, zoom in / out" (the map's range); "kneeboard, contact 42" / "kneeboard, close contact" (one unit's details)
+- "Show alerts", "kneeboard, acknowledge", "kneeboard, acknowledge all"; "kneeboard, track on / off"
 Nothing is said back: the page changes.
 In the A-10C II and Hornet the Checklist page follows your switches by itself (no voice): "show the cold
 start / taxi / takeoff / carrier launch / landing / carrier landing / shutdown checklist" (A-10C also

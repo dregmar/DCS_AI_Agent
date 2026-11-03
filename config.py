@@ -90,7 +90,7 @@ KNEEBOARD_TRACK = True            # your track on the map ("kneeboard, track on 
 DCS_BIOS_JSON_DIR = None          # None = Saved Games\DCS\Scripts\DCS-BIOS\doc\json (jet checklists read it)
 
 # --- Jets (A-10C, F/A-18C...): common/aircraft.py has the numbers per type ---
-FUEL_CALLS = True                 # Overlord's joker / bingo calls in jets
+FUEL_CALLS = False                 # Overlord's joker / bingo calls in jets
 AIRCRAFT_OVERRIDES = {}           # e.g. {"FA-18C_hornet": {"reserve_lbs": 3500, "joker_margin_lbs": 2000}}
 LLM_MODEL = "qwen3:8b"           # "ollama pull qwen3:8b". Back to the old one: "qwen2.5:7b".
                                  # Compare them with: python llm_bench.py
@@ -172,3 +172,5 @@ GEORGE_LONG_PRESS_S = 0.75         # > 0.5 s
 GEORGE_EXTRA_LONG_PRESS_S = 1.30   # > 1 s (CPG start-up / shutdown)
 GEORGE_WEAPON_CYCLE = ["NO_WPN", "GUN", "MSL", "RKT"]   # only loaded weapons appear in George's cycle
 GEORGE_IDLE_CLOSE_MAIN_S = 0.0     # hide George's wheel after this many idle seconds (None = never)
+
+FRIENDLY_SHOW_M = 20000

@@ -105,8 +105,17 @@
   body.showlayers #layers { display: block; }
   #layers label { display: flex; align-items: center; gap: 10px; padding: 6px 2px; cursor: pointer; font-size: 17px; }
   #layers label:hover { color: var(--amber); }
+  #layers .pb { max-height: calc(100vh - 160px); overflow-y: auto; }
+  #layers .sub { color: var(--amber); font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    border-top: 1px solid var(--line); margin-top: 6px; padding-top: 8px; }
   #layers input { width: 20px; height: 20px; accent-color: var(--amber); margin: 0; }
-  #legend { position: absolute; left: 10px; right: 10px; bottom: 10px; font-size: 14px; color: var(--dim);
+  #mapfoot { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; flex-direction: column;
+    align-items: flex-start; gap: 6px; pointer-events: none; }
+  #mapgrid { font-family: var(--mono); font-size: 20px; font-weight: 600; color: var(--amber); letter-spacing: .5px;
+    background: rgba(8,13,17,.9); border: 1px solid var(--amberdim); border-left: 3px solid var(--amber);
+    padding: 4px 10px; border-radius: 4px; white-space: nowrap; display: none; }
+  #mapgrid small { font-family: var(--font); font-size: 12px; color: var(--dim); letter-spacing: 1.2px; margin-right: 8px; font-weight: 700; }
+  #legend { align-self: stretch; font-size: 14px; color: var(--dim);
     background: rgba(8,13,17,.88); border: 1px solid var(--line2); padding: 5px 10px; border-radius: 6px;
     display: flex; flex-wrap: wrap; gap: 2px 14px; pointer-events: none; }
   #legend span { white-space: nowrap; }
@@ -323,7 +332,9 @@
       <button id="layerbtn" class="small" title="Map layers">LYR</button>
       <button id="layoutbtn" title="Map only / dashboard">⛶</button>
     </div>
-    <div id="layers" class="panel"><div class="ph">Map layers</div><div class="pb" id="layerlist"></div></div>
+    <div id="layers" class="panel"><div class="ph">Map layers</div><div class="pb"><div id="layerlist"></div>
+      <div class="sub">Position format</div><div id="gridfmt"></div></div></div>
+    <div id="mapfoot"><div id="mapgrid"></div>
     <div id="legend">
       <span style="color:var(--me)"><i>▲</i>you</span><span style="color:var(--track)"><i>—</i>your track</span>
       <span style="color:var(--friendly)"><i>●</i>Overlord</span><span style="color:var(--outcast)"><i>◆</i>Outcast</span>
@@ -331,7 +342,8 @@
       <span style="color:var(--neutral)"><i>■</i>neutral</span><span style="color:var(--unknown)"><i>■</i>unknown</span>
       <span style="color:var(--hostile)"><i>◌</i>threat ring</span>
       <span style="color:var(--jtac)"><i>✛</i>JTAC</span><span style="color:var(--named)"><i>◇</i>waypoint</span>
-    </div>
+      <span style="color:var(--friendly)"><i>□</i>friendly ≤<span id="frrange">5 km</span></span>
+    </div></div>
   </section>
 
   <aside id="colR" class="col">
@@ -392,7 +404,7 @@ function save() { try { localStorage.setItem("kb.zoom", zoom); localStorage.setI
 
 // layers (1 Nov): what the map draws, remembered per viewer like zoom; the server's track switch still applies
 const LAYERS = [["rings", "Threat rings"], ["track", "Your track"], ["route", "Route"], ["wpts", "Named waypoints"],
-                ["ground", "Ground units"], ["air", "Aircraft"], ["naval", "Ships"], ["friendly", "Friendly flights"],
+                ["ground", "Ground units"], ["air", "Aircraft"], ["naval", "Ships"], ["friendly", "Friendly units"],
                 ["labels", "Labels"]];
 let L = Object.fromEntries(LAYERS.map(l => [l[0], true]));
 try { Object.assign(L, JSON.parse(localStorage.getItem("kb.layers") || "{}")); } catch (e) {}
@@ -403,6 +415,33 @@ $("layerlist").addEventListener("change", e => {
   try { localStorage.setItem("kb.layers", JSON.stringify(L)); } catch (e2) {}
   draw();
 });
+// position format (1 Nov): MGRS from the program; the two lat/long forms worked out here from your position
+const GRIDFMTS = [["mgrs", "MGRS grid"], ["dms", "Lat / long DMS"], ["ddm", "Lat / long DDM"]];
+let gridFmt = "mgrs";
+try { const g = localStorage.getItem("kb.gridfmt"); if (GRIDFMTS.some(f => f[0] === g)) gridFmt = g; } catch (e) {}
+$("gridfmt").innerHTML = GRIDFMTS.map(([k, t]) => `<label><input type="radio" name="gridfmt" value="${k}"${k === gridFmt ? " checked" : ""}>${t}</label>`).join("");
+$("gridfmt").addEventListener("change", e => {
+  if (!e.target.value) return;
+  gridFmt = e.target.value;
+  try { localStorage.setItem("kb.gridfmt", gridFmt); } catch (e2) {}
+  draw();
+});
+function llPart(v, pos, neg, degW, fmt) {          // one coordinate: "N 42°23'03.4"" or "N 42°23.056'"
+  const h = v >= 0 ? pos : neg, a = Math.abs(v);
+  let d = Math.floor(a), m = (a - d) * 60;
+  if (fmt === "ddm") {
+    let mm = m.toFixed(3); if (+mm >= 60) { d += 1; mm = "0.000"; }
+    return `${h} ${String(d).padStart(degW, "0")}°${mm.padStart(6, "0")}'`;
+  }
+  let mi = Math.floor(m), sec = ((m - mi) * 60).toFixed(1);
+  if (+sec >= 60) { sec = "0.0"; mi += 1; } if (mi >= 60) { mi = 0; d += 1; }
+  return `${h} ${String(d).padStart(degW, "0")}°${String(mi).padStart(2, "0")}'${sec.padStart(4, "0")}"`;
+}
+function posFmt(me) {                               // [label, text] in the chosen format
+  if (!me) return null;
+  if (gridFmt === "mgrs") return me.grid ? ["GRID", me.grid] : null;
+  return [gridFmt.toUpperCase(), `${llPart(me.lat, "N", "S", 2, gridFmt)} ${llPart(me.lon, "E", "W", 3, gridFmt)}`];
+}
 const layerBtn = $("layerbtn");
 layerBtn.onclick = () => { document.body.classList.toggle("showlayers"); layerBtn.classList.toggle("on", document.body.classList.contains("showlayers")); };
 // layout (1 Nov): "auto" = dashboard around the map, "map" = the map alone (as before the redesign)
@@ -452,6 +491,7 @@ function draw() {
     info.textContent = M ? "No position from DCS yet." : "Waiting for DCS…";
     ctx.fillStyle = css("--faint"); ctx.font = "600 20px " + css("--font"); ctx.textAlign = "center";
     ctx.fillText(M ? "NO POSITION FROM DCS" : "WAITING FOR DCS", W / 2, H / 2); ctx.textAlign = "start";
+    showGrid(null);
     sidePanels(); return;
   }
   const me = M.me, cx = W / 2, cy = H * (trackUp ? 0.62 : 0.5);
@@ -459,7 +499,9 @@ function draw() {
   const pxPerM = Math.min(W, H) * 0.45 / (radiusU * unitM);
   const rot = trackUp ? -me.hdg * Math.PI / 180 : 0, cosL = Math.cos(me.lat * Math.PI / 180);
   const Pm = (e, n) => {             // metres east / north of you -> screen
-    const x = e * Math.cos(rot) - n * Math.sin(rot), y = e * Math.sin(rot) + n * Math.cos(rot);
+    // a point at true bearing b lands at screen angle b + rot, the same turn as the compass ticks and your
+    // symbol (rot = -heading in track up). 1 Nov: the old formula turned it the other way (mirrored in TU).
+    const x = e * Math.cos(rot) + n * Math.sin(rot), y = n * Math.cos(rot) - e * Math.sin(rot);
     return [cx + x * pxPerM, cy - y * pxPerM];
   };
   const P = (lat, lon) => Pm((lon - me.lon) * 111320 * cosL, (lat - me.lat) * 111320);
@@ -582,6 +624,18 @@ function draw() {
     label(x, y, `${short(a.type)} ${Math.round(a.alt_ft / 1000)}k` + tags(a, 0), col, k === sel);
   }
   ctx.globalAlpha = 1;
+  // your side's units within FRIENDLY_SHOW_M (and your wingmen): blue, outlined so they read apart from Overlord's dots
+  setHTML($("frrange"), frRange());
+  if (L.friendly) for (const u of (M.friends || [])) {
+    const [x, y] = P(u.lat, u.lon), k = "fr:" + u.id, col = css("--friendly");
+    if (x < -40 || y < -40 || x > W + 40 || y > H + 40) continue;
+    ctx.strokeStyle = col; ctx.fillStyle = "rgba(84,183,255,.28)"; ctx.lineWidth = 2;
+    if (u.cat === "air") { ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 8, y + 7); ctx.lineTo(x - 8, y + 7); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else if (u.cat === "naval") { ctx.beginPath(); ctx.moveTo(x, y - 8); ctx.lineTo(x + 8, y); ctx.lineTo(x, y + 8); ctx.lineTo(x - 8, y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else { ctx.fillRect(x - 6, y - 6, 12, 12); ctx.strokeRect(x - 6, y - 6, 12, 12); }
+    hits.push([x, y, k, "u", u]); if (k === sel) bracket(x, y, 13);
+    if (u.wing || radiusU <= 5 || k === sel) label(x, y, short(u.type) + (u.alt_ft != null ? ` ${Math.round(u.alt_ft / 100) / 10}k` : ""), col, k === sel);
+  }
   // Overlord's flights
   if (L.friendly) for (const f of M.flights) for (const [i, p] of f.pts.entries()) {
     const [x, y] = P(p[0], p[1]); ctx.fillStyle = css("--flight");
@@ -609,9 +663,20 @@ function draw() {
   // George's entries the picture can't place (a class only, or no unit fits): listed, never drawn
   note.style.display = (M.george && M.george.length) ? "block" : "none";
   note.textContent = (M.george && M.george.length) ? "George: " + M.george.join(" · ") : "";
+  showGrid(me);
   info.textContent = `${me.ac || "aircraft"} · hdg ${String(Math.round(me.hdg)).padStart(3, "0")} · ${me.alt_ft.toLocaleString()} ft · ${me.kts} kt · ${trackUp ? "track up" : "north up"}`
     + (staleEnemy ? (M.enemy_age < 0 ? " · no enemy picture" : ` · enemy picture ${M.enemy_age}+ s old`) : "");
   sidePanels();
+}
+const gridEl = document.getElementById("mapgrid");
+function showGrid(me) {             // your position, bottom left of the map, in the chosen format
+  const f = posFmt(me);
+  gridEl.style.display = f ? "block" : "none";
+  setHTML(gridEl, f ? `<small>${f[0]}</small>${esc(f[1])}` : "");
+}
+function frRange() {               // config FRIENDLY_SHOW_M, in the map's units ("20 km" / "10.8 nm")
+  const m = M && M.friends_m > 0 ? M.friends_m : 5000, v = m / UNIT_M();
+  return `${+(v < 10 ? v.toFixed(1) : Math.round(v))} ${UNIT()}`;
 }
 function short(t) { return String(t || "").replace(/_/g, " ").slice(0, 22); }
 const isOld = u => u.status === "out_of_coverage" || u.status === "lost";
@@ -683,7 +748,9 @@ function sidePanels() {
     const nx = (M.route || []).find(p => p.n === M.wp_next);
     if (nx) { const d = geo(nx); wp = `WP ${nx.n} · ${brg3(d.brg)} ${fmtD(d.m)}`; }
     setHTML($("ovac"), esc(short(me.ac)));
-    setHTML($("ovw"), kv("Heading", String(Math.round(me.hdg)).padStart(3, "0") + "°") + kv("Altitude", `${me.alt_ft.toLocaleString()} ft`)
+    const posRows = gridFmt === "mgrs" ? (me.grid ? kv("Grid", esc(me.grid)) : "")
+      : kv("Lat", esc(llPart(me.lat, "N", "S", 2, gridFmt))) + kv("Long", esc(llPart(me.lon, "E", "W", 3, gridFmt)));
+    setHTML($("ovw"), posRows + kv("Heading", String(Math.round(me.hdg)).padStart(3, "0") + "°") + kv("Altitude", `${me.alt_ft.toLocaleString()} ft`)
       + kv("Speed", `${me.kts} kt`) + kv("Next", wp) + kv("Map range", `${ZOOMS[zoom]} ${UNIT()} · ${trackUp ? "TU" : "N up"}`));
   } else {
     setHTML($("ovac"), ""); setHTML($("ovw"), `<div class="muted">${M ? "No position from DCS yet." : "Waiting for DCS…"}</div>`);
@@ -691,7 +758,7 @@ function sidePanels() {
   // tactical summary
   if (M) {
     const all = [...M.ground, ...M.air], cnt = a => all.filter(u => affOf(u) === a && !isOld(u)).length;
-    const fr = M.outcasts.length + M.flights.reduce((s, f) => s + f.pts.length, 0), lastKnown = all.filter(isOld).length;
+    const fr = M.outcasts.length + M.flights.reduce((s, f) => s + f.pts.length, 0) + (M.friends || []).length, lastKnown = all.filter(isOld).length;
     const sym = c => `<i class="sym" style="background:var(${c})"></i>`;
     setHTML($("tsrc"), M.source === "picture" ? "PICTURE" : "LISTS");
     setHTML($("tsum"), kv(sym("--friendly") + "Friendly", fr) + kv(sym("--hostile") + "Hostile", cnt("hostile"))
@@ -724,10 +791,11 @@ function showPanel(p) {        // "kneeboard, contact 42" (from the picture), or
   if (selKey && M) for (const h of hits) if (h[2] === selKey) { u = h[4]; kind = h[3]; break; }
   if (selKey && !u && M) {      // not drawn (filtered, off screen): look it up in the feed
     u = [...M.ground, ...M.air].find(x => keyOf(x) === selKey) || null; kind = u ? (u.alt_ft !== undefined ? "a" : "g") : null;
+    if (!u) { u = (M.friends || []).find(x => "fr:" + x.id === selKey) || null; kind = u ? "u" : null; }
   }
   if (selKey && !u) selKey = null;                 // gone from the picture
   document.body.classList.toggle("has-sel", !!(u || p));
-  if (u) { setHTML($("seltid"), esc(u.tid || (kind === "o" ? "OUTCAST" : kind === "f" ? "OVERLORD" : ""))); setHTML(panelEl, tappedPanel(u, kind)); return; }
+  if (u) { setHTML($("seltid"), esc(u.tid || (kind === "o" ? "OUTCAST" : kind === "f" ? "OVERLORD" : kind === "u" ? "FRIENDLY" : ""))); setHTML(panelEl, tappedPanel(u, kind)); return; }
   if (!p) {
     setHTML($("seltid"), "");
     setHTML(panelEl, `<div class="muted">Tap a marker on the map, or say “kneeboard, contact 42”.</div>`); return;
@@ -743,6 +811,14 @@ function showPanel(p) {        // "kneeboard, contact 42" (from the picture), or
 function tappedPanel(u, kind) {
   const d = M.me ? geo(kind === "f" ? { lat: u.pts[0][0], lon: u.pts[0][1] } : u) : null;
   const rows = [];
+  if (kind === "u") {
+    rows.push(["Side", "Friendly", "friendly-t"], ["Kind", u.wing ? "Your wingman" : esc(cap(u.cat))]);
+    if (d) rows.push(["From you", `${brg3(d.brg)} ${fmtD(d.m)}`]);
+    if (u.alt_ft != null) rows.push(["Altitude", `${u.alt_ft.toLocaleString()} ft`]);
+    return `<span class="src">Tapped on the map</span><h3><span class="ic friendly-t">${u.cat === "air" ? "▲" : u.cat === "naval" ? "◆" : "■"}</span>${esc(short(u.type))}</h3><table>`
+      + rows.map(r => `<tr><td class="k">${r[0]}</td><td${r[2] ? ` class="${r[2]}"` : ""}>${r[1]}</td></tr>`).join("") + `</table>`
+      + `<div class="hint">Shown while within ${frRange()} of you.</div>`;
+  }
   if (kind === "o" || kind === "f") {
     rows.push(["Side", "Friendly", "friendly-t"]);
     if (kind === "f") rows.push(["Flight", `${esc(u.kind)}, ${u.pts.length} aircraft`], ["State", esc(u.state || "")]);

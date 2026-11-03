@@ -1,8 +1,14 @@
 # What George understands
 
 Hold **SPACE** or your **PTT button** (button 21 on the VKB Gladiator EVO R stick; `JOY_BUTTON` in config.py), speak, release. The phrases below are handled instantly. Anything else goes to the
-LLM (2–5 s), which handles free-form requests and settings you name in your own words.
+local model (about 1–1.5 s), which handles free-form requests and settings you name in your own words;
+its answer is checked against what you said and the live state before George acts on it.
 "George", "please" and "okay" are ignored, and so is a leading "and" or "so".
+
+**Safety orders go first:** a short "cease fire", "hold fire", "check fire", "weapons hold / tight",
+"stop lasing", "laser off" or "abort" (George, crew, a wingman or Outcast may be named first) runs at
+once, ahead of anything still waiting, and cancels the orders you gave before it. The Comms page of the
+kneeboard lists what was dropped.
 
 ## Fire control
 
@@ -48,7 +54,7 @@ After a search George reads his list out with clock positions, for example: "Tar
 | **lock target 3** · **select the second one** · **track target 3** · **lock priority target** | Tracks that entry of his list |
 | **engage targets 1, 3 and 4** · **engage targets one through four** · **engage the priority target** | Marks them on his shoot list and engages them in that order |
 | **where is target 2** · **where's the priority threat** | "Target 2, LARC-V, 2 o'clock, 2.1 kilometers." |
-| **next target** · **scroll down** · **previous** · **scroll up** | Moves through the open list |
+| **next target** · **scroll down** · **previous** · **scroll up** | Moves through the open list (in the Apache these stay George's; the kneeboard needs "kneeboard, scroll down") |
 | **track it** · **that one** | Tracks the highlighted entry |
 | **skip target** | Next target in a multi-target engagement |
 | **exit list** · **cancel target list** | Closes the open list |
@@ -101,12 +107,14 @@ EUFD for warnings. For the rest he waits:
 |---|---|
 | **any cautions** · **warnings** · **cautions** | Reads the EUFD's warnings, cautions and advisories |
 
-Radio menu and navigation: see `COMMANDS_COMMON.md`.
-
 ## What George calls out on his own
 
-- "Missile away, 7 remaining." · "Missiles winchester." · "Firing gun."
+- "Missile away, 7 remaining." · "Missiles winchester." · "Firing gun." · "Gun winchester."
 - "Target destroyed. Next target, T-72B." · "Shoot list complete."
 - Low altitude, high-threat air defence detected, TADS masked.
 - "DCS not in focus." when DCS isn't the window in front (he sends no keys then).
 - New EUFD warnings and cautions: "Warning, engine 1 out." "Caution, engine 1 oil pressure low."
+- Warnings, cautions, threat warnings and low altitude also go to the kneeboard's Alerts page.
+
+Radio menu, wingmen, Overlord, Darkside, Warlord, briefing, position, training mode and the kneeboard:
+see `COMMANDS_COMMON.md` and `KNEEBOARD.md`.
