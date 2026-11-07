@@ -181,7 +181,9 @@ class HueyProfile:
                  "CALIBRATE_LOAD", "RESET_LOAD_CAL"):
             return self.cargo(a)
         if a == "FLARE":
-            return self.cockpit.dispense_flare(self._flares, auto_arm=AUTO_ARM_FLARES)[1]
+            from core import settings                   # HUEY_AUTO_ARM_FLARES, a live setting (6 Nov)
+            return self.cockpit.dispense_flare(self._flares,
+                                               auto_arm=bool(settings.get("HUEY_AUTO_ARM_FLARES", AUTO_ARM_FLARES)))[1]
         if a == "RADIO":
             return self.cockpit.set_radio(cmd["key"], cmd["mhz"])[1]
         if a == "RADIO_REPORT":

@@ -72,6 +72,19 @@ def parse_route(text: str) -> list:
     return out
 
 
+def parse_wpnames(text: str) -> list:
+    """'WPNAMES\n3\t1000\t2000\tIP' -> [(3, 1000.0, 2000.0, 'IP')] (5 Nov: the 9-line's IP)."""
+    out = []
+    for line in text.split("\n")[1:]:
+        bits = line.split("\t")
+        if len(bits) >= 4:
+            try:
+                out.append((int(bits[0]), float(bits[1]), float(bits[2]), bits[3].strip()))
+            except ValueError:
+                pass
+    return out
+
+
 def parse_flight(text: str):
     """'FLIGHT Gunfighter\n1\tGunfighter-1\tPlayer\t1\n2\tGunfighter-2\tHigh\t0'
     -> ('Gunfighter', [(1, 'Gunfighter-1', 'Player', True), (2, 'Gunfighter-2', 'High', False)])"""
@@ -203,6 +216,8 @@ class CommsMenu:
             # GROUP / UNIT are repeated every 10 s for the hook: logged only when they change
             # (28 Oct: "UNIT RedArcher" filled the log)
             kind = cmd.split(" ", 1)[0]
+            if cmd.startswith("LOS\t"):               # line-of-sight queries every 2 s while lasing: not logged
+                return
             if kind in ("GROUP", "UNIT"):
                 if getattr(self, "_said_ident", {}).get(kind) == cmd:
                     return
@@ -472,6 +487,8 @@ ON_AIRBASES = None
 ON_PLAYERS = None          # "PLAYERS n mp|sp": people connected (common/training.py refuses multiplayer)
 ON_LOADED = None            # "LOADED n": a mission was loaded or restarted (unit ids start again)
 ON_EVENTS = None            # "EVENTS\n<kind;id;name;type;killer id;name;type>...": DCS unit deaths (tactical I-T4)
+ON_JTACS = None             # "JTACS\n...": your side's laser sources (common/jtac_sight.py, 3 Nov)
+ON_LOS = None               # "LOS <req> <target id>\n...": a line-of-sight answer (common/jtac_sight.py)
 
 
 def listen(menu: CommsMenu) -> None:
@@ -501,6 +518,14 @@ def listen(menu: CommsMenu) -> None:
             if text.startswith("LOADED"):             # mission (re)loaded: its flights and clones are gone
                 if ON_LOADED is not None:
                     ON_LOADED()
+                continue
+            if text.startswith("JTACS"):              # laser sources (george_comms_hook.lua, 3 Nov)
+                if ON_JTACS is not None:
+                    ON_JTACS(text)
+                continue
+            if text.startswith("LOS "):               # a line-of-sight answer for the JTAC's laser
+                if ON_LOS is not None:
+                    ON_LOS(text)
                 continue
             if text.startswith("EVENTS\n"):           # DCS says units died (george_comms_hook.lua, T8)
                 if ON_EVENTS is not None:
@@ -541,6 +566,13 @@ def listen(menu: CommsMenu) -> None:
                     print(f"[FLIGHT] {group}: " + ", ".join(
                         f"{n} {name} ({'you' if me else skill})" for n, name, skill, me in units))
                     last_flight = (group, units)
+                continue
+            if text.startswith("WPNAMES"):            # named waypoints (george_comms_hook.lua, 5 Nov)
+                names = parse_wpnames(text)
+                if names != state_store.snapshot().get("route_names"):
+                    state_store.set_route_names(names)
+                    if names:
+                        print("[NAV] Named waypoints: " + ", ".join(f"{n} {nm}" for n, _, _, nm in names[:8]))
                 continue
             if text.startswith("ROUTE"):              # the mission route (george_comms_hook.lua)
                 route = parse_route(text)

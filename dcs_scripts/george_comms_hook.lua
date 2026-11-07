@@ -19,6 +19,12 @@
 -- in flight order: 1 = lead):  "FLIGHT <group>\n<n>\t<unit name>\t<skill>\t<1 if it's you>\n..."
 -- And the loaded mission's briefing, every 30 s, for George's and Overlord's briefing answers:
 --   "BRIEF <mission name>\n##SITUATION\n<text>\n##TASK\n<your coalition's task>\n##SORTIE\n<sortie>"
+-- JTAC lasing (3 Nov): every 10 s, your side's laser sources, one a line (tab-separated):
+--   "JTACS\n<id>\t<unit name>\t<label>\t<type>\t<uav|named>\t<a|g>\t<lat>\t<lon>\t<alt m>"
+--   drones by DCS's "UAVs" attribute; others by a unit or group name with the word JTAC, FAC, observer,
+--   recon or SOF. And on request "LOS\t<req>\t<target id>\t<unit name>\t..." (terrain line of sight,
+--   land.isVisible, from each unit's eye to the target): "LOS <req> <target id>\n<unit name>\t<1|0|gone>\t<slant m>..."
+--   or "... \nNOTARGET". Read-only: nothing in the mission is changed.
 -- Status file: Saved Games\DCS\Logs\george_comms_hook_status.txt
 
 local gch = { noted = {}, next_t = 0, last = "", last_t = -10 }
@@ -168,12 +174,27 @@ local function mission_route()
         roster[#roster + 1] = string.format("%d\t%s\t%s\t%d", i, tostring(u.name), tostring(u.skill), me and 1 or 0)
     end
     gch.flight_text = table.concat(roster, "\n")
-    local pts = {}
+    local pts, names = {}, {}
+    local function wp_name(s)                    -- a waypoint name, or its dictionary entry (5 Nov: 9-line IP)
+        if type(s) ~= "string" then return "" end
+        if s:sub(1, 8) == "DictKey_" then
+            for _, d in pairs({ m.dictionary, mis.dictionary, type(m.l10n) == "table" and type(m.l10n.DEFAULT) == "table"
+                                and m.l10n.DEFAULT.dictionary or nil }) do
+                if type(d) == "table" and type(d[s]) == "string" then return d[s] end
+            end
+            return ""
+        end
+        return s
+    end
     for i, p in ipairs((g.route and g.route.points) or {}) do
         if type(p.x) == "number" and type(p.y) == "number" then
             pts[#pts + 1] = string.format("%d,%.0f,%.0f", i - 1, p.x, p.y)
+            local nm = wp_name(p.name):gsub("[\t\r\n;]", " ")
+            if nm ~= "" then names[#names + 1] = string.format("%d\t%.0f\t%.0f\t%s", i - 1, p.x, p.y, nm) end
         end
     end
+    -- "WPNAMES\n<n>\t<north m>\t<east m>\t<name>...": your route's named waypoints (the 9-line's IP)
+    gch.wpnames_text = "WPNAMES" .. (#names > 0 and ("\n" .. table.concat(names, "\n")) or "")
     return "ROUTE " .. table.concat(pts, ";"), string.format("group '%s' (found by %s): %d route points",
         tostring(g.name), by_name and "name" or by_slot and "slot" or "Player skill", #pts)
 end
@@ -439,6 +460,275 @@ local function send_callsign(now)
     end
 end
 
+-- Detection probe D0 (3 Nov): what DCS's own sensors report, before a detection model is designed.
+-- Runs ONLY while Saved Games\DCS\Scripts\george_detection_probe.flag exists (detection_probe.py on /
+-- off), every 10 s: your side's AWACS, drones and units named JTAC / observer / FAC / recon / SOF report
+-- Controller:getDetectedTargets() and isTargetDetected(); terrain line of sight (land.isVisible) to the
+-- same targets and to enemy ground units within 20 km. Writes Logs\george_detection_probe.txt with the
+-- real time each query took. Read-only: nothing in the mission is changed, nothing is sent.
+local DPROBE_FLAG = lfs.writedir() .. [[Scripts\george_detection_probe.flag]]
+local DPROBE_LOG = lfs.writedir() .. [[Logs\george_detection_probe.txt]]
+local DPROBE_CODE = [==[
+local MAXOBS, MAXT, LOS_M, MAXLOS = 6, 80, 20000, 30
+local ok, res = pcall(function()
+    if type(coalition) ~= "table" or type(world) ~= "table" or type(Group) ~= "table" then return "DPROBE NOWORLD" end
+    local me
+    if name ~= "" and type(Unit) == "table" and Unit.getByName then
+        local o, x = pcall(Unit.getByName, name)
+        if o then me = x end
+    end
+    if not me and world.getPlayer then
+        local o, x = pcall(world.getPlayer)
+        if o then me = x end
+    end
+    if not me then return "DPROBE NOUNIT" end
+    local out = {}
+    local function add(t) out[#out + 1] = t end
+    local function clean(v) return (tostring(v == nil and "" or v):gsub("[\t\r\n]", " ")) end
+    local function d2(a, b) local dx, dz = a.x - b.x, a.z - b.z return math.sqrt(dx * dx + dz * dz) end
+    local function num(v) return type(v) == "number" and string.format("%.0f", v) or "" end
+    local side = me:getCoalition()
+    local enemy = (side == 1) and 2 or 1
+    local myname = clean(me:getName())
+    local obs = {}
+    for _, cat in ipairs({ Group.Category.AIRPLANE, Group.Category.HELICOPTER, Group.Category.GROUND }) do
+        local okg, groups = pcall(coalition.getGroups, side, cat)
+        for _, g in ipairs(okg and groups or {}) do
+            local oku, units = pcall(function() return g:getUnits() end)
+            for _, u in ipairs(oku and units or {}) do
+                if #obs < MAXOBS then
+                    local okd, d = pcall(function() return u:getDesc() end)
+                    local at = (okd and type(d) == "table" and type(d.attributes) == "table") and d.attributes or {}
+                    local un = clean(u:getName())
+                    local low = string.lower(un .. " " .. clean(g:getName()))
+                    local why = (at["AWACS"] and "awacs") or (at["UAVs"] and "uav")
+                    if not why then
+                        for _, w in ipairs({ "jtac", "observer", "fac", "recon", "sof" }) do
+                            if low:find(w, 1, true) then why = "named" break end
+                        end
+                    end
+                    if why and un ~= myname then obs[#obs + 1] = { u = u, why = why, name = un } end
+                end
+            end
+        end
+    end
+    local foes = {}
+    local okf, fg = pcall(coalition.getGroups, enemy, Group.Category.GROUND)
+    for _, g in ipairs(okf and fg or {}) do
+        local oku, units = pcall(function() return g:getUnits() end)
+        for _, u in ipairs(oku and units or {}) do foes[#foes + 1] = u end
+    end
+    add(string.format("SUMMARY\tside %d\tobservers %d\tenemy ground units %d", side, #obs, #foes))
+    for _, o in ipairs(obs) do
+        local okp, p = pcall(function() return o.u:getPoint() end)
+        local okc, ctrl = pcall(function() return o.u:getController() end)
+        if okp and okc and ctrl then
+            local okt, list = pcall(function() return ctrl:getDetectedTargets() end)
+            local terr = okt and "" or ("\terror " .. clean(list))
+            list = okt and type(list) == "table" and list or {}
+            add(string.format("OBS\t%s\t%s\t%s\talt %s\tdetected %d%s", o.name, clean(o.u:getTypeName()), o.why,
+                num(p.y), #list, terr))
+            local seen = {}
+            for i, t in ipairs(list) do
+                local obj = t.object
+                if obj and i <= MAXT then
+                    local okid, tid = pcall(function() return obj.id_ end)
+                    if okid then seen[tostring(tid)] = true end
+                    local oki, det, vis, lastTime, typeKnown, distKnown, lastPos =
+                        pcall(function() return ctrl:isTargetDetected(obj) end)
+                    local okq, tp = pcall(function() return obj:getPoint() end)
+                    local okn, tn = pcall(function() return obj:getTypeName() end)
+                    local okco, tc = pcall(function() return obj:getCoalition() end)
+                    local okcat, tcat = pcall(function() return obj:getCategory() end)
+                    local err, los = "", ""
+                    if okq and tp and oki and type(lastPos) == "table" and lastPos.x then err = num(d2(tp, lastPos)) end
+                    if okq and tp and land and land.isVisible then
+                        local okl, v = pcall(land.isVisible, { x = p.x, y = p.y + 2, z = p.z }, { x = tp.x, y = tp.y + 2, z = tp.z })
+                        los = okl and tostring(v) or "err"
+                    end
+                    add(table.concat({ "DET", o.name, clean(okid and tid), clean(okn and tn), clean(okco and tc),
+                        clean(okcat and tcat), "visible=" .. tostring(t.visible), "typeKnown=" .. tostring(t.type),
+                        "distKnown=" .. tostring(t.distance), "lastTime=" .. (oki and num(lastTime) or ""),
+                        "range=" .. ((okq and tp) and num(d2(p, tp)) or ""), "posErr=" .. err, "los=" .. los }, "\t"))
+                end
+            end
+            local n = 0
+            for _, f in ipairs(foes) do
+                if n >= MAXLOS then break end
+                local okq, fp = pcall(function() return f:getPoint() end)
+                if okq and fp and d2(p, fp) <= LOS_M and land and land.isVisible then
+                    n = n + 1
+                    local okl, v = pcall(land.isVisible, { x = p.x, y = p.y + 2, z = p.z }, { x = fp.x, y = fp.y + 2, z = fp.z })
+                    local okid, fid = pcall(function() return f.id_ end)
+                    add(table.concat({ "LOS", o.name, clean(okid and fid), clean(f:getTypeName()), "range=" .. num(d2(p, fp)),
+                        "los=" .. (okl and tostring(v) or "err"), "detected=" .. tostring(okid and seen[tostring(fid)] == true) }, "\t"))
+                end
+            end
+        end
+    end
+    return "DPROBE\n" .. table.concat(out, "\n")
+end)
+if not ok then return "DPROBE ERR " .. tostring(res) end
+return res
+]==]
+
+local function detection_probe(now)
+    if now < (gch.dprobe_t or 0) then return end
+    gch.dprobe_t = now + 10.0
+    if lfs.attributes(DPROBE_FLAG) == nil then gch.dprobe_on = false return end
+    local st = gch.types_state
+    if not st then return end
+    local t0 = DCS.getRealTime()
+    local r = run(st, "local name = " .. string.format("%q", gch.want_unit or "") .. "\n" .. DPROBE_CODE)
+    local ms = (DCS.getRealTime() - t0) * 1000.0
+    local f = io.open(DPROBE_LOG, gch.dprobe_on and "a" or "w")      -- a fresh log each time the flag appears
+    gch.dprobe_on = true
+    if f then
+        local lines = select(2, r:gsub("\n", "\n"))
+        f:write(string.format("== %s  query %.1f ms  %d lines\n%s\n", os.date("%H:%M:%S"), ms, lines, r))
+        f:close()
+    end
+    note("dprobe", "detection probe running (flag present), log: Logs\\george_detection_probe.txt")
+end
+
+-- JTAC lasing (3 Nov): laser sources and terrain line of sight, in the mission scripting state.
+local JTACS_CODE = [==[
+local MAXJ = 12
+local ok, res = pcall(function()
+    if type(coalition) ~= "table" or type(Group) ~= "table" or type(coord) ~= "table" then return "JTACS NOWORLD" end
+    local me
+    if name ~= "" and type(Unit) == "table" and Unit.getByName then
+        local o, x = pcall(Unit.getByName, name)
+        if o then me = x end
+    end
+    if not me and world.getPlayer then
+        local o, x = pcall(world.getPlayer)
+        if o then me = x end
+    end
+    if not me then return "JTACS NOUNIT" end
+    local function clean(v) return (tostring(v == nil and "" or v):gsub("[\t\r\n]", " ")) end
+    local function named(v)
+        local low = string.lower(v)
+        for _, w in ipairs({ "jtac", "observer", "fac", "recon", "sof" }) do
+            if low:find("%f[%a]" .. w .. "%f[%A]") then return true end
+        end
+        return false
+    end
+    local side, myname, out = me:getCoalition(), clean(me:getName()), {}
+    for _, cat in ipairs({ Group.Category.GROUND, Group.Category.AIRPLANE, Group.Category.HELICOPTER }) do
+        local okg, groups = pcall(coalition.getGroups, side, cat)
+        for _, g in ipairs(okg and groups or {}) do
+            local gname = clean(g:getName())
+            local oku, units = pcall(function() return g:getUnits() end)
+            for _, u in ipairs(oku and units or {}) do
+                if #out >= MAXJ then break end
+                pcall(function()
+                    local d = u:getDesc() or {}
+                    local at = type(d.attributes) == "table" and d.attributes or {}
+                    local un = clean(u:getName())
+                    local why = (at["UAVs"] and "uav") or ((named(un) or named(gname)) and "named") or nil
+                    if why and un ~= myname and u:isExist() then
+                        local p = u:getPoint()
+                        local lat, lon = coord.LOtoLL(p)
+                        local label = (why == "named" and not named(un)) and gname or un
+                        out[#out + 1] = string.format("%s\t%s\t%s\t%s\t%s\t%s\t%.6f\t%.6f\t%.0f", clean(u.id_), un, label,
+                            clean(u:getTypeName()), why, cat == Group.Category.GROUND and "g" or "a", lat, lon, p.y)
+                    end
+                end)
+            end
+        end
+    end
+    return "JTACS" .. (#out > 0 and ("\n" .. table.concat(out, "\n")) or "")
+end)
+if not ok then return "JTACS ERR " .. tostring(res) end
+return res
+]==]
+
+local LOS_CODE = [==[
+local ok, res = pcall(function()
+    if type(coalition) ~= "table" or type(land) ~= "table" or not land.isVisible then return "NOWORLD" end
+    local function find()
+        for _, side in ipairs({ 1, 2, 0 }) do
+            for _, cat in ipairs({ Group.Category.GROUND, Group.Category.SHIP }) do
+                local okg, groups = pcall(coalition.getGroups, side, cat)
+                for _, g in ipairs(okg and groups or {}) do
+                    local oku, units = pcall(function() return g:getUnits() end)
+                    for _, u in ipairs(oku and units or {}) do
+                        if tostring(u.id_) == tid then return u end
+                    end
+                end
+            end
+        end
+        return nil
+    end
+    local function height(o)
+        local okd, d = pcall(function() return o:getDesc() end)
+        if okd and type(d) == "table" and type(d.box) == "table" and type(d.box.max) == "table"
+           and type(d.box.max.y) == "number" then return d.box.max.y, d.category end
+        return 2, okd and type(d) == "table" and d.category or nil
+    end
+    local tgt = find()
+    if not tgt then return "NOTARGET" end
+    local tp = tgt:getPoint()
+    local th = height(tgt)
+    local aim = { x = tp.x, y = tp.y + math.max(0.5, math.min(th * 0.5, 3)), z = tp.z }
+    local out = {}
+    for _, n in ipairs(names) do
+        local oko, o = pcall(Unit.getByName, n)
+        if oko and o and o:isExist() then
+            local op = o:getPoint()
+            local oh, ocat = height(o)
+            local air = (ocat == 0 or ocat == 1)                  -- Unit.Category AIRPLANE / HELICOPTER
+            local eye = { x = op.x, y = op.y + (air and 0 or math.max(1.5, math.min(oh, 5))), z = op.z }
+            local okv, v = pcall(land.isVisible, eye, aim)
+            local dx, dy, dz = aim.x - eye.x, aim.y - eye.y, aim.z - eye.z
+            out[#out + 1] = string.format("%s\t%s\t%.0f", n, (okv and v) and "1" or "0", math.sqrt(dx * dx + dy * dy + dz * dz))
+        else
+            out[#out + 1] = n .. "\tgone\t0"
+        end
+    end
+    return table.concat(out, "\n")
+end)
+if not ok then return "ERR " .. tostring(res) end
+return res
+]==]
+
+local function send_jtacs(now)
+    if now < (gch.jtacs_t or 0) then return end
+    gch.jtacs_t = now + 10.0
+    local st = gch.types_state
+    if not st then return end
+    local r = run(st, "local name = " .. string.format("%q", gch.want_unit or "") .. "\n" .. JTACS_CODE)
+    if r:sub(1, 5) == "JTACS" and r:sub(1, 7) ~= "JTACS N" and r:sub(1, 9) ~= "JTACS ERR" then
+        gch.out:send(r:sub(1, 60000))
+        local n = select(2, r:gsub("\n", "\n"))
+        note("jtacs" .. n, string.format("JTAC list sent: %d laser source(s)", n))
+    else
+        note("jtacsno" .. r:sub(1, 12), "no JTAC list: " .. r:sub(1, 120))
+    end
+end
+
+local function los_query(msg)
+    local parts = {}
+    for f in (msg .. "\t"):gmatch("([^\t]*)\t") do parts[#parts + 1] = f end
+    local req, tid = tonumber(parts[2]), parts[3]
+    if not req or not tid or not tid:match("^%-?%d+$") then
+        note("losbad", "ignored line-of-sight request: " .. msg:sub(1, 80))
+        return
+    end
+    local names = {}
+    for i = 4, math.min(#parts, 11) do
+        if parts[i] ~= "" then names[#names + 1] = string.format("%q", parts[i]) end
+    end
+    local st = gch.types_state
+    local r = "NOSTATE"
+    if st then
+        r = run(st, string.format("local tid, names = %q, { %s }\n", tid, table.concat(names, ", ")) .. LOS_CODE)
+    end
+    gch.out:send(string.format("LOS %d %s\n%s", req, tid, r))
+    note("los", "first line-of-sight answer: " .. r:sub(1, 80):gsub("[\t\n]", " "))
+end
+
 local function send_route(now)
     if now < (gch.route_t or 0) then return end
     gch.route_t = now + 10.0
@@ -447,6 +737,10 @@ local function send_route(now)
     if not text then note("noroute" .. tostring(info), "no mission route: " .. tostring(info)) return end
     gch.out:send(text)
     note("route" .. info, "mission route sent: " .. info)
+    if gch.wpnames_text then
+        gch.out:send(gch.wpnames_text)
+        note("wpn" .. gch.wpnames_text, "waypoint names sent: " .. gch.wpnames_text:gsub("\n", " | "):sub(1, 200))
+    end
     if gch.flight_text then
         gch.out:send(gch.flight_text)
         note("flight" .. gch.flight_text, "flight sent: " .. gch.flight_text:gsub("\n", " | "))
@@ -484,8 +778,9 @@ local function frame()
     send_players(now)
     send_events(now)
     send_callsign(now)
+    detection_probe(now)
+    send_jtacs(now)
     local state = find_state(now)
-    if not state then return end
     if gch.inp then
         for _ = 1, 5 do
             local msg = gch.inp:receive()
@@ -502,11 +797,14 @@ local function frame()
                     gch.want_group, gch.route_t = want, 0           -- resend route + flight now
                     note("group" .. want, "the program asked for group '" .. want .. "'")
                 end
-            else
+            elseif msg:sub(1, 4) == "LOS\t" then
+                los_query(msg)                                  -- JTAC lasing (3 Nov): answered without the menu
+            elseif state then
                 command(state, msg)
             end
         end
     end
+    if not state then return end
     local text = run(state, READ)
     if text == "NOPANEL" or text:sub(1, 3) == "ERR" then
         note("readerr" .. text:sub(1, 20), "reading the menu failed: " .. text)
@@ -523,7 +821,7 @@ end
 DCS.setUserCallbacks({
     onMissionLoadEnd = function()            -- new mission (or the same one restarted): send at once
         gch.route_t, gch.brief_t, gch.types_t, gch.fuel_t, gch.players_t, gch.events_t = 0, 0, 0, 0, 0, 0
-        gch.callsign_t = 0
+        gch.callsign_t, gch.jtacs_t = 0, 0
         gch.loaded = (gch.loaded or 0) + 1      -- the program forgets this mission's flights and clones
     end,
     onSimulationFrame = function()

@@ -36,6 +36,15 @@ ROE_FREE, ROE_HOLD = 0, 4
 _ABORT = re.compile(r"\b(?:abort|abort abort|cease|stop the attack|knock it off|hold fire|weapons hold)\b", re.I)
 _CONTINUE = re.compile(r"\b(?:continue|resume|press|cleared hot|carry on)\b", re.I)
 _LEAD = re.compile(r"^\s*Overlord(?:\s+copies)?[,.]\s*", re.I)
+# 9-line (5 Nov, common/nine_line.py): "request nine-line", your readback, your "IN" call
+_NINE = re.compile(r"\b(?:9|nine)[ -]?lines?\b", re.I)
+_READBACK = re.compile(r"\b(?:read ?back|readback|reading back)\b", re.I)
+_IN = re.compile(r"^(?:[a-z]+ \d(?:[ -]?\d)?,? )?(?:in|inbound)(?: hot)?(?:,? (?:from|heading)\b.*|"
+                 r",? (?:from )?(?:the )?(?:north|south|east|west)\w*.*)?$", re.I)
+
+
+def _plain(t: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[,.;:!?]+", " ", t or "")).strip().lower()
 
 
 def _say_type(name: str) -> str:
@@ -48,7 +57,9 @@ class Darkside:
                  callsign: Callable[[], str] = lambda: "Nomad", oly=None, warlord=None,
                  tasks: TaskRegistry = TASKS, log: Optional[Callable[[str, str], None]] = None,
                  danger_close_m: float = rules.DANGER_CLOSE_M,
-                 say_ai: Optional[Callable[[str, str], None]] = None):
+                 say_ai: Optional[Callable[[str, str], None]] = None,
+                 agl_m: float = rules.DANGER_CLOSE_AGL_M,
+                 outcasts: Optional[Callable[[], Dict[int, str]]] = None):
         """log(who, text): the comms log. say_ai(text, speaker): speaks an AI-to-AI call; used only
         with AI_TO_AI_SPOKEN (command/exchange.py)."""
         self.jtac, self.snapshot, self.speak, self.callsign = jtac, snapshot, speak, callsign
@@ -56,12 +67,16 @@ class Darkside:
         self.log = log or (lambda who, text: None)
         self.say_ai = say_ai
         self.danger_close_m = danger_close_m
+        self.agl_m = agl_m                                # R6: you / wingmen / Outcasts below this hold the run
+        self.outcasts = outcasts or (lambda: {})          # unit id -> "Outcast 2" (main.py)
         self._lock = threading.Lock()
         self._flights: Dict[str, object] = {}            # task_id -> the Overlord Mission he controls
         self._aborted: Set[str] = set()
         self._said: Dict[str, str] = {}                  # task_id -> last "holding because" said
         self._caution: Set[str] = set()
         self._reported: Set[int] = set()                 # kills already called (JTAC tick or CAS loop)
+        self._nine = None                                # (target id, NineLine) last given to you
+        self._readback_due = False
 
     # ------------------------------------------------------------ words
     def _lead(self) -> str:
@@ -82,6 +97,10 @@ class Darkside:
 
     def say(self, text: str) -> None:
         self.speak(f"{self._lead()}{text}")
+
+    def notice(self, text: str) -> None:
+        """An unprompted JTAC line ("Overlord, JTAC Hammer lost sight of the target, laser off.") in his words."""
+        self.speak(self.words(text))
 
     def jtac_speak(self, text: str) -> None:
         """For Jtac(speak=...): his unprompted "good effect" in Darkside's voice and words, unless the
@@ -112,11 +131,18 @@ class Darkside:
             self._aborted.clear()
             self._said.clear()
             self._caution.clear()
+            self._nine, self._readback_due = None, False
 
     # ------------------------------------------------------------ "Darkside, ..."
     def wanted(self, rest: str) -> bool:
         t = rest or ""
-        return bool(_ABORT.search(t) or (_CONTINUE.search(t) and self.has_flights()) or self.jtac.wanted(t))
+        return bool(_ABORT.search(t) or (_CONTINUE.search(t) and self.has_flights()) or self.nine_wanted(t)
+                    or self.jtac.wanted(t))
+
+    def nine_wanted(self, rest: str) -> bool:
+        """A 9-line request, its readback, or your IN call (also handed over from Overlord / "JTAC, ...")."""
+        t = rest or ""
+        return bool(_NINE.search(t) or (_READBACK.search(t) and self._readback_due) or _IN.match(_plain(t)))
 
     def handle(self, rest: str) -> Optional[str]:
         """What Darkside says to the rest of "Darkside, ..." (or a hand-off from Overlord / "JTAC, ..."),
@@ -124,6 +150,12 @@ class Darkside:
         t = rest or ""
         if _ABORT.search(t):
             return self.abort()
+        if _NINE.search(t):
+            return self.nine_line()
+        if _READBACK.search(t) and self._readback_due:
+            return self.readback(t)
+        if _IN.match(_plain(t)):
+            return self.in_call()
         if _CONTINUE.search(t) and self.has_flights():
             return self.resume()
         if self.jtac.wanted(t):
@@ -131,6 +163,122 @@ class Darkside:
                 said = self.jtac.handle(t)
             return self.words(said) if said else None
         return None
+
+    # ------------------------------------------------------------ 9-line (5 Nov)
+    def _zones(self) -> list:
+        return (self.warlord.block.get("no_strike") if self.warlord is not None else None) or []
+
+    def _target(self):
+        """The JTAC's current target, live; None if there isn't one."""
+        tgt = getattr(self.jtac, "current", None)
+        return self.jtac._live(tgt) if tgt is not None else None
+
+    def nine_line(self) -> str:
+        from common import nine_line
+        from common.overlord import target_state
+        if self._target() is None:                       # no target yet: the JTAC picks one first
+            with acting_as(DARKSIDE):
+                said = self.jtac.handle("request target")
+            if self._target() is None:
+                return self.words(said) if said else f"{self._lead()}no targets to brief."
+        snap = self.snapshot()
+        tgt = self._target()
+        if target_state(snap, tgt) == "dead":
+            return f"{self._lead()}the {_say_type(tgt['type'])} is destroyed. Request next target."
+        nine = nine_line.build(snap, tgt, self.jtac, self._zones(), self.danger_close_m)
+        with self._lock:
+            self._nine, self._readback_due = (tgt.get("id"), nine), nine_line.READBACK
+        self.log("darkside", f"9-line on {tgt.get('type')} {tgt.get('id')}: {nine.text()}")
+        tail = " Read back lines 4, 6 and restrictions." if nine_line.READBACK else " Call IN with direction."
+        return f"{self._lead()}{nine.text()}{tail}"
+
+    def readback(self, said: str) -> str:
+        from common import nine_line
+        with self._lock:
+            got = self._nine
+        if got is None:
+            return f"{self._lead()}no nine-line to read back."
+        ok, wrong = nine_line.readback_ok(got[1], said)
+        if not ok:
+            return f"{self._lead()}negative, {wrong}. Read back again."
+        with self._lock:
+            self._readback_due = False
+        return f"{self._lead()}readback correct. Call IN with direction."
+
+    def in_call(self) -> str:
+        """Your IN call: the mark from the 9-line goes down, then cleared hot, or abort with the reason."""
+        from common import nine_line
+        from common.overlord import target_state
+        from command import rules
+        with self._lock:
+            got, due = self._nine, self._readback_due
+        tgt = self._target()
+        if tgt is None or got is None or got[0] != tgt.get("id"):
+            return f"{self._lead()}no nine-line on this target. Say Darkside, request nine-line."
+        if due:
+            return f"{self._lead()}read back lines 4, 6 and restrictions first."
+        snap = self.snapshot()
+        if target_state(snap, tgt) == "dead":
+            return f"{self._lead()}abort, the {_say_type(tgt['type'])} is destroyed. Request next target."
+        zone = rules.zone_at(self._zones(), tgt["lat"], tgt["lon"])
+        if zone:
+            return f"{self._lead()}abort, the target is inside the {zone['name']} no-strike zone."
+        nine = got[1]
+        parts = []
+        with acting_as(DARKSIDE):                        # marking is his
+            if nine.mark_kind == "laser":
+                said = self.jtac.lase(f"code {nine.laser_code}")
+                parts.append("laser on" if "laser on" in said else said.replace("Overlord, ", "").rstrip("."))
+            elif nine.mark_kind == "smoke":
+                said = self.jtac.handle("mark target")
+                parts.append("smoke out" if said and "smoke" in said and "unable" not in said.lower()
+                             else (said or "no smoke").replace("Overlord, ", "").rstrip("."))
+        near = rules.friendlies_near(snap, tgt["lat"], tgt["lon"], self.danger_close_m)
+        hot = "cleared hot"
+        if near:
+            hot += f", danger close, friendly {_say_type(near[0]['type'])} {near[0]['d']:.0f} metres"
+        parts.append(hot)
+        text = ". ".join(p[0].upper() + p[1:] if i else p for i, p in enumerate(parts))
+        return f"{self._lead()}{text}."
+
+    def ip_points(self) -> List[dict]:
+        """For the kneeboard map (5 Nov): the 9-line's IP while its target is still the JTAC's, and each Hog
+        flight's IP. [{"lat", "lon", "label", "kind": "nine" | "flight", "tlat", "tlon"}]"""
+        out = []
+        with self._lock:
+            got = self._nine
+            flights = list(self._flights.values())
+        cur = getattr(self.jtac, "current", None) or {}
+        if got is not None and got[0] == cur.get("id") and got[1].ip_lat is not None:
+            n = got[1]
+            out.append({"lat": n.ip_lat, "lon": n.ip_lon, "label": n.ip_map, "kind": "nine",
+                        "tlat": cur.get("lat"), "tlon": cur.get("lon")})
+        for m in flights:
+            ip = getattr(m, "ip", None)
+            if ip:
+                out.append({"lat": round(float(ip[0]), 6), "lon": round(float(ip[1]), 6),
+                            "label": f"{m.cs} IP", "kind": "flight", "tlat": None, "tlon": None})
+        return out
+
+    def brief_flight(self, m) -> None:
+        """NINE_LINE_AI_TO_AI: the 9-line to a Hog flight at the IP, and its readback (comms log, spoken)."""
+        from common import nine_line
+        from common.overlord import target_state
+        snap = self.snapshot()
+        tgt = next((t for t in getattr(m, "targets", []) or [] if t.get("lat") is not None
+                    and target_state(snap, t) != "dead"), None)
+        if tgt is None:
+            return
+        tgt = self.jtac._live(tgt) if hasattr(self.jtac, "_live") else tgt
+        nine = nine_line.build(snap, tgt, self.jtac, self._zones(), self.danger_close_m,
+                               ip_override=getattr(m, "ip", None))
+        out = f"Darkside: {m.cs} 1, Darkside, {nine.text()}"
+        back = f"{m.cs} 1: Darkside, {m.cs} 1, {nine.elevation}, {nine.location}. Ready."
+        self.log("ai", out)
+        self.log("ai", back)
+        if self.say_ai is not None:
+            self.say_ai(out.split(": ", 1)[-1], "darkside")
+            self.say_ai(back.split(": ", 1)[-1], "george")
 
     # ------------------------------------------------------------ CAS flights (P2-6)
     def register(self, m) -> None:
@@ -172,6 +320,16 @@ class Darkside:
         if near:
             f = near[0]
             return False, f"friendly {_say_type(f['type'])} {f['d']:.0f} metres from the target"
+        try:                                              # R6: your own aircraft low near the target
+            outcasts = self.outcasts() or {}
+        except Exception:
+            outcasts = {}
+        low = rules.own_low_near(snap, lat, lon, self.danger_close_m, self.agl_m, outcasts,
+                                 rules.alt_of(snap, target.get("id")))
+        if low:
+            f = low[0]
+            who = "you're" if f["who"] == "you" else f"{f['who']} is"
+            return False, f"{who} {f['d']:.0f} metres from the target"
         with self._lock:
             first = near is None and m.task_id not in self._caution
             if first:
@@ -183,6 +341,12 @@ class Darkside:
 
     def check_in(self, m) -> None:
         self._ai("ai", f"{m.cs} 1: Darkside, {m.cs} 1, {m.kind.desc} at the IP, weapons hold.", "george")
+        from common import nine_line
+        if nine_line.AI_TO_AI:
+            try:
+                self.brief_flight(m)
+            except Exception as e:                       # never hold up the CAS loop
+                print(f"[DARKSIDE] 9-line to {m.cs} failed: {e}")
 
     def clear(self, m, target: dict) -> bool:
         """Cleared hot: weapons free and the attack, sent as Darkside. False if Olympus refused."""

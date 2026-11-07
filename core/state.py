@@ -118,6 +118,8 @@ class ApacheStateStore:
         # (AH-64D, UH-1H). Its "next" waypoint is George's own guess: the route in order, moving on
         # when we pass within WP_REACHED_M of a waypoint (the TSD may be set to another one).
         self.mission_route: List[Any] = []
+        self.route_names: List[Any] = []        # [(n, north_m, east_m, name)] named waypoints (comms hook, 5 Nov)
+        self.magvar: Optional[float] = None     # true - magnetic here, degrees (Export.lua, 5 Nov)
         self.mission_wp = -1
         # Your flight, from the mission (comms hook): group name and [(n, unit name, skill, is_me)];
         # flight_alive: unit names of the others that Export.lua still sees (None = not reported)
@@ -221,6 +223,9 @@ class ApacheStateStore:
             self.hdg_deg = _f(telemetry_data, "hdg", self.hdg_deg)
             self.agl_ft = _f(telemetry_data, "agl_ft", self.agl_ft)
             self.vs_fpm = _f(telemetry_data, "vs_fpm", self.vs_fpm)
+            mv = telemetry_data.get("magvar")
+            if isinstance(mv, (int, float)) and not isinstance(mv, bool):
+                self.magvar = float(mv)
             def _vec(v, n):
                 if isinstance(v, list) and len(v) == n:
                     try:
@@ -345,6 +350,11 @@ class ApacheStateStore:
     def set_flight(self, group: str, units: List[Any]) -> None:
         with self._lock:
             self.flight_group, self.flight_units = group, [tuple(u) for u in units]
+
+    def set_route_names(self, names: List[Any]) -> None:
+        """[(n, north_m, east_m, name)]: your route's named waypoints (george_comms_hook.lua WPNAMES)."""
+        with self._lock:
+            self.route_names = [tuple(x) for x in names]
 
     WP_REACHED_M = 800.0
 
@@ -526,6 +536,8 @@ class ApacheStateStore:
                 "route": list(self.route) if self.route else list(self.mission_route),
                 "wp_next": self.wp_next if self.route else self.mission_wp,
                 "route_source": "LoGetRoute" if self.route else ("mission" if self.mission_route else ""),
+                "route_names": list(self.route_names),
+                "magvar": self.magvar,
                 "cargo": self.cargo,
                 "start_pos": self.start_pos,
                 "fuel_raw": self.fuel_raw,

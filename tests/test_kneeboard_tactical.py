@@ -109,7 +109,7 @@ class MapFromPicture(unittest.TestCase):
         m = model.build_map(SNAP, Ctx(None))
         self.assertEqual(m["source"], "lists")
         self.assertEqual([g["id"] for g in m["ground"]], [99])
-        self.assertEqual(m["jtac"], {"type": "Ural-375", "lat": 1.0, "lon": 1.0})
+        self.assertEqual({k: m["jtac"][k] for k in ("type", "lat", "lon")}, {"type": "Ural-375", "lat": 1.0, "lon": 1.0})
         self.assertEqual((m["george"], m["panel"]), ([], None))
         old = types.SimpleNamespace(**{k: getattr(Ctx, k) for k in ("xz_to_ll", "is_air_defence", "imperial",
                                                                      "named_waypoints", "outcasts", "flights", "jtac")})

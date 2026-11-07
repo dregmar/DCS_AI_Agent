@@ -80,8 +80,9 @@ class TestExportLua(unittest.TestCase):
             self.assertEqual(len(re.findall(r"%[-0-9.]*[dfs]", spec)), n, spec[:40])
         full = next(f for f in fmts if '"olyx"' in f[0])
         # + step 7's Olympus list, Phase 3's g, the tactical picture's neutrals and own side (T8)
-        self.assertIn('"t":%.2f,"scan_t":%.2f,"olyx":%s,"g":%s,"neu":%s,"fr":%s}', full[0])
-        self.assertTrue(full[1].strip().endswith('george_num(george_g(), "%.2f"),\n        george_neu or "[]", george_fr or "[]"'))
+        # ... and the magnetic variation for the 9-line (5 Nov)
+        self.assertIn('"t":%.2f,"scan_t":%.2f,"olyx":%s,"g":%s,"neu":%s,"fr":%s,"magvar":%s}', full[0])
+        self.assertTrue(full[1].strip().endswith('george_num(george_g(), "%.2f"),\n        george_neu or "[]", george_fr or "[]", george_num(magvar, "%.1f")'))
         for row in ('\'["%s",%d,%.6f,%.6f,%.0f,"%s"]\'',):      # the neu / fr row: 6 values
             self.assertIn(row, lua)
         self.assertIn("george_scan_t = now", lua)                         # set only when a scan completes

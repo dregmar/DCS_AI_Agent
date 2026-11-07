@@ -382,6 +382,13 @@ local function george_send_telemetry()
             ac = george_json_str(me.Name or "")
         end
     end
+    -- Magnetic variation here (true - magnetic, degrees, east positive), for magnetic headings in the
+    -- JTAC's 9-line (5 Nov). nil when DCS doesn't give the magnetic heading.
+    local magvar = nil
+    if LoGetMagneticYaw and hdg >= 0 then
+        local ok, my = pcall(LoGetMagneticYaw)
+        if ok and type(my) == "number" then magvar = ((hdg - my * rad + 540) % 360) - 180 end
+    end
     -- Height above ground (radar-altimeter style) and vertical speed, for crew callouts.
     local agl = -1
     if LoGetAltitudeAboveGroundLevel then
@@ -421,13 +428,13 @@ local function george_send_telemetry()
     local route, wp_next = george_route(now)
     local cargo = george_cargo and string.format("[%.1f,%.1f,%.1f]", george_cargo[1], george_cargo[3], george_cargo[2]) or "null"
     local payload = string.format(
-        '{"ac":"%s","alt_ft":%.0f,"agl_ft":%.0f,"vs_fpm":%.0f,"speed_kts":%.0f,"pitch":%.1f,"roll":%.1f,"yaw":%.1f,"hdg":%.1f,"ammo":[%d,%d,%d],"contacts":[%s],"pos":%s,"vel":%s,"route":%s,"wp":%d,"cargo":%s,"fuel":%s,"flight":%s,"group":"%s","unit":"%s","wing":%s,"self_id":%d,"ll":%s,"ad":%s,"oly":%s,"air":%s,"gnd":%s,"coal":%d,"t":%.2f,"scan_t":%.2f,"olyx":%s,"g":%s,"neu":%s,"fr":%s}',
+        '{"ac":"%s","alt_ft":%.0f,"agl_ft":%.0f,"vs_fpm":%.0f,"speed_kts":%.0f,"pitch":%.1f,"roll":%.1f,"yaw":%.1f,"hdg":%.1f,"ammo":[%d,%d,%d],"contacts":[%s],"pos":%s,"vel":%s,"route":%s,"wp":%d,"cargo":%s,"fuel":%s,"flight":%s,"group":"%s","unit":"%s","wing":%s,"self_id":%d,"ll":%s,"ad":%s,"oly":%s,"air":%s,"gnd":%s,"coal":%d,"t":%.2f,"scan_t":%.2f,"olyx":%s,"g":%s,"neu":%s,"fr":%s,"magvar":%s}',
         ac, alt * 3.28084, agl, vs, ias * 1.94384,
         (pitch or 0) * rad, (roll or 0) * rad, (yaw or 0) * rad, hdg, msl, rkt, gun,
         table.concat(items, ","), pos, vel, route, wp_next, cargo, fuel, george_flight or "null", george_my_group or "", george_my_unit or "",
         george_wing or "null", george_self_id or -1, george_ll(me_ll), george_ad or "[]", george_oly or "[]", george_air or "[]", george_gnd or "[]", george_coal or 0,
         now or 0, george_scan_t or -1, george_olyx or "[]", george_num(george_g(), "%.2f"),
-        george_neu or "[]", george_fr or "[]")
+        george_neu or "[]", george_fr or "[]", george_num(magvar, "%.1f"))
 
     local ok, err = pcall(udp.send, udp, payload)
     if ok then
@@ -449,6 +456,73 @@ function LuaExportStart()
     end
 end
 
+-- Detection probe D0 (3 Nov): your own aircraft's sensors as Export.lua sees them (RWR, radar targets,
+-- locked targets, sighting system), every 5 s, ONLY while Scripts\george_detection_probe.flag exists.
+-- Unknown tables are dumped (scalars, one level deep) so the first flight shows what each module fills.
+-- Writes Logs\george_detection_probe_export.txt; sends nothing.
+local george_probe_flag = lfs.writedir() .. [[Scripts\george_detection_probe.flag]]
+local george_probe_path = lfs.writedir() .. [[Logs\george_detection_probe_export.txt]]
+local george_probe_next, george_probe_on = -1, false
+
+local function george_dump(t, depth)
+    if type(t) ~= "table" then return tostring(t) end
+    local parts, n = {}, 0
+    for k, v in pairs(t) do
+        n = n + 1
+        if n > 20 then parts[#parts + 1] = "..." break end
+        if type(v) == "table" then
+            parts[#parts + 1] = tostring(k) .. "=" .. ((depth or 0) < 1 and george_dump(v, (depth or 0) + 1) or "{...}")
+        else
+            parts[#parts + 1] = tostring(k) .. "=" .. tostring(v)
+        end
+    end
+    return "{" .. table.concat(parts, ", ") .. "}"
+end
+
+local function george_probe_sensors(now)
+    local f = io.open(george_probe_path, george_probe_on and "a" or "w")
+    george_probe_on = true
+    if not f then return end
+    local function line(s) f:write(string.format("%.1f  %s\n", now, s)) end
+    local function try(name, fn)
+        if not fn then line(name .. ": not available") return nil end
+        local ok, v = pcall(fn)
+        if not ok then line(name .. ": error " .. tostring(v)) return nil end
+        if v == nil then line(name .. ": nil") end
+        return v
+    end
+    local ok_s, me = pcall(LoGetSelfData)
+    line("aircraft " .. tostring(ok_s and type(me) == "table" and me.Name or "?"))
+    local tws = try("LoGetTWSInfo", LoGetTWSInfo)
+    if type(tws) == "table" then
+        local em = type(tws.Emitters) == "table" and tws.Emitters or {}
+        line(string.format("RWR mode %s, %d emitters", tostring(tws.Mode), #em))
+        for i, e in ipairs(em) do
+            if i > 10 then break end
+            line("  RWR " .. george_dump(e))
+        end
+    end
+    local tg = try("LoGetTargetInformation", LoGetTargetInformation)
+    if type(tg) == "table" then
+        line(string.format("radar targets %d", #tg))
+        for i, t in ipairs(tg) do
+            if i > 10 then break end
+            line("  TGT " .. george_dump(t))
+        end
+    end
+    local lk = try("LoGetLockedTargetInformation", LoGetLockedTargetInformation)
+    if type(lk) == "table" then
+        line(string.format("locked targets %d", #lk))
+        for i, t in ipairs(lk) do
+            if i > 5 then break end
+            line("  LOCK " .. george_dump(t))
+        end
+    end
+    local si = try("LoGetSightingSystemInfo", LoGetSightingSystemInfo)
+    if type(si) == "table" then line("sight " .. george_dump(si)) end
+    f:close()
+end
+
 function LuaExportBeforeNextFrame()
     if not udp then return end
     local now = (LoGetModelTime and LoGetModelTime()) or os.clock()
@@ -456,6 +530,15 @@ function LuaExportBeforeNextFrame()
     if now - george_fast_check >= 1.0 or now < george_fast_check then
         george_fast_check = now
         george_fast_on = lfs.attributes(george_fast_flag) ~= nil
+    end
+    if now >= george_probe_next or now + 30 < george_probe_next then       -- also after a new mission
+        george_probe_next = now + 5.0
+        if lfs.attributes(george_probe_flag) ~= nil then
+            local ok, err = pcall(george_probe_sensors, now)
+            if not ok then george_tel_note("probeerr", "detection probe error: " .. tostring(err)) end
+        else
+            george_probe_on = false
+        end
     end
     if george_fast_on then
         local g = george_g()

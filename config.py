@@ -5,6 +5,9 @@ from pynput.keyboard import Key
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PIPER_MODEL_PATH = os.path.join(BASE_DIR, "en_US-ryan-low.onnx")        # George / crew (intercom)
 OVERLORD_MODEL_PATH = os.path.join(BASE_DIR, "en_US-joe-medium.onnx")   # Overlord (command radio)
+DARKSIDE_MODEL_PATH = os.path.join(BASE_DIR, "en_US-bryce-medium.onnx") # Darkside (JTAC radio)
+WARLORD_MODEL_PATH = os.path.join(BASE_DIR, "en_US-norman-medium.onnx") #Warlord 
+INSTRUCTOR_MODEL_PATH = os.path.join(BASE_DIR, "jenny.onnx") #Instructor
 
 # Audio Output Device Index (User specified device #5)
 AUDIO_OUTPUT_DEVICE = 5
@@ -173,4 +176,33 @@ GEORGE_EXTRA_LONG_PRESS_S = 1.30   # > 1 s (CPG start-up / shutdown)
 GEORGE_WEAPON_CYCLE = ["NO_WPN", "GUN", "MSL", "RKT"]   # only loaded weapons appear in George's cycle
 GEORGE_IDLE_CLOSE_MAIN_S = 0.0     # hide George's wheel after this many idle seconds (None = never)
 
-FRIENDLY_SHOW_M = 20000
+
+# --- KNEEBOARD FRIENDLY UNITS DISPLAY ---
+FRIENDLY_SHOW_M = 30000          # Maximum distance (metres) for displaying friendly units
+                                 # on the kneeboard tactical map (30000 = 30 km).
+
+
+# --- DIRECT ORDERS: RESTRICTED ZONE ENFORCEMENT ---
+# Controls how the AI handles direct orders involving restricted or protected zones.
+# "warn"  = report a zone conflict without automatically blocking the order.
+# "block" = prevent orders that violate the configured zone restrictions.
+DIRECT_ORDERS_ZONES = "warn"     # Options: "warn" or "block"
+
+
+# --- JTAC LASER DESIGNATION RANGES ---
+# Maximum permitted laser-designation distances for JTAC-controlled assets.
+# Different limits apply to ground-based observers and airborne drones.
+JTAC_GROUND_LASER_M = 8000       # Ground JTAC laser range in metres (8 km)
+JTAC_DRONE_LASER_M = 20000       # Drone JTAC laser range in metres (20 km)
+
+
+# --- WARLORD & DANGER-CLOSE SAFETY THRESHOLDS ---
+# Distance and altitude thresholds used for tactical safety assessment.
+WARLORD_CAUTION_M = 5000        # Caution distance in metres (5 km) for Warlord safety checks
+DANGER_CLOSE_AGL_M = 300        # Altitude above ground level in metres (300 m)
+                                 # used for danger-close safety assessment
+DEFER_WAIT_S = 300
+
+
+NINE_LINE_READBACK = False    # require lines 4 and 6 read back before IN
+NINE_LINE_AI_TO_AI = False     # Darkside briefs the Hog flights too

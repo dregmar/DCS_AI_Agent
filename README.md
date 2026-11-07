@@ -114,7 +114,7 @@ kneeboard; Instructor phases 4-6 (weapons, sling load, control inputs); radio ro
 
 ## Run
 
-1. Start Ollama before DCS (the model takes about 13 s to load once, then stays loaded).
+1. Start Ollama before DCS (the model takes about 13 s to load once, then stays loaded). Run with the following command "powershell -ExecutionPolicy Bypass -File start_george_ollama.ps1"
 2. Start DCS (and Olympus, if you use it) and a mission.
 3. `python main.py`. Hold your PTT button (or SPACE) to talk. The console ends with
    `>>> ALL SYSTEMS ONLINE <<<`, and the kneeboard address is printed.

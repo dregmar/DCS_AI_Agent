@@ -7,6 +7,10 @@ common/jtac.py - Overlord as JTAC (feature 9): a target talk-on ready for the CD
     "Overlord, next target"               another one
     "Overlord, say again target"          repeats it
     "Overlord, mark target (red smoke)"   smoke on it through Olympus
+    "... lase the target (code 1688)"     a laser on it (3 Nov) from the nearest JTAC (a unit named JTAC / FAC /
+    "... laser off"                       observer / recon / SOF, 8 km) or drone (20 km slant) that has terrain line
+                                          of sight to it (common/jtac_sight.py, george_comms_hook.lua). Kept on
+                                          a moving target; off when it's destroyed, gone or out of sight.
     "Overlord, BDA"                       destroyed / still active / can't assess
 
     -> "Overlord, target ZSU-23-4 Shilka. Grid 40 Romeo, Delta Quebec, 1 2 3 4 5, 6 7 8 9 0.
@@ -34,16 +38,63 @@ THREAT_RADIUS_M = 10_000            # air defence this close to the target is ca
 DIR_CONE_DEG = 35.0
 
 _REQUEST = re.compile(r"\b(?:request(?:ing)?|give me|need|say|send)\s+(?:a\s+|the\s+|me\s+)?(?:new\s+)?"
-                      r"(?:target|tasking|task)\b|\b(?:any|got)\s+(?:a\s+)?targets?\b|^\s*target\s*\??$", re.I)
-_NEXT = re.compile(r"\b(?:next|another|new|different)\s+target\b", re.I)
+                      r"(?:target|tasking|task)\b|\b(?:any|got)\s+(?:a\s+)?targets?\b|^\s*target\s*\??$|"
+                      r"\b(?:request(?:ing)?|give me|need)\s+(?:a\s+)?talk[ -]?on\b", re.I)
+_NEXT = re.compile(r"\b(?:next|another|new|different|follow[ -]?on)\s+target\b", re.I)
 _REPEAT = re.compile(r"\b(?:say again|repeat)\b.*\b(?:target|grid|coordinates|position)\b|"
                      r"\b(?:say|repeat)\s+(?:the\s+)?(?:grid|coordinates)\b", re.I)
 # 28 Oct: "Overlord, smoke on my target" went to the router, which made it a SEAD request
 _MARK = re.compile(r"\bmark\b.*\btarget\b|\bmark (?:it|with smoke)\b|"
                    r"\bsmoke (?:on )?(?:the |my |our |that )?target\b|\b(?:request(?:ing)?|need) (?:\w+ )?smoke\b", re.I)
+# 3 Nov: "mark the target with laser" / "lase the target" gave red smoke: a laser mark is its own order
+_LASE = re.compile(r"\b(?:lase|lased|lasing|laze|lazing|lays|lace|lacing|laser|designate|sparkle)\b", re.I)
+_LASE_ON = re.compile(r"\b(?:target|it|that|mark|code|on)\b", re.I)
+_LASE_STOP = re.compile(r"\b(?:stop|cease|kill|end|terminate|cancel)\s+(?:the\s+)?(?:lasing|lazing|laser|lase|sparkle)\b|"
+                        r"\blaser\s+(?:off|stop)\b", re.I)
+_CODE = re.compile(r"\bcode (\d) ?(\d) ?(\d) ?(\d)\b|\bcode (\d{4})\b", re.I)
+DEFAULT_LASER_CODE = 1688
+GROUND_LASER_RANGE_M = 8_000       # a ground JTAC this close (slant) can lase (JTAC_GROUND_LASER_M)
+AIR_LASER_RANGE_M = 20_000         # a drone or airborne FAC (JTAC_DRONE_LASER_M)
+LOST_SIGHT_CHECKS = 2              # sight checks in a row without line of sight: laser off
+MAX_ASKED = 6                      # the nearest in range asked about each lase
 _BDA = re.compile(r"\bbda\b|\bb d a\b|\bbattle damage\b|\bdamage assessment\b|\bis (?:it|the target) (?:dead|destroyed)\b",
                   re.I)
 _COLORS = ("red", "green", "white", "orange", "blue")
+
+
+# 4 Nov flight: Whisper heard "lase target" as "layers / please / nears my / least target". Only in a JTAC
+# request, and only straight before "target" / "it", these are read as "lase".
+_LASE_HEARD = re.compile(r"\b(?:layers?|please|nears|least|vase|phase|faze|lease[ds]?|lays|lace[ds]?|laze[ds]?|leis|lees|"
+                         r"lies|leaves|blaze|lane|lanes|lasers)\b(?=\s+(?:on\s+)?(?:the\s+|my\s+|that\s+|our\s+)?"
+                         r"(?:target|it)\b)", re.I)
+
+
+def heard(t: str) -> str:
+    """The JTAC request with Whisper's versions of "lase" put right, and its commas / full stops taken out
+    (5 Nov: "request, target" and "follow on, target" got "say again"). Question marks stay."""
+    t = re.sub(r"\s+", " ", re.sub(r"[,.;:!]+", " ", t or "")).strip()
+    return _LASE_HEARD.sub("lase", t)
+
+
+_LASE_QUESTION = re.compile(r"\?|\b(?:what|what's|whats|which|tell me|confirm|say again)\b|\bcodes\b", re.I)
+
+
+def lase_wanted(t: str) -> bool:
+    """"lase the target", "mark it with laser", "laser on, code 1688", or just "lase" / "sparkle"; never a
+    question ("what's the laser code?" is the briefing's)."""
+    t = (t or "").strip()
+    if not _LASE.search(t) or _LASE_QUESTION.search(t):
+        return False
+    return bool(_LASE_ON.search(t) or len(re.findall(r"[a-z']+", t.lower())) <= 2)
+
+
+def laser_range(o) -> float:
+    return AIR_LASER_RANGE_M if o.air else GROUND_LASER_RANGE_M
+
+
+def say_source(o) -> str:
+    """"the MQ-9 Reaper" for a drone, "JTAC Hammer" for a named unit."""
+    return f"the {say_type(o.type)}" if o.why == "uav" else o.label
 
 
 def _say_digits(s: str) -> str:
@@ -76,9 +127,16 @@ def text_coords(lat: float, lon: float) -> str:
 
 
 class Jtac:
-    def __init__(self, snapshot: Callable[[], dict], oly=None, speak: Optional[Callable[[str], None]] = None):
-        """oly: common.olympus.Olympus (marking), or None. speak: Overlord's unprompted voice."""
-        self.snapshot, self.oly, self.speak = snapshot, oly, speak
+    def __init__(self, snapshot: Callable[[], dict], oly=None, speak: Optional[Callable[[str], None]] = None,
+                 laser=None):
+        """oly: common.olympus.Olympus (marking), or None. speak: Overlord's unprompted voice.
+        laser: common.olympus_orders.Executor (lase_from / lase_stop), or None."""
+        self.snapshot, self.oly, self.speak, self.laser = snapshot, oly, speak, laser
+        self.sight = None                           # common.jtac_sight.SightService (main.py)
+        self.extra_wanted: Callable[[str], bool] = lambda t: False   # Darkside's 9-line phrases (main.py)
+        self.notify = speak                         # "lost sight, laser off" (Darkside's voice in main.py)
+        self._lasing = None                         # the Observer whose laser is on
+        self._blind = 0                             # sight checks in a row without line of sight
         self._lock = threading.Lock()
         self.current: Optional[dict] = None
         self._given: List[int] = []                 # ids already given this sortie ("next target")
@@ -86,15 +144,20 @@ class Jtac:
 
     # ------------------------------------------------------------ what was said
     def wanted(self, rest: str) -> bool:
-        t = rest or ""
-        return bool(_REQUEST.search(t) or _NEXT.search(t) or _BDA.search(t) or _MARK.search(t)
+        t = heard(rest)
+        return bool(self.extra_wanted(t) or _REQUEST.search(t) or _NEXT.search(t) or _BDA.search(t) or _MARK.search(t)
+                    or _LASE_STOP.search(t) or lase_wanted(t)
                     or (_REPEAT.search(t) and self.current is not None))
 
     def handle(self, rest: str) -> Optional[str]:
         """What Overlord says (the text after "Overlord,"), or None if it isn't a JTAC request."""
-        t = rest or ""
+        t = heard(rest)
         if _BDA.search(t):
             return self.bda()
+        if _LASE_STOP.search(t):
+            return self.laser_off()
+        if lase_wanted(t):                          # before smoke: "mark the target with laser"
+            return self.lase(t)
         if _MARK.search(t):
             return self.mark(t)
         if _REPEAT.search(t) and self.current is not None:
@@ -112,10 +175,7 @@ class Jtac:
             return []
         prof = aircraft.profile(snap)
         radius = 37_000 if prof.kind == "jet" else 12_000
-        cands = ground_near(snap, (me[0], me[1]), radius)       # big radar SAMs are left out
-        alts = {int(g[1]): float(g[4]) for g in snap.get("enemy_ground") or [] if len(g) >= 5}
-        for c in cands:
-            c["alt"] = alts.get(c["id"])
+        cands = self._ground(snap, (me[0], me[1]), radius)      # big radar SAMs are left out
         d = parse_direction(text.lower())
         if d is not None:
             cands = [c for c in cands
@@ -126,6 +186,24 @@ class Jtac:
             from common.unit_types import TYPES
             cands = [c for c in cands if re.search(kind[1], c["type"].lower()) or TYPES.matches_spoken(c["type"], text.lower())]
         return cands                                             # most dangerous first, then nearest
+
+    @staticmethod
+    def _ground(snap: dict, here, radius: float) -> List[dict]:
+        """R4: hostile ground tracks the picture holds ACTIVE (never a stale or lost one, never a neutral),
+        most dangerous first like ground_near; without a current picture, Export's list as before."""
+        from tactical import link
+        pic = link.hostile_ground_near(here[0], here[1], radius)
+        if pic is None:
+            cands = ground_near(snap, here, radius)
+            alts = {int(g[1]): float(g[4]) for g in snap.get("enemy_ground") or [] if len(g) >= 5}
+            for c in cands:
+                c["alt"] = alts.get(c["id"])
+            return cands
+        from common.overlord import threat_weight
+        out = [dict(r, w=threat_weight(r["type"]), src="enemy_ground") for r in pic
+               if r["id"] is not None and not is_big_sam(r["type"])]
+        out.sort(key=lambda r: (-r["w"], r["d"]))
+        return out
 
     def request(self, text: str = "", skip_given: bool = False) -> str:
         snap = self.snapshot()
@@ -181,11 +259,10 @@ class Jtac:
             parts.append("Threats: " + "; ".join(threats) + ".")
         return " ".join(parts)
 
-    def threats(self, tgt: dict, snap: dict) -> List[str]:
-        """Air defence near the target (SAMs, AAA), nearest first, up to two."""
+    @staticmethod
+    def _raw_threats(snap: dict, here) -> List[dict]:
+        """Without a current picture: Export's lists, as before R4."""
         from common.unit_types import TYPES
-        here = (tgt["lat"], tgt["lon"])
-        seen, out = set(), []
         rows = radars_near(snap, here, THREAT_RADIUS_M) + [
             g for g in ground_near(snap, here, THREAT_RADIUS_M) if TYPES.is_air_defence(g["type"]) or g["w"] >= 90]
         for g in snap.get("enemy_ground") or []:             # big SAMs ground_near leaves out
@@ -193,6 +270,18 @@ class Jtac:
                 d, _ = dist_brg(here, (float(g[2]), float(g[3])))
                 if d <= THREAT_RADIUS_M:
                     rows.append({"type": g[0], "id": int(g[1]), "lat": float(g[2]), "lon": float(g[3]), "d": d})
+        return rows
+
+    def threats(self, tgt: dict, snap: dict) -> List[str]:
+        """Air defence near the target (SAMs, AAA), nearest first, up to two."""
+        from tactical import link
+        here = (tgt["lat"], tgt["lon"])
+        seen, out = set(), []
+        pic = link.threats_near(here[0], here[1], THREAT_RADIUS_M)       # R4: the picture's threat list
+        if pic is not None:
+            rows = [r for r in pic if re.search(r"SAM|AAA|MANPADS", r.get("category") or "")]
+        else:
+            rows = self._raw_threats(snap, here)
         for r in sorted(rows, key=lambda r: dist_brg(here, (r["lat"], r["lon"]))[0]):
             if r["id"] == tgt["id"] or r["id"] in seen:
                 continue
@@ -218,6 +307,129 @@ class Jtac:
         if not ok:
             return f"Overlord, unable to mark, {why}."
         return f"Overlord, {color} smoke on the target."
+
+    def candidates_in_range(self, tgt: dict) -> Optional[list]:
+        """Laser sources within their range of the target (horizontal, first cut), nearest first, as
+        (Observer, metres); None if DCS hasn't sent the JTAC list."""
+        obs = self.sight.observers() if self.sight is not None else None
+        if obs is None:
+            return None
+        out = []
+        for o in obs:
+            d = dist_brg((o.lat, o.lon), (tgt["lat"], tgt["lon"]))[0]
+            if d <= laser_range(o):
+                out.append((o, d))
+        out.sort(key=lambda od: od[1])
+        return out[:MAX_ASKED]
+
+    def where(self, target_id) -> Optional[tuple]:
+        """For the laser tracker (every 2 s): where the target is now; None once it's destroyed, gone, or
+        the JTAC has lost sight of it (then he says so)."""
+        with self._lock:
+            tgt, src = self.current, self._lasing
+        if tgt is None or tgt.get("id") != target_id:
+            return None
+        snap = self.snapshot()
+        if target_state(snap, tgt) == "dead":
+            return None
+        from command.rules import position_of
+        pos = position_of(snap, target_id)
+        if pos is None or src is None or self.sight is None:
+            return pos
+        got = self.sight.query(target_id, [src.name], timeout=1.0)
+        if got is None:                             # no answer: keep lasing, ask again next time
+            return pos
+        if not got.found:                           # DCS has no such unit any more: destroyed before the picture
+            with self._lock:                        # marks it (4 Nov: that was called "lost sight"); the kill
+                if self._lasing is src:             # call follows from tick()
+                    self._lasing, self._blind = None, 0
+            print(f"[JTAC] Target {target_id} no longer in DCS: laser off.")
+            return None
+        row = got.rows.get(src.name)
+        down = row is not None and row[0] == "gone"
+        blind = row is None or row[0] != "1" or row[1] > laser_range(src)
+        with self._lock:
+            if self._lasing is not src:
+                return pos
+            self._blind = self._blind + 1 if blind else 0
+            off = down or self._blind >= LOST_SIGHT_CHECKS
+            if off:
+                self._lasing, self._blind = None, 0
+        if not off:
+            return pos
+        who = say_source(src)
+        why = f"{who} is down" if down else f"{who} lost sight of the target"
+        print(f"[JTAC] {why}: laser off.")
+        if self.notify is not None:
+            self.notify(f"Overlord, {why}, laser off.")
+        return None
+
+    def laser_pick(self, tgt: dict):
+        """The nearest JTAC / drone in range with line of sight to tgt: ((Observer, metres), "") or
+        (None, why not - a sentence ending with a full stop). Asks DCS (up to 1.5 s): not on the main thread."""
+        cands = self.candidates_in_range(tgt)
+        if cands is None:
+            return None, "DCS hasn't sent the JTAC list. Is the comms hook up to date?"
+        if not cands:
+            return None, (f"no JTAC within {GROUND_LASER_RANGE_M / 1000:g} km or drone within "
+                          f"{AIR_LASER_RANGE_M / 1000:g} km of the target. Say mark target for smoke.")
+        got = self.sight.query(tgt["id"], [o.name for o, _ in cands])
+        if got is None:
+            return None, "no line of sight answer from DCS."
+        if not got.found:
+            return None, "DCS can't find the target."
+        pick = next(((o, d) for o, d in cands
+                     if got.rows.get(o.name, ("0", 0.0))[0] == "1" and got.rows[o.name][1] <= laser_range(o)), None)
+        if pick is not None:
+            return pick, ""
+        live = [o for o, _ in cands if got.rows.get(o.name, ("gone", 0.0))[0] != "gone"]
+        if not live:
+            return None, "no JTAC or drone left near the target."
+        if len(live) == 1:
+            return None, f"{say_source(live[0])} has no line of sight to the target."
+        return None, f"none of the {len(live)} JTACs in range can see the target."
+
+    def lase(self, text: str) -> str:
+        with self._lock:
+            tgt = self.current
+        if tgt is None:
+            return "Overlord, no target to lase. Request a target first."
+        if self.laser is None or self.oly is None or not getattr(self.oly, "connect", lambda: False)():
+            return "Overlord, unable to lase, Olympus isn't running."
+        snap = self.snapshot()
+        if target_state(snap, tgt) == "dead":
+            return "Overlord, the target's destroyed. Request next target."
+        tgt = self._live(tgt)
+        pick, why = self.laser_pick(tgt)
+        if pick is None:
+            return f"Overlord, unable to lase, {why}"
+        m = _CODE.search(text or "")
+        code = int("".join(g for g in m.groups() if g)) if m else DEFAULT_LASER_CODE
+        self.laser_off(quiet=True)
+        src, d = pick
+        with self._lock:
+            self._lasing, self._blind = src, 0
+        why = self.laser.lase_from(src.id, tgt, code, where=self.where)
+        if why:
+            with self._lock:
+                self._lasing = None
+            return f"Overlord, unable to lase, {why[len('Unable, '):] if why.startswith('Unable, ') else why}"
+        brg = dist_brg((tgt["lat"], tgt["lon"]), (src.lat, src.lon))[1]
+        return (f"Overlord, laser on the target, code {_say_digits(str(code))}, from {say_source(src)}, "
+                f"{aircraft.say_dist(d, snap)} {compass(brg)} of the target.")
+
+    def laser_off(self, quiet: bool = False) -> str:
+        with self._lock:
+            src, self._lasing = self._lasing, None
+        if src is None or self.laser is None:
+            return "" if quiet else "Overlord, no laser on."
+        on = src.id in self.laser.lasing()
+        why = self.laser.lase_stop([{"id": src.id}]) if on else ""
+        if quiet:
+            return ""
+        if why:
+            return f"Overlord, {why[0].lower() + why[1:]}"
+        return "Overlord, laser off."
 
     def bda(self) -> str:
         snap = self.snapshot()
@@ -259,9 +471,24 @@ class Jtac:
             return None
         with self._lock:
             self._reported_dead = tgt["id"]
+        print(f"[JTAC] Target {tgt['id']} {tgt['type']} called destroyed: {self._why_dead(tgt)}")
         text = f"Overlord, good effect, {say_type(tgt['type'])} destroyed."
         self.speak(text)
         return text
+
+    @staticmethod
+    def _why_dead(tgt: dict) -> str:
+        """For the log (4 Nov: an SA-11 called destroyed came back 10 minutes later): what decided it."""
+        from tactical import link
+        from tactical.models import dcs_key
+        p = link._get()
+        pic = p.picture() if p is not None else None
+        if pic is None:
+            return "Export's lists (no current picture)"
+        t = next((x for x in pic.tracks if x.key == dcs_key(tgt.get("id"))), None)
+        if t is None:
+            return "not in the picture; Export's lists"
+        return f"picture track {t.track_id} {t.status.value}: {t.status_reason}"
 
     def reset(self) -> None:
         with self._lock:

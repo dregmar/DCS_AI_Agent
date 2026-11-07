@@ -97,6 +97,9 @@ def build_map(snap: dict, ctx) -> Dict:
     else:
         ground, air = _from_lists(snap, ctx, me_ll)
         jtac, notes = ctx.jtac(snap), []
+    ground, air = ground[:MAX_GROUND], air[:MAX_AIR]
+    jtac = dict(jtac) if isinstance(jtac, dict) else jtac          # the JTAC's own copy stays untouched
+    _add_grids(ground + air + ([jtac] if jtac else []), snap)
     out = {
         "units": "nm" if ctx.imperial(snap) else "km",
         "me": me,
@@ -105,9 +108,10 @@ def build_map(snap: dict, ctx) -> Dict:
         "named": ctx.named_waypoints(snap),
         "outcasts": ctx.outcasts(snap),
         "flights": ctx.flights(snap),
-        "ground": ground[:MAX_GROUND],
-        "air": air[:MAX_AIR],
+        "ground": ground,
+        "air": air,
         "jtac": jtac,
+        "ips": _ips(ctx, snap),                     # 5 Nov: the 9-line's IP and the Hog flights' IPs
         "friends": friends_near(snap, me_ll),
         "friends_m": friendly_radius_m(),
         "enemy_age": enemy_age(snap),
@@ -122,18 +126,38 @@ def build_map(snap: dict, ctx) -> Dict:
     return out
 
 
-def _grid(lat: float, lon: float, snap: dict) -> Optional[str]:
-    """"38T LM 72180 40180": MGRS at the aircraft's target-grid precision (common/aircraft.py)."""
+def _digits(snap: dict) -> int:
     try:
         from common.aircraft import profile
-        digits = int(profile(snap).target_grid_digits)
+        return max(1, min(5, int(profile(snap).target_grid_digits)))
     except Exception:
-        digits = 4
+        return 4
+
+
+def _grid(lat: float, lon: float, snap: dict, digits: Optional[int] = None) -> Optional[str]:
+    """"38T LM 72180 40180": MGRS at the aircraft's target-grid precision (common/aircraft.py)."""
     try:
         from common.position import mgrs_text
-        return mgrs_text(lat, lon, max(1, min(5, digits)))
+        return mgrs_text(lat, lon, _digits(snap) if digits is None else digits)
     except Exception:
         return None
+
+
+def _ips(ctx, snap: dict) -> list:
+    fn = getattr(ctx, "ips", None)
+    try:
+        return list(fn(snap) or []) if callable(fn) else []
+    except Exception:
+        return []
+
+
+def _add_grids(units, snap: dict) -> None:
+    """3 Nov: every target carries its MGRS at your precision, so the kneeboard shows a selected target's
+    position in the same format as yours (lat / long are worked out on the page). ~3.5 us a unit."""
+    digits = _digits(snap)
+    for u in units:
+        if isinstance(u, dict) and u.get("lat") is not None and u.get("lon") is not None and "grid" not in u:
+            u["grid"] = _grid(u["lat"], u["lon"], snap, digits)
 
 
 def _flat_m(a, b) -> float:
@@ -149,7 +173,9 @@ def friendly_radius_m() -> float:
     """config FRIENDLY_SHOW_M (metres), else 5 km; the page shows it in the legend."""
     try:
         import config
-        v = float(getattr(config, "FRIENDLY_SHOW_M", FRIENDLY_SHOW_M) or FRIENDLY_SHOW_M)
+        from core import settings                  # a live setting (6 Nov)
+        v = float(settings.get("FRIENDLY_SHOW_M", getattr(config, "FRIENDLY_SHOW_M", FRIENDLY_SHOW_M))
+                  or FRIENDLY_SHOW_M)
         return v if v > 0 else FRIENDLY_SHOW_M
     except Exception:
         return FRIENDLY_SHOW_M
@@ -342,7 +368,11 @@ def contact_panel(pic, n: int, snap: dict, imperial: bool) -> Optional[Dict]:
         rows.append(["Threat", f"{threat.category}, priority {threat.priority}"])
         for e in threat.evidence:
             rows.append(["", e.fact])
-    return {"tid": short_tid(tid), "title": t.display or t.type_name or "unknown type", "rows": rows}
+    out = {"tid": short_tid(tid), "title": t.display or t.type_name or "unknown type", "rows": rows}
+    if t.position is not None:                      # 3 Nov: shown in your position format (the page picks it)
+        out["pos"] = {"lat": round(t.position.lat, 6), "lon": round(t.position.lon, 6),
+                      "grid": _grid(t.position.lat, t.position.lon, snap)}
+    return out
 
 
 def enemy_age(snap: dict) -> Optional[int]:

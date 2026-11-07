@@ -58,12 +58,28 @@ def _load(path: str, label: str):
         return None
 
 
+def _voice_path(setting: str, fallback: str) -> str:
+    """A voice's model file: the one chosen on the kneeboard's Settings page (core/settings.py), else
+    config.py's, else fallback. Not there? The same file in the voices subfolder (6 Nov: Andre is moving
+    the voices into F:\\DCS_AI_Agent\\voices)."""
+    import config as _config
+    try:
+        from core import settings
+        path = settings.get(setting, None) or fallback
+    except Exception:
+        path = getattr(_config, setting, None) or fallback
+    if path and not os.path.exists(path):
+        alt = os.path.join(getattr(_config, "BASE_DIR", "") or "", "voices", os.path.basename(path))
+        if os.path.exists(alt):
+            return alt
+    return path
+
+
 def _load_instructor():
     """The instructor's voice, only if its model is in the project folder (a missing file isn't an
     error: until it is downloaded the instructor speaks in George's voice)."""
     import config as _config
-    path = getattr(_config, "INSTRUCTOR_MODEL_PATH", None) or os.path.join(
-        getattr(_config, "BASE_DIR", ""), "jenny.onnx")
+    path = _voice_path("INSTRUCTOR_MODEL_PATH", os.path.join(getattr(_config, "BASE_DIR", ""), "jenny.onnx"))
     if not os.path.exists(path):
         print(f"[AUDIO] Instructor voice not found ({path}): the instructor will use George's voice. "
               f"Put jenny.onnx and jenny.onnx.json in the project folder.")
@@ -75,7 +91,7 @@ def _load_role(label: str, setting: str, filename: str):
     """A command role's voice (P2-3), only if its model is in the project folder; until it's
     downloaded the role speaks in Overlord's voice (a missing file isn't an error)."""
     import config as _config
-    path = getattr(_config, setting, None) or os.path.join(getattr(_config, "BASE_DIR", ""), filename)
+    path = _voice_path(setting, os.path.join(getattr(_config, "BASE_DIR", ""), filename))
     if not os.path.exists(path):
         print(f"[AUDIO] {label.capitalize()} voice not found ({path}): {label} will use Overlord's voice. "
               f"Put {os.path.basename(path)} and its .json in the project folder.")
@@ -83,14 +99,34 @@ def _load_role(label: str, setting: str, filename: str):
     return _load(path, label)
 
 
-VOICES = {GEORGE: _load(PIPER_MODEL_PATH, GEORGE),
-          OVERLORD: _load(OVERLORD_MODEL_PATH, OVERLORD),
+VOICES = {GEORGE: _load(_voice_path("PIPER_MODEL_PATH", PIPER_MODEL_PATH), GEORGE),
+          OVERLORD: _load(_voice_path("OVERLORD_MODEL_PATH", OVERLORD_MODEL_PATH), OVERLORD),
           INSTRUCTOR: _load_instructor(),
           WARLORD: _load_role(WARLORD, "WARLORD_MODEL_PATH", "en_US-norman-medium.onnx"),
           DARKSIDE: _load_role(DARKSIDE, "DARKSIDE_MODEL_PATH", "en_US-bryce-medium.onnx")}
 voice = VOICES[GEORGE]            # kept for older code that reads tts.voice
 if VOICES[OVERLORD] is None and voice is not None:
     print("[AUDIO] Overlord will use George's voice.")
+
+
+SAMPLE = "sample"                 # the Settings page's "play a sample" voice (6 Nov)
+_sample_lock = threading.Lock()
+_sample_path = None
+
+
+def speak_sample(path: str, text: str) -> bool:
+    """The Settings page: one line in a voice that may not be in use yet. Loaded once and kept while the
+    same voice is sampled again (one sample voice in memory at a time); then spoken through the normal
+    queue. Slow work (loading the model) - call it from a worker thread, never the main / PTT threads."""
+    global _sample_path
+    with _sample_lock:
+        if _sample_path != path or VOICES.get(SAMPLE) is None:
+            v = _load(path, SAMPLE)
+            if v is None:
+                return False
+            VOICES[SAMPLE], _sample_path = v, path
+    speak_radio(text, SAMPLE, priority=PRIORITY_ROUTINE, max_age=20.0)
+    return True
 
 
 def _voice_for(speaker: str):

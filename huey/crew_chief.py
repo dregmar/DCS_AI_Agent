@@ -52,6 +52,7 @@ class CrewChief:
                  fuel_burn_lbs_hr: float = 555.0, reserve_lbs: float = 185.0):
         self.speak, self.snapshot, self.active = speak, snapshot, active
         self.talkdown = TalkDown(speak) if talkdown else None
+        self.talkdown_on: Callable[[], bool] = lambda: True     # HUEY_TALKDOWN, a live setting (main.py)
         self.fuel_burn, self.reserve = fuel_burn_lbs_hr, reserve_lbs
         self._bingo_said = False
         self.contact_range_m = contact_range_m
@@ -145,7 +146,7 @@ class CrewChief:
                    vs > -400 or spd > 40, "Sink rate! You're settling.")
 
         # --- talking you down / onto a load
-        if self.talkdown and tel_ok:
+        if self.talkdown and tel_ok and self.talkdown_on():
             self.talkdown.check(snap, now)
 
         # --- bingo: flying home from here would land you under the reserve

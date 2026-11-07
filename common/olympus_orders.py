@@ -317,6 +317,20 @@ class Executor:
         ok, why = self.oly.command(name, body)
         return "" if ok else f"Unable, {why}."
 
+    def lase_from(self, source_id: int, tgt: dict, code: int,
+                  where: Optional[Callable[[int], Optional[Tuple[float, float]]]] = None) -> str:
+        """A laser from any unit (3 Nov: Darkside's drone) on tgt, kept on it by the tracker. where(target id)
+        -> (lat, lon) or None (gone: laser off); default George's contacts, as for wingmen. '' = on."""
+        self.lase_stop([{"id": source_id}])
+        said = self._send("fireLaser", {"ID": source_id, "code": code, "location": self._loc(tgt["lat"], tgt["lon"])})
+        if said:
+            return said
+        with self._lock:
+            self._spots[source_id] = {"spot": None, "target": tgt["id"], "code": code,
+                                      "since": time.monotonic(), "where": where}
+        self._start_tracker()
+        return ""
+
     # ------------------------------------------------------------ laser
     def _find_spot(self, source_id: int) -> Optional[int]:
         """The newest active spot of this wingman, from Olympus's data (/olympus/spots)."""
@@ -380,12 +394,20 @@ class Executor:
                             self._spots[wid]["spot"] = spot
                     print(f"[OLYMPUS] Laser spot {spot} for unit {wid}.")
                     s["spot"] = spot
-                c = contacts.get(s["target"])
-                if c is None:                             # destroyed or out of sight: laser off
+                if s.get("where") is not None:            # Darkside's laser: the picture / DCS lists
+                    try:
+                        pos = s["where"](s["target"])
+                    except Exception as e:
+                        print(f"[OLYMPUS] Laser target lookup failed: {e}")
+                        pos = None
+                else:
+                    c = contacts.get(s["target"])
+                    pos = (c["lat"], c["lon"]) if c is not None else None
+                if pos is None:                           # destroyed or out of sight: laser off
                     print(f"[OLYMPUS] Target {s['target']} gone, laser {s['spot']} off.")
                     self.lase_stop([{"id": wid}])
                     continue
-                pos = (c["lat"], c["lon"])
+                pos = (float(pos[0]), float(pos[1]))
                 if last.get(wid) and math.dist(last[wid], pos) < 1e-5:
                     continue
                 last[wid] = pos

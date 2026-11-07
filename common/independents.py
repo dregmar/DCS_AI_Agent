@@ -190,6 +190,7 @@ class Independents:
         bad = next((s for s in sent if not s[1]), None)
         if ok:
             ORDERS.record(self._say(n), "go independent", "completed", "clone up, original removed")
+            self._task_up(n)
         else:
             ORDERS.record(self._say(n), "go independent", "failed",
                           err or (f"{bad[0]}: {bad[2]}" if bad else "no clone appeared"))
@@ -197,6 +198,25 @@ class Independents:
             with self._lock:
                 self._by_n.pop(n, None)
             self.speak(f"{NUM_SAY.get(n, n)} couldn't go independent. Still in your flight.".capitalize())
+
+    def _task_up(self, n: int) -> None:
+        """R3: a tasking record for the Outcast, owned by you (shown on the kneeboard, not in Warlord's cap)."""
+        from command.tasking import TASKS
+        t = TASKS.new("OUTCAST", "PILOT", self._say(n), requested_by="pilot")
+        for st in ("approved", "en_route"):
+            TASKS.set_state(t.task_id, st, "independent" if st == "en_route" else "")
+        snap = self.snapshot()
+        unit = self._unit(snap, n)
+        r = self.known(n) or {}
+        TASKS.attach(t.task_id, r.get("group"), [int(unit[2])] if unit else [])
+        with self._lock:
+            if n in self._by_n:
+                self._by_n[n]["task"] = t.task_id
+
+    def _task_lost(self, n: int) -> None:
+        from command.tasking import TASKS
+        r = self.known(n) or {}
+        TASKS.set_state(r.get("task"), "lost", "down")
 
     def _clone(self, w: dict) -> bool:
         n = w["n"]
@@ -283,6 +303,7 @@ class Independents:
         if unit is None:
             with self._lock:
                 self._by_n[n]["state"] = "lost"
+            self._task_lost(n)
             from common.debrief import DEBRIEF
             DEBRIEF.loss(self._say(n))
             return f"{self._say(n)} is down."
@@ -394,6 +415,7 @@ class Independents:
     def _hunt_loop(self, n: int, stop: threading.Event, air_defence: bool = False) -> None:
         from common.overlord import target_state, say_type
         current, idle_since = None, time.monotonic()
+        skipped = set()                                  # R3: targets Warlord's rules refused (block mode)
         while not stop.is_set():
             snap = self.snapshot()
             unit = self._unit(snap, n)
@@ -401,6 +423,7 @@ class Independents:
                 with self._lock:
                     if n in self._by_n:
                         self._by_n[n]["state"] = "lost"
+                self._task_lost(n)
                 from common.debrief import DEBRIEF
                 DEBRIEF.loss(self._say(n))
                 self.speak(f"{self._say(n)} is down.")
@@ -414,10 +437,14 @@ class Independents:
             if current is None and enemy_lists_stale(snap):
                 idle_since = time.monotonic()    # wait for a fresh picture; don't rejoin "for no targets"
             elif current is None:
-                cands = self._hunt_targets(snap, unit, air_defence)
+                cands = [c for c in self._hunt_targets(snap, unit, air_defence) if c["id"] not in skipped]
                 if cands:
                     current, idle_since = cands[0], time.monotonic()
                     ok, why = self.ex.oly.command("attackUnit", {"ID": uid, "targetID": current["id"]})
+                    if not ok and str(why).startswith("Warlord:"):
+                        skipped.add(current["id"])       # Warlord said why; the next target
+                        current = None
+                        continue
                     if not ok:
                         self.speak(f"{self._say(n)}, unable, {why}.")
                         return

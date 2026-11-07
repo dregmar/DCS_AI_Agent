@@ -24,7 +24,7 @@ import re
 import threading
 from typing import Dict, List, Optional
 
-PAGES = ("map", "briefing", "checklist", "comms", "status", "alerts", "instructor")
+PAGES = ("map", "briefing", "checklist", "comms", "status", "alerts", "instructor", "settings")
 
 _LEAD = r"^(?:(?:george|kneeboard|knee board|hey|okay|ok)[\s,]+)*"
 _SHOW = r"(?:show(?: me)?|open|display|bring up|pull up|go to|switch to|page|kneeboard|knee board)"
@@ -35,6 +35,7 @@ _PAGE_WORDS = [
     ("status", r"(?:system |systems )?status|systems|stats|that s us"),  # 29 Oct: "Niebord, that's us"
     ("alerts", r"alerts?|warnings?"),
     ("instructor", r"instructor|instructors|training|scores?|score ?card"),     # Instructor Mode tab (Phase 2)
+    ("settings", r"settings?|options|preferences|set ?up"),                     # Settings tab (6 Nov, S3)
 ]
 _PAGE_RX = [(p, re.compile(_LEAD + _SHOW + r"[\s,]+(?:the |my )?(?:" + w + r")(?:\s+(?:page|tab))?$"))
             for p, w in _PAGE_WORDS]

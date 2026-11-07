@@ -6,6 +6,18 @@ tactical/link.py - how the rest of the program asks the tactical picture about o
     link.closure(key, me_ll, me_vel) -> metres per second (negative = closing) | None
     link.active()                    -> is a current picture available?
 
+R4 (approved 2 Nov, built 4 Nov): the roles' area checks read the picture too. Each returns None when there
+is no current picture (the caller then uses Export's raw lists as before), else a list nearest first of
+{"type", "id", "lat", "lon", "d", "status", ...}:
+    link.friendlies_near(lat, lon, r)     FRIENDLY ground / naval tracks (never aircraft or Olympus flights,
+                                          whose category is unknown), any status but GONE: a friendly the
+                                          picture can't vouch for (stale, lost) still counts at its last
+                                          known position - never called clear
+    link.threats_near(lat, lon, r)        the picture's threat list (hostile, not GONE or LOST), + "category"
+                                          ("radar SAM", "AAA" ...) and "w" (weight)
+    link.hostile_ground_near(lat, lon, r) HOSTILE ground tracks that are ACTIVE (JTAC targets: only units
+                                          the picture can vouch for are offered), + "alt"
+
 key = "dcs:<object id>" (tactical.models.dcs_key). None always means "the picture can't say": the picture
 isn't running, isn't current (older than max_age), or doesn't hold that unit. Callers then use their own
 rule exactly as before, so tests and old behaviour need no picture at all.
@@ -84,6 +96,75 @@ def closure(key: Optional[str], me_ll, me_vel=None) -> Optional[float]:
     if me_vel:
         vn, ve = vn - float(me_vel[0]), ve - float(me_vel[1])
     return (n * vn + e * ve) / d
+
+
+_AIR = frozenset({"air", "air_fixed", "air_rotary"})
+_GROUND = frozenset({"ground", "surface", "structure"})
+# 4 Nov flight: Overlord's Olympus flights are "unknown" category in the picture, so "not air" counted the
+# Hog as friendly ground forces and Warlord denied CAS danger close. Friendlies are only what DCS reports as
+# ground or naval (Export's own-side list), as the raw rule was.
+_SURFACE = frozenset({"ground", "naval", "surface", "structure"})
+
+
+def _picture():
+    p = _get()
+    return p.picture() if p is not None else None
+
+
+def _dcs_id(key: str) -> Optional[int]:
+    try:
+        return int(str(key).split(":", 1)[1])
+    except (IndexError, ValueError):
+        return None
+
+
+def _row(t, d: float) -> dict:
+    return {"type": t.type_name or t.display or "unknown", "id": _dcs_id(t.key), "lat": t.position.lat,
+            "lon": t.position.lon, "d": d, "status": t.status.value, "track": t.track_id}
+
+
+def _near(pic, lat: float, lon: float, radius: float, keep) -> list:
+    from tactical.sources import dist_m
+    out = []
+    for t in pic.tracks:
+        if t.position is None or not keep(t):
+            continue
+        d = dist_m((lat, lon), (t.position.lat, t.position.lon))
+        if d <= radius:
+            out.append(_row(t, d))
+    return sorted(out, key=lambda r: r["d"])
+
+
+def friendlies_near(lat: float, lon: float, radius: float) -> Optional[list]:
+    pic = _picture()
+    if pic is None:
+        return None
+    return _near(pic, lat, lon, radius, lambda t: t.affiliation.value == "friendly"
+                 and t.category.value in _SURFACE and t.status.value != "gone")
+
+
+def threats_near(lat: float, lon: float, radius: float) -> Optional[list]:
+    pic = _picture()
+    if pic is None:
+        return None
+    by_id = {a.track_id: a for a in pic.threats}
+    out = _near(pic, lat, lon, radius, lambda t: t.track_id in by_id)
+    for r in out:
+        a = by_id[r["track"]]
+        r["category"], r["w"] = a.category, a.weight
+    return out
+
+
+def hostile_ground_near(lat: float, lon: float, radius: float) -> Optional[list]:
+    pic = _picture()
+    if pic is None:
+        return None
+    out = _near(pic, lat, lon, radius, lambda t: t.affiliation.value == "hostile"
+                and t.category.value in _GROUND and t.status.value == "active")
+    alts = {t.track_id: (t.position.alt_m if t.position else None) for t in pic.tracks}
+    for r in out:
+        r["alt"] = alts.get(r["track"])
+    return out
 
 
 class ServiceLink:

@@ -122,6 +122,8 @@ ESCORT_RADIUS_M = 30_000           # escort: bandits this close to you
 ESCORT_MOVE_M = 5_000              # escort: re-centre when you've moved this far
 BREAK_OFF_M = 20_000               # a bandit this far outside the radius: back to station
 COST_PER_AIRCRAFT = 10             # Olympus's default spawn cost when the database gives none
+DEFER_WAIT_S = 300.0               # R7: a request Warlord defers waits this long (DEFER_WAIT_S in config)
+DEFER_CHECK_S = 10.0               # ... and is rechecked this often
 APPEAR_TIMEOUT_S = 30.0
 MISSION_TIMEOUT_S = 25 * 60        # SEAD / CAS
 CAS_MAX_TARGETS = 8                # CAS: the named target and the most dangerous others (1 Nov: 40 listed)
@@ -365,7 +367,34 @@ def cas_targets(targets: List[dict], keep_first: bool = False) -> List[dict]:
     return (head + rest)[:CAS_MAX_TARGETS]
 
 
+def cas_ip(snap: dict, point: Tuple[float, float], toward: Optional[Tuple[float, float]] = None,
+           ip_m: Optional[float] = None) -> Tuple[float, float]:
+    """The CAS initial point: IP_M from the target area, on the side away from known air defence (else
+    towards `toward`: where the flight came from, or you). Hog flights and the 9-line (5 Nov) share it."""
+    lat0, lon0 = point
+    ip_m = IP_M if ip_m is None else ip_m
+    threats = radars_near(snap, point, SEARCH_RADIUS_M)
+    if threats:
+        n = sum(t["lat"] - lat0 for t in threats)
+        e = sum((t["lon"] - lon0) * math.cos(math.radians(lat0)) for t in threats)
+        brg = (math.degrees(math.atan2(e, n)) + 180.0) % 360 if (n or e) else 0.0
+    elif toward is not None:
+        _, brg = dist_brg(point, toward)
+    else:
+        brg = 180.0
+    return geo.offset_ll(lat0, lon0, ip_m * math.cos(math.radians(brg)), ip_m * math.sin(math.radians(brg)))
+
+
 def big_sams_near(snap: dict, point: Tuple[float, float], radius: float = SEARCH_RADIUS_M) -> List[dict]:
+    """Big radar SAMs near the point. R4: from the tactical picture's threat list while it's current (a stale
+    SAM still counts; a destroyed one doesn't), else Export's lists. Warlord's denial and Overlord's caution
+    both come from here, so they agree."""
+    from tactical import link
+    pic = link.threats_near(point[0], point[1], radius)
+    if pic is not None:
+        out = [dict(r, src="air_defence") for r in pic if is_big_sam(r["type"])]
+        out.sort(key=lambda r: (-r["w"], r["d"]))
+        return out
     return [r for r in radars_near(snap, point, radius) if is_big_sam(r["type"])]
 
 
@@ -463,6 +492,16 @@ class Overlord:
         self.callsign: Callable[[], str] = lambda: "Nomad"     # main.py: the mission's callsign (P2-2)
         self._lock = threading.Lock()
         self._missions: List[Mission] = []
+        # R7: requests Warlord deferred, one per kind: kind -> {"task_id", "text", "since", "reason"}
+        self._waiting: Dict[str, dict] = {}
+        self._req = threading.local()                    # the request being handled (its words, a recheck)
+        self._waiter: Optional[threading.Thread] = None
+        self.defer_wait_s, self.defer_check_s = DEFER_WAIT_S, DEFER_CHECK_S
+        self.clock: Callable[[], float] = time.monotonic
+        # speaks an unprompted line in a role's voice (main.py); default: Overlord's speak
+        self.say_role: Callable[[str, str], None] = lambda text, who: self.speak(text)
+        if warlord is not None:
+            warlord.waiting_lines = self.waiting_lines   # "Warlord, status" lists them (R2's hook)
 
     # -------------------------------------------------------------- entry
     def handle(self, text: str) -> Optional[str]:
@@ -495,6 +534,7 @@ class Overlord:
             why = stale_reason(self.snapshot())
             if why:
                 return f"Overlord, unable, {why}. Say again in a moment."
+        self._req.text = t                              # R7: kept with a deferred request, to ask again
         if "SEAD" in named:
             return self.request_sead(t)
         if "CAS" in named:
@@ -679,17 +719,31 @@ class Overlord:
         when it launched (with Warlord's note after it, if he has one), else why not. A Warlord denial is
         held for "Warlord, override" (common/warlord.py) and said in his voice after Overlord's line."""
         who = f"{k.callsign} flight"
+        retry = getattr(self._req, "retry", None)        # R7: a deferred request asked again
+        if retry is not None:
+            retry["result"] = "waiting"                  # unless something below decides
         if not self.oly.connect():
+            if retry is not None:
+                retry["reason"] = "Olympus isn't running"
+                return ""
             ORDERS.record(who, k.key, "failed", "Olympus isn't running")
             return "Overlord, unable, Olympus isn't running."
         cost = k.size * COST_PER_AIRCRAFT
         why = self._budget_problem(cost)
         if why:
+            if retry is not None:
+                retry["reason"] = why
+                return ""
             ORDERS.record(who, k.key, "failed", why)
             return f"Overlord, unable, {why}."
         from tactical.models import dcs_key
-        task = self.tasks.new(k.key, _roles.OVERLORD, who, where=where,
-                              targets=[dcs_key(x.get("id")) for x in targets])
+        # R5: who sends it in - Darkside for CAS when he's on the net (else Overlord, who then runs it himself)
+        ctrl = _roles.DARKSIDE if k.key == "CAS" and self.darkside is not None else (
+            _roles.OVERLORD if k.key == "CAS" else None)
+        task = self.tasks.get(retry["task_id"]) if retry is not None else None
+        if task is None:
+            task = self.tasks.new(k.key, _roles.OVERLORD, who, where=where,
+                                  targets=[dcs_key(x.get("id")) for x in targets], controller=ctrl)
         note = ()
         final = self._tasking_text(k, ok_text, short_text)
         full = self.warlord is not None and not exchange.short()
@@ -703,18 +757,27 @@ class Overlord:
                 self.warlord.hold(task.task_id, k.key, d,
                                   lambda: self._spawn(k, self.snapshot(), point, where, targets, task.task_id)
                                   or final)
+                if retry is not None:
+                    retry["result"] = "denied"
+                    return Said("", then=[(self.warlord.deny_text(k.key, d), "warlord")])
                 return Said(self._ack(k, where) if full else "",
                             then=[(self.warlord.deny_text(k.key, d), "warlord")])
             if d.verdict == "defer":
+                if retry is not None:                    # still not: keep waiting, nothing said
+                    retry["reason"] = d.reason
+                    return ""
                 self.tasks.set_state(task.task_id, "deferred", d.reason)
-                self.tasks.set_state(task.task_id, "failed", f"deferred: {d.reason}")
-                ORDERS.record(who, k.key, "failed", f"Warlord deferred: {d.reason}")
+                ORDERS.record(who, k.key, "submitted", f"Warlord deferred: {d.reason}; waiting")
+                self._wait(k.key, task.task_id, getattr(self._req, "text", "") or k.key.lower(), d.reason)
                 return Said(self._ack(k, where) if full else "",
-                            then=[(self.warlord.defer_text(k.key, d), "warlord")])
+                            then=[(self.warlord.defer_text(k.key, d, self.defer_wait_s), "warlord")])
             self.tasks.set_state(task.task_id, "approved", "Warlord approved")
             if d.advice:
                 note = ((self.warlord.advice_text(k.key, d), "warlord"),)
         err = self._spawn(k, snap, point, where, targets, task.task_id)
+        if retry is not None:
+            retry["result"] = "failed" if err else "approved"
+            return err or (Said(final, then=list(note)) if note else final)
         if err:
             return err
         if full:                         # the whole exchange: ack, Warlord's approval, the tasking, his note
@@ -852,9 +915,124 @@ class Overlord:
         m.state = "engaging"
         return True
 
+    # -------------------------------------------------------------- R7: deferred requests wait
+    def _wait(self, kind: str, task_id: str, text: str, reason: str) -> None:
+        """Keeps a deferred request (one per kind: a newer one replaces it) and starts the recheck thread."""
+        with self._lock:
+            old = self._waiting.get(kind)
+            self._waiting[kind] = {"task_id": task_id, "text": text, "since": self.clock(), "reason": reason}
+            start = self._waiter is None or not self._waiter.is_alive()
+            if start:
+                self._waiter = threading.Thread(target=self._wait_loop, daemon=True, name="overlord-deferred")
+        if old is not None and old["task_id"] != task_id:
+            self.tasks.set_state(old["task_id"], "failed", "replaced by a newer request")
+        if start:
+            self._waiter.start()
+
+    def waiting_lines(self) -> List[str]:
+        """For "Warlord, status": "CAS request waiting: 2 flights already up, 4 minutes left"."""
+        now = self.clock()
+        with self._lock:
+            items = list(self._waiting.items())
+        out = []
+        for kind, w in items:
+            left = max(0, int(self.defer_wait_s - (now - w["since"])))
+            when = f"{left // 60} minute{'s' if left // 60 != 1 else ''}" if left >= 60 else f"{left} seconds"
+            out.append(f"{KINDS[kind].said} request waiting: {w['reason']}, {when} left")
+        return out
+
+    def _wait_loop(self) -> None:
+        while True:
+            time.sleep(self.defer_check_s)
+            with self._lock:
+                items = list(self._waiting.items())
+            if not items:
+                return
+            for kind, w in items:
+                try:
+                    self._recheck(kind, w)
+                except Exception as e:                   # never let one request stop the others
+                    print(f"[OVERLORD] Deferred {kind} recheck failed: {e}")
+
+    def _drop(self, kind: str, w: dict) -> bool:
+        with self._lock:
+            if self._waiting.get(kind) is not w:
+                return False
+            del self._waiting[kind]
+            return True
+
+    def _recheck(self, kind: str, w: dict) -> None:
+        k = KINDS[kind]
+        who = f"{k.callsign} flight"
+        if self.clock() - w["since"] > self.defer_wait_s:
+            if self._drop(kind, w):
+                self.tasks.set_state(w["task_id"], "failed", f"deferred: {w['reason']}; no approval in time")
+                ORDERS.record(who, kind, "failed", f"Warlord deferred: {w['reason']}; the wait ran out")
+                if self.warlord is not None:
+                    self.say_role(self.warlord.expired_text(kind, w["reason"]), "warlord")
+            return
+        if stale_reason(self.snapshot()):                # a frozen picture: ask again next time
+            return
+        if self._busy(kind):                             # one of this kind is already up
+            if self._drop(kind, w):
+                self.tasks.set_state(w["task_id"], "failed", f"a {k.said} flight is already up")
+                self.say_role(f"Overlord, {k.said} request dropped, a {k.said} flight is already up.", "overlord")
+            return
+        fn = {"SEAD": self.request_sead, "CAS": self.request_cas, "CAP": self.request_cap,
+              "ESCORT": self.request_escort}[kind]
+        self._req.retry, self._req.text = dict(w, result=None), w["text"]
+        try:
+            said = fn(w["text"])
+            res = self._req.retry["result"]
+            w["reason"] = self._req.retry.get("reason", w["reason"])
+        finally:
+            self._req.retry = None
+        if res == "waiting":
+            return
+        if not self._drop(kind, w):                      # cancelled meanwhile
+            return
+        if res is None:                                  # the request didn't get as far as Warlord
+            self.tasks.set_state(w["task_id"], "failed", "the target is no longer in the picture")
+            ORDERS.record(who, kind, "failed", "deferred request: the target is no longer in the picture")
+            self.say_role(f"Overlord, {k.said} cancelled, the target is no longer in the picture.", "overlord")
+            return
+        if res == "approved" and self.warlord is not None:
+            self.say_role(self.warlord.now_approved_text(kind), "warlord")
+        self._say_said(said)
+
+    def _say_said(self, said) -> None:
+        if said is None:                                 # (an empty Said can still carry Warlord's line)
+            return
+        if str(said):
+            self.say_role(str(said), "overlord")
+        for text, who in getattr(said, "then", None) or []:
+            if text:
+                self.say_role(text, who)
+
+    def _cancel_waiting(self, named: List[str], everything: bool, flights_up: bool) -> List[str]:
+        """R7: "Overlord, cancel CAS" drops a waiting CAS request too. Returns the kinds dropped."""
+        with self._lock:
+            kinds = list(self._waiting)
+        if named:
+            drop = [x for x in kinds if x in named]
+        elif everything or (not flights_up and len(kinds) == 1):
+            drop = kinds
+        else:
+            drop = []
+        out = []
+        for kind in drop:
+            with self._lock:
+                w = self._waiting.pop(kind, None)
+            if w is not None:
+                self.tasks.set_state(w["task_id"], "failed", "cancelled while waiting for Warlord")
+                ORDERS.record(f"{KINDS[kind].callsign} flight", kind, "failed", "cancelled while deferred")
+                out.append(kind)
+        return out
+
     def reset(self) -> None:
         """A new mission: stop following the last one's flights, without calling them lost."""
         with self._lock:
+            self._waiting.clear()                        # R7: the old mission's deferred requests
             old, self._missions = list(self._missions), []
         for m in old:
             m.state = "cancelled"
@@ -907,6 +1085,13 @@ class Overlord:
                 ok, why = self.oly.command("attackUnit", {"ID": m.lead_id, "targetID": m.current["id"]})
                 if ok:
                     self._task(m, "attacking", say_type(m.current["type"]))
+                zone = re.search(r"inside the (.+?) no-strike zone", why or "") if not ok else None
+                if zone:                                 # R1: skip it, the others are still fair game
+                    skipped, m.current = m.current, None
+                    m.targets = [r for r in m.targets if r is not skipped]
+                    self.speak(f"Overlord, {m.cs} skipping the {say_type(skipped['type'])} "
+                               f"in the {zone.group(1)} no-strike zone.")
+                    continue
                 if not ok:
                     m.state = "failed"
                     self._task(m, "failed", f"attackUnit: {why}")
@@ -923,17 +1108,7 @@ class Overlord:
             time.sleep(POLL_S)
 
     def _ip(self, m: Mission, snap: dict):
-        """The CAS initial point: IP_M from the target area, on the side away from known air defence
-        (else towards where the flight came from)."""
-        lat0, lon0 = m.point
-        threats = radars_near(snap, m.point, SEARCH_RADIUS_M)
-        if threats:
-            n = sum(t["lat"] - lat0 for t in threats)
-            e = sum((t["lon"] - lon0) * math.cos(math.radians(lat0)) for t in threats)
-            brg = (math.degrees(math.atan2(e, n)) + 180.0) % 360 if (n or e) else 0.0
-        else:
-            _, brg = dist_brg(m.point, m.spawn_ll)
-        return geo.offset_ll(lat0, lon0, IP_M * math.cos(math.radians(brg)), IP_M * math.sin(math.radians(brg)))
+        return cas_ip(snap, m.point, m.spawn_ll)
 
     def _lead_ll(self, snap: dict, m: Mission):
         for u in self._flight(snap, m):
@@ -1139,6 +1314,12 @@ class Overlord:
             tgt = f" Engaging the {say_type(m.current['type'])}." if m.current else ""
         else:
             tgt = f" Engaging a {say_type(m.current['type'])}." if m.current else " No bandits."
+        t = self.tasks.get(m.task_id)                    # R2: the tasking record says why it's holding
+        if t is not None and t.state == "holding":
+            why = "" if t.reason in ("", "at the IP") else f", {t.reason}"
+            return f"{m.cs} flight holding at the IP{why}, tasked {task}.{done}"
+        if t is not None and t.state == "cleared":
+            tgt = tgt or " Cleared hot."
         return f"{m.cs} flight on task, {task}.{tgt}{done}"
 
     def status(self) -> str:
@@ -1149,12 +1330,16 @@ class Overlord:
 
     def cancel(self, named: List[str], everything: bool = False) -> str:
         act = self._active()
-        if not act:
-            return "Overlord, no flights tasked."
+        dropped = self._cancel_waiting(named, everything, bool(act))         # R7
+        waited = (f"{_say_list([KINDS[x].said for x in dropped])} request cancelled." if dropped else "")
         if named:
             act = [m for m in act if m.kind.key in named]
-            if not act:
+        if not act:
+            if waited:
+                return f"Overlord copies. {waited[0].upper() + waited[1:]}"
+            if named:
                 return f"Overlord, no {KINDS[named[0]].said} flight tasked."
+            return "Overlord, no flights tasked."
         elif len(act) > 1 and not everything:
             return ("Overlord, say which: " + _say_list([m.kind.said for m in act]).replace(" and ", " or ")
                     + ", or cancel all.")
@@ -1168,7 +1353,8 @@ class Overlord:
                     self.oly.command("setROE", {"ID": m.lead_id, "ROE": 4})   # anyone may stop an attack
                 self._send_home(m)
         names = _say_list([f"{m.cs} flight" for m in act])
-        return f"Overlord copies. {names}, mission cancelled, returning to base."
+        return f"Overlord copies. {names}, mission cancelled, returning to base." + (f" {waited[0].upper() + waited[1:]}"
+                                                                                     if waited else "")
 
 
 # ------------------------------------------------------------------ pop-up warnings

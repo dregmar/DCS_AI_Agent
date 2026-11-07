@@ -643,6 +643,19 @@ class Instructor:
         return time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(self.wall()))
 
 
+def _hover_level(config) -> int:
+    """INSTRUCTOR_HOVER_LEVEL: a value saved from the kneeboard's Settings page wins (core/settings.py), else
+    the given config's."""
+    try:
+        from core import settings
+        saved = settings.store().saved()
+        if "INSTRUCTOR_HOVER_LEVEL" in saved:
+            return int(saved["INSTRUCTOR_HOVER_LEVEL"])
+    except Exception:
+        pass
+    return int(getattr(config, "INSTRUCTOR_HOVER_LEVEL", 1))
+
+
 def build(config, snapshot: Callable[[], dict], speak: Callable[[str], None],
           mission_name: Callable[[], str] = lambda: "", targets=None, fuel=None, reserve=None,
           flight=None, fast=None, enabled=None) -> Instructor:
@@ -662,6 +675,6 @@ def build(config, snapshot: Callable[[], dict], speak: Callable[[str], None],
                    keep_raw=getattr(config, "INSTRUCTOR_KEEP_RAW", True),
                    raw_days=getattr(config, "INSTRUCTOR_RAW_DAYS", 30))
     return Instructor(snapshot, speak, hist, mission_name=mission_name,
-                      level=getattr(config, "INSTRUCTOR_HOVER_LEVEL", 1), targets=targets, fuel=fuel, reserve=reserve,
+                      level=_hover_level(config), targets=targets, fuel=fuel, reserve=reserve,
                       flight=flight, fast=fast, enabled=enabled,
                       fuel_allowance_lbs=getattr(config, "INSTRUCTOR_FUEL_ALLOWANCE_LBS", catalog.FUEL_ALLOWANCE_LBS))

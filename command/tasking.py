@@ -15,6 +15,11 @@ flight (Olympus group and unit ids, once it appears), the target track keys, its
     attacking -> attacking | holding | on_task | complete | aborted | failed | lost
     complete, aborted, failed, lost: final. denied is final unless overridden.
 
+R5 (4 Nov): each record names its controller - the role that may send the flight in (attackUnit, weapons
+free): Darkside for Overlord's CAS, Overlord for his SEAD / CAP / escort, you for your Outcasts. The
+permission table reads it (command/permissions.py) instead of a built-in "CAS is Darkside's"; reassigning a
+flight between roles later only changes this field.
+
 Records are immutable (frozen dataclasses replaced on change), so a reader's copy never changes under
 it. Thread-safe: one lock, never held while calling out. A mission load clears everything (reset()).
 """
@@ -59,10 +64,18 @@ class Task:
     created_mono: float = 0.0
     updated_mono: float = 0.0
     history: Tuple[Tuple[str, str, float], ...] = ()   # (state, reason, mono)
+    controller: str = ""                  # R5: the role that may send it in (default_controller)
 
     @property
     def live(self) -> bool:
         return self.state in LIVE
+
+
+def default_controller(kind: str, owner: str) -> str:
+    """R5: Overlord's CAS is Darkside's to clear hot; everything else is controlled by its owner."""
+    if kind == "CAS" and owner == "OVERLORD":
+        return "DARKSIDE"
+    return owner
 
 
 class TaskRegistry:
@@ -73,18 +86,20 @@ class TaskRegistry:
         self._ids = itertools.count(1)
 
     def new(self, kind: str, owner: str, flight: str, requested_by: str = "pilot", where: str = "",
-            targets=()) -> Task:
+            targets=(), controller: Optional[str] = None) -> Task:
         now = self._clock()
+        ctrl = controller or default_controller(kind, owner)
         with self._lock:
             tid = f"K{next(self._ids)}"
             t = Task(tid, kind, owner, requested_by, flight, where, tuple(k for k in targets if k),
-                     created_mono=now, updated_mono=now, history=(("requested", "", now),))
+                     created_mono=now, updated_mono=now, history=(("requested", "", now),), controller=ctrl)
             self._tasks[tid] = t
             if len(self._tasks) > MAX_KEPT:              # drop the oldest finished ones
                 done = sorted((x for x in self._tasks.values() if not x.live), key=lambda x: x.updated_mono)
                 for x in done[:len(self._tasks) - MAX_KEPT]:
                     del self._tasks[x.task_id]
-        self._print(f"[TASKING] {tid} {kind} for {flight} ({owner}) requested")
+        self._print(f"[TASKING] {tid} {kind} for {flight} ({owner}"
+                    + (f", sent in by {ctrl}" if ctrl != owner else "") + ") requested")
         return t
 
     def set_state(self, task_id: Optional[str], state: str, reason: str = "") -> bool:
@@ -141,6 +156,36 @@ class TaskRegistry:
         with self._lock:
             self._tasks.clear()
             self._ids = itertools.count(1)
+
+
+STATE_SAID = {"requested": "requested", "approved": "approved", "denied": "denied", "deferred": "deferred",
+              "overridden": "overridden", "en_route": "en route", "on_task": "on station", "holding": "holding",
+              "cleared": "cleared hot", "attacking": "attacking", "complete": "complete", "aborted": "aborted",
+              "failed": "failed", "lost": "lost"}
+
+
+def _ago(s: float) -> str:
+    s = max(0, int(s))
+    return f"{s} s" if s < 90 else f"{s // 60} min"
+
+
+def rows(registry: "TaskRegistry", now: float, finished: int = 3, held: Optional[Tuple[str, float]] = None) -> List[dict]:
+    """The kneeboard's Taskings list (R2): live tasks oldest first, then the last few finished ones.
+    held = (task_id, seconds left) of a Warlord denial waiting for an override."""
+    live = registry.active()
+    done = [t for t in registry.recent(50) if not t.live][-finished:]
+    out = []
+    for t in live + list(reversed(done)):
+        state = STATE_SAID.get(t.state, t.state)
+        if t.state == "holding" and t.reason == "at the IP":
+            state = "holding at the IP"
+        why = "" if not t.reason or t.reason in ("at the IP",) or t.state in ("en_route", "approved") else f", {t.reason}"
+        left = ""
+        if held is not None and held[0] == t.task_id:
+            left = f", override for {int(held[1])} s"
+        out.append({"id": t.task_id, "kind": t.kind, "flight": t.flight, "state": t.state, "live": t.live,
+                    "text": f"{t.task_id} {t.kind}, {t.flight}: {state}{why}{left} ({_ago(now - t.updated_mono)})"})
+    return out
 
 
 TASKS = TaskRegistry()

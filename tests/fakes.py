@@ -28,6 +28,8 @@ config.GEORGE_IDLE_CLOSE_MAIN_S = None          # tests that need auto-hide set 
 config.TRAINING_LIST_PATH = None                # never read or write the PC's logs/training_groups.json
 config.OLYMPUS_GM_PASSWORD = ""                 # tests never use a real Game Master login
 config.INSTRUCTOR_DATA_DIR = None               # never read or write the PC's data/instructor (memory only)
+import os as _os
+_os.environ["GEORGE_SETTINGS_FILE"] = ""        # never read or write the PC's settings_local.json (memory only)
 
 from core.state import state_store              # noqa: E402  (after the config overrides)
 from core.george_ui import parse_indication     # noqa: E402

@@ -308,7 +308,7 @@
  {
   "type": "ATZ-10",
   "display": "Refueler ATZ-10",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Ground Units",
@@ -1503,7 +1503,7 @@
  {
   "type": "GAZ-66",
   "display": "Truck GAZ-66",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Ground Units",
@@ -1561,7 +1561,7 @@
  {
   "type": "Grad-URAL",
   "display": "MLRS BM-21 Grad 122mm",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Armed ground units",
@@ -1600,7 +1600,7 @@
  {
   "type": "HEMTT TFFT",
   "display": "Firefighter HEMMT TFFT",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Ground Units",
@@ -1799,7 +1799,7 @@
  {
   "type": "Hummer",
   "display": "LUV HMMWV Jeep",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "APC",
    "All",
@@ -1904,7 +1904,7 @@
  {
   "type": "KAMAZ Truck",
   "display": "Truck KAMAZ 43101",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Ground Units",
@@ -1977,6 +1977,25 @@
    "Naval",
    "Ships",
    "Submarines"
+  ]
+ },
+ {
+  "type": "KS-19",
+  "display": "AAA KS-19 100mm",
+  "cat": "ground",
+  "attrs": [
+   "AAA",
+   "AA_flak",
+   "Air Defence",
+   "All",
+   "Armed Air Defence",
+   "Ground Units",
+   "Ground vehicles",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Rocket Attack Valid AirDefence",
+   "Static AAA",
+   "Vehicles"
   ]
  },
  {
@@ -2763,6 +2782,19 @@
   ]
  },
  {
+  "type": "MiG-25RBT",
+  "display": "mig-25rbv",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Aux",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes"
+  ]
+ },
+ {
   "type": "MiG-29 Fulcrum",
   "display": "MiG-29-Fulcrum",
   "cat": "plane",
@@ -2788,6 +2820,35 @@
    "NonAndLightArmoredUnits",
    "NonArmoredUnits",
    "Planes"
+  ]
+ },
+ {
+  "type": "MiG-29S",
+  "display": "mig-29c",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Fighters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes"
+  ]
+ },
+ {
+  "type": "MiG-31",
+  "display": "mig-31",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Interceptors",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
   ]
  },
  {
@@ -3251,7 +3312,7 @@
  {
   "type": "S-300PS 54K6 cp",
   "display": "SAM SA-10 S-300 \"Grumble\" C2",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "Air Defence",
    "All",
@@ -3608,7 +3669,7 @@
  {
   "type": "SKP-11",
   "display": "Truck SKP-11 Mobile ATC",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Ground Units",
@@ -4029,6 +4090,35 @@
   ]
  },
  {
+  "type": "Su-24M",
+  "display": "su-24m",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Bombers",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "Su-24MR",
+  "display": "su-24mr",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Aux",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
   "type": "Su-25",
   "display": "su-25",
   "cat": "plane",
@@ -4068,6 +4158,36 @@
    "NonAndLightArmoredUnits",
    "NonArmoredUnits",
    "Planes"
+  ]
+ },
+ {
+  "type": "Su-33",
+  "display": "su-33",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Fighters",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
+  ]
+ },
+ {
+  "type": "Su-34",
+  "display": "Su-34",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Bombers",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes",
+   "Refuelable"
   ]
  },
  {
@@ -4386,6 +4506,20 @@
   ]
  },
  {
+  "type": "Tu-22M3",
+  "display": "tu-22m3",
+  "cat": "plane",
+  "attrs": [
+   "Air",
+   "All",
+   "Battle airplanes",
+   "Bombers",
+   "NonAndLightArmoredUnits",
+   "NonArmoredUnits",
+   "Planes"
+  ]
+ },
+ {
   "type": "Type_071",
   "display": "Type 071 Amphibious Transport Dock",
   "cat": "ship",
@@ -4412,7 +4546,7 @@
  {
   "type": "UAZ-469",
   "display": "LUV UAZ-469 Jeep",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Cars",
@@ -4505,7 +4639,7 @@
  {
   "type": "Ural-375",
   "display": "Truck Ural-4320",
-  "cat": "ground",
+  "cat": "static",
   "attrs": [
    "All",
    "Ground Units",
@@ -4694,6 +4828,12 @@
   ]
  },
  {
+  "type": "Workshop A",
+  "display": "Workshop A",
+  "cat": "static",
+  "attrs": []
+ },
+ {
   "type": "Yak-40",
   "display": "yak-40",
   "cat": "plane",
@@ -4722,7 +4862,7 @@
  {
   "type": "ZIL-131 KUNG",
   "display": "Truck ZIL-131 (C2)",
-  "cat": "static",
+  "cat": "ground",
   "attrs": [
    "All",
    "Ground Units",

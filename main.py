@@ -148,6 +148,7 @@ def _on_mission_loaded() -> None:
     Olympus-1 'claimed', the next clone was refused, and Overlord called the old escort down)."""
     print("[MISSION] Loaded: forgetting the last mission's flights, Outcasts and home plate.")
     state_store.set_callsign(None)          # the new mission's callsign comes from the hook (P2-2)
+    JTAC_SIGHT.clear()                      # laser sources: unit ids start again (3 Nov)
     if DARKSIDE is not None:
         DARKSIDE.reset()                    # kills called, aborts: unit ids start again
     if OVERLORD is not None:
@@ -189,6 +190,10 @@ TRAINING = training_mod.Training(state_store.snapshot, _training_client, mission
 comms_menu.ON_PLAYERS = TRAINING.note_players
 TRAINING.on_destroyed = lambda names: _alert_training(names)     # Alerts tab (defined below)
 atexit.register(TRAINING.shutdown)
+from core import settings                         # live settings (6 Nov): the training gate's limits
+for _name, _attr, _cast in (("TRAINING_MAX_RANGE_KM", "max_range_km", float), ("TRAINING_MAX_GROUPS", "max_groups", int),
+                            ("TRAINING_MAX_UNITS", "max_units", int), ("TRAINING_VOICE_SWITCH", "voice_switch", bool)):
+    settings.bind(_name, lambda v, a=_attr, c=_cast: setattr(TRAINING, a, c(v)))
 # Feature 8: "Overlord, spawn two T-72s 5 km north of me" (common/training_targets.py), through the gate.
 # "Group is up" / "failed to appear" come later, from its own thread, in the instructor's voice (1 Nov:
 # one training mode); each kill also goes to the instructor's score log.
@@ -293,7 +298,9 @@ INSTRUCTOR = (instructor_mod.build(config, state_store.snapshot, lambda text: _s
                                    mission_name=KB.mission_name, targets=_instructor_target, fuel=_instructor_fuel,
                                    reserve=_instructor_reserve, flight=state_store.flight_since,
                                    fast=_instructor_fast, enabled=lambda: TRAINING.on)
-              if getattr(config, "INSTRUCTOR_ENABLED", True) else None)
+              if settings.get("INSTRUCTOR_ENABLED", True) else None)
+if INSTRUCTOR is not None:                        # a live setting: the start level of the next exercise
+    settings.bind("INSTRUCTOR_HOVER_LEVEL", lambda v: setattr(INSTRUCTOR, "level", int(v)), apply_now=False)
 # One training mode (1 Nov): "Training mode on / off", spawns and the instructor's exercises together,
 # all in the instructor's voice. The gate (TRAINING) and the instructor stay separate modules.
 from common import training_mode as training_mode_mod
@@ -336,22 +343,47 @@ OVERLORD = None
 # Phase 2 command roles (command/): every command the Blue commander client sends passes the one
 # permission table (P2-1), enforced from P2-6 (PERMISSIONS_ENFORCE, default True while the roles are on;
 # False = refusals only logged). COMMAND_ROLES_ENABLED = False: no Warlord / Darkside, as before Phase 2.
-COMMAND_ROLES_ON = bool(getattr(config, "COMMAND_ROLES_ENABLED", True))
+# Settings (core/settings.py, 6 Nov): a value saved from the kneeboard's Settings page (settings_local.json)
+# wins over config.py. Live settings reach the running objects through settings.bind(); "restart" ones are
+# read here once.
+from core import settings
+COMMAND_ROLES_ON = bool(settings.get("COMMAND_ROLES_ENABLED", True))
 from command import exchange as exchange_mod     # P2-7: full (default) or short radio exchange
-exchange_mod.configure(short=bool(getattr(config, "COMMAND_SHORT_FORM", False)),
-                       ai_spoken=bool(getattr(config, "AI_TO_AI_SPOKEN", False)))
+settings.bind("COMMAND_SHORT_FORM", lambda v: exchange_mod.configure(short=bool(v),
+                                                                     ai_spoken=bool(settings.get("AI_TO_AI_SPOKEN"))))
+settings.bind("AI_TO_AI_SPOKEN", lambda v: exchange_mod.configure(short=bool(settings.get("COMMAND_SHORT_FORM")),
+                                                                  ai_spoken=bool(v)))
 from command.permissions import Guard as _PermissionGuard
 from command import roles as roles_mod
-OPERATOR_CALLSIGN = getattr(config, "OPERATOR_CALLSIGN", roles_mod.DEFAULT_CALLSIGN)   # P2-2 fallback
+
+
+def _voice_sample(path: str) -> None:
+    """The Settings page's sample button (kneeboard thread): one line in that voice."""
+    name = os.path.basename(path).rsplit(".", 1)[0]
+    if not tts_mod.speak_sample(path, f"This is the {name.replace('_', ' ').replace('-', ' ')} voice. Radio check."):
+        print(f"[SETTINGS] Couldn't play a sample of {name}.")
+
+
+def _operator_callsign() -> str:
+    """P2-2 fallback when the mission gives no callsign (OPERATOR_CALLSIGN, live)."""
+    return settings.get("OPERATOR_CALLSIGN", roles_mod.DEFAULT_CALLSIGN)
 
 
 def my_callsign() -> str:
     """What the roles call you: the mission's callsign ("Enfield 1-1"), else OPERATOR_CALLSIGN."""
-    return roles_mod.callsign(state_store.snapshot(), OPERATOR_CALLSIGN)[0]
+    return roles_mod.callsign(state_store.snapshot(), _operator_callsign())[0]
 
 
-PERMISSIONS = _PermissionGuard(enforce=COMMAND_ROLES_ON and bool(getattr(config, "PERMISSIONS_ENFORCE", True)))
-DANGER_CLOSE_M = float(getattr(config, "DARKSIDE_DANGER_CLOSE_M", 1000))
+PERMISSIONS = _PermissionGuard(enforce=COMMAND_ROLES_ON and bool(settings.get("PERMISSIONS_ENFORCE", True)))
+settings.bind("PERMISSIONS_ENFORCE", lambda v: setattr(PERMISSIONS, "enforce", COMMAND_ROLES_ON and bool(v)),
+              apply_now=False)
+
+
+def _danger_close_m() -> float:
+    return float(settings.get("DARKSIDE_DANGER_CLOSE_M", 1000))
+
+
+DANGER_CLOSE_M = _danger_close_m()               # the start value; live changes go through the bind below
 # WARLORD (common/warlord.py, P2-5): reviews every flight Overlord would spawn; his rules read the
 # hand-written "warlord" block of data/campaign_briefing.json (command/rules.py)
 WARLORD = None
@@ -360,9 +392,63 @@ if COMMAND_ROLES_ON:
     from common.warlord import Warlord
     WARLORD = Warlord(state_store.snapshot, callsign=lambda: my_callsign(),
                       block=_rules.load_block(os.path.join(config.BASE_DIR, "data", "campaign_briefing.json")),
-                      max_flights=int(getattr(config, "WARLORD_MAX_FLIGHTS", 4)), danger_close_m=DANGER_CLOSE_M,
+                      max_flights=int(settings.get("WARLORD_MAX_FLIGHTS", 4)), danger_close_m=DANGER_CLOSE_M,
                       # the tactical picture turned off (TACTICAL_ENABLED = False): he judges without it
                       picture_active=lambda: TACTICAL is None or _picture_link_active())
+    settings.bind("WARLORD_CAUTION_M", lambda v: setattr(WARLORD, "caution_m", float(v)))   # R6: MANPADS / AAA
+    settings.bind("WARLORD_MAX_FLIGHTS", lambda v: setattr(WARLORD, "max_flights", int(v)), apply_now=False)
+    # R1: no role's attack on a target inside one of Warlord's no-strike zones (refused in the permission table)
+    PERMISSIONS.zone_check = lambda target_id: _rules.no_strike_zone_of(
+        state_store.snapshot(), WARLORD.block["no_strike"], target_id)
+    # R3: your own wingmen's and Outcasts' attacks get Warlord's caution (DIRECT_ORDERS_ZONES "warn"), or
+    # aren't sent ("block")
+    PERMISSIONS.direct_check = lambda params: _direct_order_check(params)
+    PERMISSIONS.on_direct = lambda params, why, blocked: _direct_order_warn(params, why, blocked)
+    settings.bind("DIRECT_ORDERS_ZONES", lambda v: setattr(PERMISSIONS, "direct_block", str(v).lower() == "block"))
+
+
+def _direct_order_check(params: dict):
+    """R3: why one of your own attack orders breaks a mission rule, or None."""
+    snap = state_store.snapshot()
+    tid = params.get("targetID")
+    zone = _rules.no_strike_zone_of(snap, WARLORD.block["no_strike"], tid)
+    if zone:
+        return f"inside the {zone} no-strike zone"
+    pos = _rules.position_of(snap, tid)
+    if pos is not None:
+        near = _rules.friendlies_near(snap, pos[0], pos[1], _danger_close_m())
+        if near:
+            return f"{near[0]['d']:.0f} metres from a friendly {overlord_mod.say_type(near[0]['type'])}"
+    return None
+
+
+def _direct_order_warn(params: dict, why: str, blocked: bool) -> None:
+    try:
+        who = _attacker_name(state_store.snapshot(), int(params.get("ID")))
+    except (TypeError, ValueError):
+        who = "your wingman"
+    text = WARLORD.caution_text("your wingman" if who == "an AI flight" else who, why, blocked)
+    _unprompted(text, lambda t: speak_warlord(t, priority=PRIORITY_PILOT))
+
+
+def _outcast_units(snap: dict) -> dict:
+    """R6: your Outcasts' unit ids -> "Outcast 2", for Darkside's danger close (Olympus's unit list)."""
+    ind = wingmen.INDEPENDENTS
+    if ind is None:
+        return {}
+    groups = {}
+    for n in ind.numbers():
+        r = ind.known(n) or {}
+        if r.get("group"):
+            groups[r["group"]] = f"Outcast {n}"
+    out = {}
+    for row in snap.get("olympus_units") or []:
+        try:
+            if row[0] in groups:
+                out[int(row[2])] = groups[row[0]]
+        except (TypeError, ValueError, IndexError):
+            continue
+    return out
 
 
 def _picture_link_active() -> bool:
@@ -385,12 +471,24 @@ if getattr(config, "OLYMPUS_ENABLED", False):
                                 or targets_mod.my_target(snap, _george_top(snap))),   # JTAC's, George's, the nose
         ask=lambda q: briefing_answer(q, "overlord"),                              # briefing questions
         warlord=WARLORD)                                                           # P2-5: asked before every spawn
+    # R7: a deferred request waits and is rechecked; what comes of it is spoken in Warlord's / Overlord's voice
+    settings.bind("DEFER_WAIT_S", lambda v: setattr(OVERLORD, "defer_wait_s", float(v)))
+    OVERLORD.say_role = lambda text, who: _unprompted(text, lambda t: speak_radio(t, who, priority=PRIORITY_PILOT))
 
 
 # Overlord as JTAC: "Overlord, request target" / "mark target" / "BDA" (common/jtac.py)
 from common.jtac import Jtac
 JTAC = Jtac(state_store.snapshot, oly=wingmen.EXECUTOR.oly if wingmen.EXECUTOR else None,
+            laser=wingmen.EXECUTOR,                  # 3 Nov: "lase the target" from a friendly drone
             speak=lambda text: _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_PILOT)))
+# JTAC lasing (3 Nov): laser sources and terrain line of sight from george_comms_hook.lua
+from common import jtac as jtac_mod, jtac_sight
+settings.bind("JTAC_GROUND_LASER_M", lambda v: setattr(jtac_mod, "GROUND_LASER_RANGE_M", float(v)))
+settings.bind("JTAC_DRONE_LASER_M", lambda v: setattr(jtac_mod, "AIR_LASER_RANGE_M", float(v)))
+JTAC_SIGHT = jtac_sight.SightService(lambda cmd: comms._send(cmd))
+JTAC.sight = JTAC_SIGHT
+comms_menu.ON_JTACS = JTAC_SIGHT.on_jtacs
+comms_menu.ON_LOS = JTAC_SIGHT.on_los
 # DARKSIDE (common/darkside.py, P2-4 / P2-6): the JTAC calls in his voice, and terminal control of
 # Overlord's CAS flights (weapons hold, IP, cleared hot by his checks, "Darkside, abort").
 DARKSIDE = None
@@ -401,8 +499,25 @@ if COMMAND_ROLES_ON:
                         callsign=lambda: my_callsign(), oly=JTAC.oly, warlord=WARLORD,
                         log=lambda who, text: COMMS_LOG.add(who, text), danger_close_m=DANGER_CLOSE_M,
                         say_ai=lambda text, who: _unprompted(       # AI_TO_AI_SPOKEN: held in the carrier quiet window
-                            text, lambda t: speak_radio(t, who, priority=PRIORITY_ROUTINE, max_age=20.0)))
+                            text, lambda t: speak_radio(t, who, priority=PRIORITY_ROUTINE, max_age=20.0)),
+                        agl_m=float(settings.get("DANGER_CLOSE_AGL_M", 300.0)),   # R6: you / Outcasts low nearby
+                        outcasts=lambda: _outcast_units(state_store.snapshot()))
     JTAC.speak = DARKSIDE.jtac_speak                 # "good effect" in Darkside's voice
+    JTAC.notify = DARKSIDE.notice                    # "lost sight of the target, laser off" (3 Nov)
+    JTAC.extra_wanted = DARKSIDE.nine_wanted         # "Overlord / JTAC, request nine-line" goes to Darkside
+    from common import nine_line as _nine_line       # 9-line options (5 Nov)
+    settings.bind("NINE_LINE_READBACK", lambda v: setattr(_nine_line, "READBACK", bool(v)))
+    settings.bind("NINE_LINE_AI_TO_AI", lambda v: setattr(_nine_line, "AI_TO_AI", bool(v)))
+    settings.bind("DANGER_CLOSE_AGL_M", lambda v: setattr(DARKSIDE, "agl_m", float(v)), apply_now=False)
+if COMMAND_ROLES_ON:
+    def _apply_danger_close(v) -> None:
+        global DANGER_CLOSE_M
+        DANGER_CLOSE_M = float(v)
+        for role in (WARLORD, DARKSIDE):
+            if role is not None:
+                role.danger_close_m = float(v)
+    settings.bind("DARKSIDE_DANGER_CLOSE_M", _apply_danger_close, apply_now=False)
+if COMMAND_ROLES_ON:
     if OVERLORD is not None:
         OVERLORD.darkside = DARKSIDE                 # CAS under his control (P2-6)
         OVERLORD.callsign = lambda: my_callsign()    # the full exchange names you (P2-7)
@@ -498,7 +613,7 @@ def _picture_events(events) -> None:
             dist = f"{d / 1852:.0f} nm" if imperial else f"{d / 1000:.0f} km"
             text = text.rstrip(".") + f", {dist} {overlord_mod.compass(b)} of you."
         COMMS_LOG.add("picture", text)
-if getattr(config, "TACTICAL_ENABLED", True):
+if settings.get("TACTICAL_ENABLED", True):
     from tactical.service import TacticalService
     from tactical.tracks import Thresholds as _TacticalThresholds
     TACTICAL = TacticalService(state_store.snapshot, hints=_tactical_hints, jtac=lambda: JTAC.current,
@@ -588,6 +703,7 @@ comms = comms_menu.CommsMenu(speak=_speak_pilot, press_keys=press_menu_keys)
 # Jets: Overlord's joker / bingo calls (common/fuel_watch.py; numbers per type in common/aircraft.py)
 FUEL_WATCH = FuelWatch(state_store.snapshot,
                        lambda text: (_alert_fuel(text),           # the Alerts tab at once, even if speech waits
+                                     settings.get("FUEL_CALLS", True) and       # spoken only while FUEL_CALLS is on
                                      _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_ALERT, max_age=30.0))))
 # Supercarrier by voice: "Marshal, inbound" / "commencing" / "platform" pick its radio-menu items
 CARRIER = carrier_mod.CarrierCalls(
@@ -654,8 +770,10 @@ def role_reply(text: str):
             said = f"{cs}, {name}, standing by. Request tasking through Overlord."
     else:
         said = DARKSIDE.handle(rest) if DARKSIDE is not None else None   # targets, mark, BDA, abort (P2-4/6)
+        if said is None and re.search(r"\b(?:strike|cas|sead|close air|air support|attack)\b", rest, re.I):
+            said = f"{cs}, {name}, request CAS or strikes through Overlord. I control CAS once it checks in."
         if said is None:
-            said = f"{cs}, {name}, say again. I can give targets, mark, BDA, or abort a CAS run."
+            said = f"{cs}, {name}, say again. I can give targets, nine-lines, smoke or laser marks, BDA, or abort a CAS run."
     return said, speaker, speaker
 
 
@@ -801,7 +919,7 @@ def handle_shared(text: str, deferred: list = None) -> bool:
 
 
 # --- ROUTER (intelligence/router.py): the model rewrites orders no fixed phrase caught ---
-ROUTER_ON = getattr(config, "ROUTER_ENABLED", True)
+ROUTER_ON = settings.get("ROUTER_ENABLED", True)
 
 
 def _router_shared(text: str):
@@ -844,12 +962,16 @@ def stt_prompt() -> str:
     if INSTRUCTOR is not None and state_store.profile() != "other":   # helicopters: the hover exercise (decision 5)
         base += " Instructor: hover, approach, fuel, bingo, begin, stop, easier, harder."   # short: Whisper keeps the last 224 tokens
     if COMMAND_ROLES_ON:
-        base += " Warlord, Darkside, radio check, override, abort, continue, cleared hot."
+        base += (" Warlord, Darkside, radio check, override, abort, continue, cleared hot, lase target, laser mark,"
+                 " talk on, nine-line, read back, in from the south.")
     ind = wingmen.INDEPENDENTS
     return base + router_mod.stt_hints(ind.numbers() if ind else [], USER_WAYPOINTS.names())
 
 
 # --- VR KNEEBOARD (kneeboard/): the map and status pages read the state here, never the other way ---
+_TASK_SAID = {"en_route": "en route", "on_task": "on station", "holding": "holding", "cleared": "cleared hot",
+              "attacking": "attacking"}
+
 class _KneeboardContext:
     """What the map needs beyond the snapshot. Called on the kneeboard's HTTP thread: only reads
     locked registries and the snapshot."""
@@ -893,8 +1015,15 @@ class _KneeboardContext:
         for m in OVERLORD.active():
             pts = [[round(float(u[3]), 6), round(float(u[4]), 6)] for u in OVERLORD._flight(snap, m) or []]
             if pts:
-                out.append({"cs": m.cs, "kind": m.kind.key, "state": m.state, "pts": pts})
+                t = OVERLORD.tasks.get(m.task_id)        # R2: "Hog: holding" on the map
+                out.append({"cs": m.cs, "kind": m.kind.key, "state": m.state, "pts": pts,
+                            "task": _TASK_SAID.get(t.state, t.state) if t else ""})
         return out
+
+    @staticmethod
+    def ips(snap: dict):
+        """The 9-line's IP and the Hog flights' IPs (Darkside), for the map."""
+        return DARKSIDE.ip_points() if DARKSIDE is not None else []
 
     @staticmethod
     def jtac(snap: dict):
@@ -937,7 +1066,8 @@ KNEEBOARD_ON = False                            # set when the server starts
 # Alerts tab (kneeboard/alerts.py) and your track on the map (kneeboard/track.py), agreed 30 Oct.
 from kneeboard.alerts import ALERTS, LinkWatch
 from kneeboard.track import Track
-TRACK = Track(state_store.snapshot, visible=getattr(config, "KNEEBOARD_TRACK", True))
+TRACK = Track(state_store.snapshot, visible=bool(settings.get("KNEEBOARD_TRACK", True)))
+settings.bind("KNEEBOARD_TRACK", lambda v: setattr(TRACK, "visible", bool(v)), apply_now=False)
 _LINKS = LinkWatch(ALERTS)
 
 
@@ -1024,7 +1154,7 @@ def kneeboard_checklist() -> dict:
     if runner is not None and runner.active:     # a run replaces "show the ... checklist"
         KB_PAGES.clear_checklist()
     return kb_pages.build_checklist(runner, lists, ac, KB_PAGES.chosen_checklist(),
-                                    getattr(config, "KNEEBOARD_AUTO_CHECKLIST", True))
+                                    settings.get("KNEEBOARD_AUTO_CHECKLIST", True))
 
 
 def kneeboard_briefing() -> dict:
@@ -1113,7 +1243,7 @@ def kneeboard_status() -> dict:
     ]
     links.append(_olympus_link(wingmen.EXECUTOR))
     links.append(PERMISSIONS.link())
-    links.append(roles_mod.callsign_link(snap, OPERATOR_CALLSIGN))
+    links.append(roles_mod.callsign_link(snap, _operator_callsign()))
     links.append(TRAINING.link())
     if INSTRUCTOR is not None:
         links.append(INSTRUCTOR.link())
@@ -1121,7 +1251,8 @@ def kneeboard_status() -> dict:
     links.append({"name": f"Ollama ({config.LLM_MODEL})", "ok": last.get("ok"),
                   "detail": (f"last call {last['secs']:.2f} s, {age(time.time() - last['when'])}"
                              + (f" ({last['error']})" if last.get("error") else "")) if last else "not used yet"})
-    voices = getattr(tts_mod, "VOICES", {}) or {}
+    voices = {k: v for k, v in (getattr(tts_mod, "VOICES", {}) or {}).items()
+              if k != getattr(tts_mod, "SAMPLE", None)}             # not the Settings page's sample voice
     fallback = getattr(tts_mod, "FALLBACK", {}) or {}            # a role without its file uses another voice
     links.append({"name": "Voices (Piper)",
                   "ok": bool(voices) and all(v is not None for k, v in voices.items() if k not in fallback),
@@ -1133,7 +1264,10 @@ def kneeboard_status() -> dict:
              *_latency_rows(),
              {"name": "Speech recognition", "value": f"{stt[0]:.2f} s ({WHISPER_MODEL})" if stt else f"not used yet ({WHISPER_MODEL})"},
              {"name": "Carrier quiet window", "value": "on" if QUIET.active() else "off"}]
-    return {"links": links, "times": times}
+    from command import tasking as _tasking
+    held = WARLORD.held_left() if WARLORD is not None else None
+    taskings = _tasking.rows(_tasking.TASKS, time.monotonic(), held=held)     # R2: what every flight is doing
+    return {"links": links, "times": times, "taskings": taskings}
 
 
 # --- ACTION EXECUTION ---
@@ -1781,6 +1915,15 @@ if __name__ == "__main__":
 
     lower_process_priority()
 
+    from core.telemetry_listener import port_in_use
+    _port = config.UDP_TELEMETRY_PORT
+    if port_in_use(_port):                        # 6 Nov: never run half-deaf beside another copy
+        print(f"\n[START] UDP port {_port} is already in use: DCS George AI is probably running already "
+              "(another console window, or a leftover python.exe in Task Manager).\n"
+              f"        Close it and start again. To see who holds it: netstat -ano | findstr \":{_port}\"")
+        import sys as _sys
+        _sys.exit(2)
+
     print("[1/5] Starting Export.lua Telemetry Listener...")
     start_telemetry_thread()
 
@@ -1798,13 +1941,12 @@ if __name__ == "__main__":
         atexit.register(_instructor_fast, False)          # never leave Export.lua on 10 Hz after we quit
     if wingmen.EXECUTOR:
         threading.Thread(target=olympus_watch, daemon=True, name="olympus-watch").start()
-    if getattr(config, "FUEL_CALLS", True):              # jets: "Overlord, joker fuel ..."
-        FUEL_WATCH.start()
-    if getattr(config, "OVERLORD_AIR_WARNINGS", True):   # "Overlord, pop-up group ..." on his own
-        overlord_mod.AirWarning(state_store.snapshot,
-                                lambda text: (_alert_air(text),
-                                              _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_ALERT,
-                                                                                          max_age=10.0)))).start()
+    FUEL_WATCH.start()          # jets: "Overlord, joker fuel ..." (spoken while FUEL_CALLS is on, a live setting)
+    overlord_mod.AirWarning(state_store.snapshot,          # "Overlord, pop-up group ..." (OVERLORD_AIR_WARNINGS)
+                            lambda text: (_alert_air(text),
+                                          settings.get("OVERLORD_AIR_WARNINGS", True) and
+                                          _unprompted(text, lambda t: speak_overlord(t, priority=PRIORITY_ALERT,
+                                                                                      max_age=10.0)))).start()
 
     print("[3/5] Loading Faster-Whisper Speech Recognition Model...")
     try:    # use the cached model without contacting huggingface.co (fully local)
@@ -1825,7 +1967,9 @@ if __name__ == "__main__":
             Kneeboard(kneeboard_map, kneeboard_status, COMMS_LOG, port=getattr(config, "KNEEBOARD_PORT", 5000),
                       feeds={"briefing": (kneeboard_briefing, 1.0), "checklist": (kneeboard_checklist, 0.5),
                              "ui": (KB_PAGES.view, 0.2), "alerts": (ALERTS.view, 0.5),
-                             "track": (TRACK.view, 2.0), "instructor": (kneeboard_instructor, 0.5)}).start()
+                             "track": (TRACK.view, 2.0), "instructor": (kneeboard_instructor, 0.5)},
+                      settings=settings.store(),                  # the Settings page (core/settings.py, S2)
+                      sample=_voice_sample).start()               # its "play a sample" button (S3)
             KNEEBOARD_ON = True
             TRACK.start()                                        # your track since mission start
             threading.Thread(target=alerts_watch, daemon=True, name="kb-alerts").start()
@@ -1841,17 +1985,20 @@ if __name__ == "__main__":
     engagement_monitor = EngagementMonitor(speak_alert)   # missile away / target destroyed callouts
     engagement_monitor.start()
     ENGAGEMENT = engagement_monitor                        # its last shot is "destroyed" evidence (tactical/)
-    if config.APACHE_EUFD_CALLOUTS:
-        apache_crew.monitor.on_new = _alert_eufd             # warnings / cautions on the Alerts tab too
-        apache_crew.start_callouts(active=lambda: state_store.profile() == "apache")
-    crew_chief = None
-    if config.HUEY_CALLOUTS:
-        crew_chief = CrewChief(speak_alert, state_store.snapshot,
-                               active=lambda: state_store.profile() == "huey",
-                               contact_range_m=config.HUEY_CONTACT_CALLOUT_M,
-                               talkdown=config.HUEY_TALKDOWN,
-                               fuel_burn_lbs_hr=config.HUEY_FUEL_BURN_LBS_HR,
-                               reserve_lbs=config.HUEY_FUEL_RESERVE_LBS).start()
+    # APACHE_EUFD_CALLOUTS / HUEY_CALLOUTS / HUEY_TALKDOWN are live settings (6 Nov): the watchers always run
+    # and check them each time they'd speak
+    apache_crew.monitor.on_new = _alert_eufd             # warnings / cautions on the Alerts tab too
+    apache_crew.start_callouts(active=lambda: state_store.profile() == "apache"
+                               and bool(settings.get("APACHE_EUFD_CALLOUTS", True)))
+    crew_chief = CrewChief(speak_alert, state_store.snapshot,
+                           active=lambda: state_store.profile() == "huey" and bool(settings.get("HUEY_CALLOUTS", True)),
+                           contact_range_m=config.HUEY_CONTACT_CALLOUT_M,
+                           talkdown=True,
+                           fuel_burn_lbs_hr=config.HUEY_FUEL_BURN_LBS_HR,
+                           reserve_lbs=config.HUEY_FUEL_RESERVE_LBS)
+    crew_chief.talkdown_on = lambda: bool(settings.get("HUEY_TALKDOWN", True))
+    crew_chief.start()
+    if True:
         huey.talkdown = crew_chief.talkdown
         if INSTRUCTOR is not None and crew_chief.talkdown is not None:
             crew_chief.talkdown.quiet = INSTRUCTOR.busy     # no hover coaching during a graded hover

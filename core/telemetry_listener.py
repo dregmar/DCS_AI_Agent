@@ -7,6 +7,19 @@ from config import UDP_TELEMETRY_PORT
 from core.state import state_store
 
 
+def port_in_use(port: int = UDP_TELEMETRY_PORT) -> bool:
+    """True if another program already listens on the UDP port (6 Nov: a second copy of DCS George AI
+    left running made every listener fail, so the new one had no position at all)."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.bind(("127.0.0.1", int(port)))
+        return False
+    except OSError:
+        return True
+    finally:
+        s.close()
+
+
 def listen_telemetry():
     """Background listener for Export.lua UDP packets."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

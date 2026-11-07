@@ -13,7 +13,7 @@
     --text: #edf2f5; --dim: #9aa8b1; --faint: #66737c;
     --friendly: #54b7ff; --hostile: #ff554e; --neutral: #43c66c; --unknown: #f4dc4e; --warning: #ff8a32;
     /* names the drawing code has always used */
-    --me: #ffffff; --route: #8fa3b5; --named: #b4a5ff; --outcast: #3fdcf2; --flight: var(--friendly);
+    --me: #ffffff; --route: #8fa3b5; --named: #b4a5ff; --ip: #ffd166; --outcast: #3fdcf2; --flight: var(--friendly);
     --enemy: var(--hostile); --ring: rgba(255,85,78,.62); --jtac: var(--amber); --pilot: #edf2f5;
     --george: var(--amber); --overlord: var(--friendly); --ok: #5fd86a; --bad: #ff554e; --unk: #7d8a93;
     --track: rgba(255,181,46,.55); --grid: rgba(201,182,139,.10); --rangering: rgba(255,181,46,.24);
@@ -195,6 +195,39 @@
   .dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 10px; vertical-align: -1px; }
   .empty { color: var(--dim); padding: 18px; }
   .scroll { height: 100%; overflow-y: auto; padding: 6px 16px 40px; }
+
+  /* ------------------------------------------------ Settings tab (6 Nov, S3): big controls for the VR cursor */
+  #setbar { flex: none; display: flex; align-items: center; gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--line);
+    min-height: 52px; color: var(--dim); font-size: 16px; }
+  #setbar .restart { flex: 1 1 auto; color: var(--amber); }
+  #setbar .restart.none { color: var(--dim); }
+  .sgroup { border: 1px solid var(--line); border-radius: 8px; margin: 10px 0; background: var(--panel); overflow: hidden; }
+  .sgroup > button.sg { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 10px;
+    min-height: 52px; padding: 0 16px; background: var(--panel2); border: 0; color: var(--amber); font-size: 18px;
+    font-weight: 700; letter-spacing: 1px; text-transform: uppercase; text-align: left; }
+  .sgroup > button.sg span { color: var(--dim); font-size: 14px; font-weight: 400; letter-spacing: .3px; text-transform: none; }
+  .sgroup > button.sg:hover { background: var(--panel3); }
+  .srow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; align-items: center;
+    padding: 12px 16px; border-top: 1px solid var(--line); }
+  .srow .sl { font-size: 18px; font-weight: 600; }
+  .srow .sl .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--amber);
+    margin-left: 8px; vertical-align: 2px; }
+  .srow .sh { grid-column: 1; color: var(--dim); font-size: 15px; }
+  .srow .sc { grid-column: 2; grid-row: 1 / span 2; display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  .srow .msg { grid-column: 1 / -1; color: var(--hostile); font-size: 15px; }
+  .srow .tag { font-size: 12px; font-weight: 700; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; margin-left: 8px;
+    color: var(--warning); border: 1px solid var(--warning); vertical-align: 2px; }
+  .sbtn { min-width: 52px; min-height: 48px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line2);
+    background: var(--panel3); color: var(--text); font-size: 18px; font-weight: 600; }
+  .sbtn:hover { border-color: var(--amber); color: var(--amber); }
+  .sbtn.on { background: linear-gradient(180deg, #4a3215, #21190e); border-color: var(--amber); color: var(--amber); }
+  .sbtn.sw { min-width: 96px; }
+  .sbtn.link { min-height: 40px; background: transparent; border-color: transparent; color: var(--dim); font-size: 15px; text-decoration: underline; }
+  .sval { min-width: 110px; text-align: center; font-family: var(--mono); font-size: 19px; }
+  .srow input[type=text], .srow select { min-height: 48px; font: inherit; font-size: 18px; color: var(--text); background: #0c1216;
+    border: 1px solid var(--line2); border-radius: 8px; padding: 0 10px; }
+  .srow input[type=text] { width: 190px; text-transform: uppercase; }
+  .srow select { max-width: 400px; }
   h2 { font-size: 15px; margin: 18px 0 8px; color: var(--amber); text-transform: uppercase; letter-spacing: 1.2px;
     border-bottom: 1px solid var(--line); padding-bottom: 5px; }
   .entry { padding: 8px 10px; margin: 0 -10px; border-left: 4px solid transparent; border-radius: 0 4px 4px 0; }
@@ -290,7 +323,8 @@
     #mapbar button { width: 48px; height: 44px; font-size: 22px; }
     #layers { right: 66px; }
   }
-  @media (max-width: 560px) {                  /* phone: seven tabs in two rows */
+  @media (max-width: 760px) { .srow { grid-template-columns: minmax(0, 1fr); } .srow .sc { grid-column: 1; grid-row: auto; justify-content: flex-start; } }
+  @media (max-width: 560px) {                  /* phone: eight tabs in two rows */
     #tabs { flex-wrap: wrap; row-gap: 4px; }
     #tabs button { flex-basis: 22%; height: 38px; }
   }
@@ -307,6 +341,7 @@
     <button data-p="pstatus" data-i="◉">Status</button>
     <button data-p="palerts" data-i="▲" id="alerttab">Alerts</button>
     <button data-p="pinstr" data-i="◆"><span class="lf">Training</span><span class="ls">Training</span></button>
+    <button data-p="pset" data-i="⚙" title="Settings"><span class="lf">Settings</span><span class="ls">⚙</span></button>
   </nav>
   <div id="mstat"><span id="live" class="wait">CONNECTING</span><span id="clock"><small>LOCAL</small>--:--:--</span></div>
 </header>
@@ -341,7 +376,7 @@
       <span style="color:var(--hostile)"><i>■</i>hostile ground <i>▲</i>air <i>□</i>last known</span>
       <span style="color:var(--neutral)"><i>■</i>neutral</span><span style="color:var(--unknown)"><i>■</i>unknown</span>
       <span style="color:var(--hostile)"><i>◌</i>threat ring</span>
-      <span style="color:var(--jtac)"><i>✛</i>JTAC</span><span style="color:var(--named)"><i>◇</i>waypoint</span>
+      <span style="color:var(--jtac)"><i>✛</i>JTAC</span><span style="color:var(--named)"><i>◇</i>waypoint</span><span style="color:var(--ip)"><i>△</i>IP</span>
       <span style="color:var(--friendly)"><i>□</i>friendly ≤<span id="frrange">5 km</span></span>
     </div></div>
   </section>
@@ -367,11 +402,14 @@
 <div id="pstatus" class="page"><section class="panel sheet"><div class="ph">System status</div><div id="status" class="scroll"><div class="empty">Waiting for the program…</div></div></section></div>
 <div id="palerts" class="page"><section class="panel sheet"><div class="ph">Alerts <span>“kneeboard, acknowledge”</span></div><div id="alerts" class="scroll"><div class="empty">No alerts.</div></div></section></div>
 <div id="pinstr" class="page"><section class="panel sheet"><div class="ph">Training <span>“training mode on / off”</span></div><div id="instr" class="scroll"><div class="empty">Waiting for the program…</div></div></section></div>
+<div id="pset" class="page"><section class="panel sheet"><div class="ph">Settings <span>saved over config.py · “kneeboard, settings”</span></div>
+  <div id="setbar"></div><div id="sets" class="scroll"><div class="empty">Waiting for the program…</div></div></section></div>
 </main>
 
 <script>
 "use strict";
 const PAGE_VERSION = "__PAGE_VERSION__";      // filled in by kneeboard/server.py
+const SETTINGS_KEY = "__SETTINGS_KEY__";      // ... and this: changes on the Settings tab carry it (a new one each start)
 const $ = id => document.getElementById(id);
 function setHTML(el, html) { if (el._h !== html) { el._h = html; el.innerHTML = html; } }   // repaint only on change
 // ---------------------------------------------------------------- tabs (remembered per viewer)
@@ -384,6 +422,7 @@ function show(id) {
   if (id === "pcomms") scrollComms();
   if (id === "pbrief" && briefPending) { briefPending = false; scrollToHit(); }
   if (id === "pcheck") scrollToCurrent();
+  if (id === "pset") loadSettings();
 }
 const isOn = id => document.getElementById(id).classList.contains("on");
 tabs.forEach(b => b.addEventListener("click", () => show(b.dataset.p)));
@@ -404,6 +443,7 @@ function save() { try { localStorage.setItem("kb.zoom", zoom); localStorage.setI
 
 // layers (1 Nov): what the map draws, remembered per viewer like zoom; the server's track switch still applies
 const LAYERS = [["rings", "Threat rings"], ["track", "Your track"], ["route", "Route"], ["wpts", "Named waypoints"],
+                ["ip", "IP and run-in"],
                 ["ground", "Ground units"], ["air", "Aircraft"], ["naval", "Ships"], ["friendly", "Friendly units"],
                 ["labels", "Labels"]];
 let L = Object.fromEntries(LAYERS.map(l => [l[0], true]));
@@ -436,6 +476,11 @@ function llPart(v, pos, neg, degW, fmt) {          // one coordinate: "N 42°23'
   let mi = Math.floor(m), sec = ((m - mi) * 60).toFixed(1);
   if (+sec >= 60) { sec = "0.0"; mi += 1; } if (mi >= 60) { mi = 0; d += 1; }
   return `${h} ${String(d).padStart(degW, "0")}°${String(mi).padStart(2, "0")}'${sec.padStart(4, "0")}"`;
+}
+function posPairs(o) {                             // [[label, text]]: a position in your format (yours, a target's)
+  if (!o || o.lat == null || o.lon == null) return [];
+  if (gridFmt === "mgrs") return o.grid ? [["Grid", o.grid]] : [];
+  return [["Lat", llPart(o.lat, "N", "S", 2, gridFmt)], ["Long", llPart(o.lon, "E", "W", 3, gridFmt)]];
 }
 function posFmt(me) {                               // [label, text] in the chosen format
   if (!me) return null;
@@ -589,6 +634,16 @@ function draw() {
     ctx.beginPath(); ctx.moveTo(x, y - 9); ctx.lineTo(x + 9, y); ctx.lineTo(x, y + 9); ctx.lineTo(x - 9, y); ctx.closePath(); ctx.stroke();
     label(x, y, w.name, css("--named"));
   }
+  // IPs (5 Nov): the 9-line's (with its dashed run-in to the target) and the Hog flights'
+  if (L.ip) for (const p of (M.ips || [])) {
+    const [x, y] = P(p.lat, p.lon); ctx.strokeStyle = css("--ip"); ctx.lineWidth = 2;
+    if (p.kind === "nine" && p.tlat != null) {
+      const [tx, ty] = P(p.tlat, p.tlon); ctx.save(); ctx.setLineDash([8, 6]);
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(tx, ty); ctx.stroke(); ctx.restore();
+    }
+    ctx.beginPath(); ctx.moveTo(x, y - 10); ctx.lineTo(x + 9, y + 7); ctx.lineTo(x - 9, y + 7); ctx.closePath(); ctx.stroke();
+    label(x, y, p.label, css("--ip"));
+  }
   // the selected contact: a voice "kneeboard, contact 42" (M.panel) or a tap on the map, whichever came last
   const sel = selKey || (M.panel ? M.panel.tid : null);
   const bracket = (x, y, r) => {
@@ -641,7 +696,7 @@ function draw() {
     const [x, y] = P(p[0], p[1]); ctx.fillStyle = css("--flight");
     ctx.beginPath(); ctx.arc(x, y, 7, 0, 2 * Math.PI); ctx.fill();
     const k = "fl:" + f.cs;
-    if (i === 0) { hits.push([x, y, k, "f", f]); if (k === sel) bracket(x, y, 13); label(x, y, `${f.cs} (${f.kind})`, css("--flight"), k === sel); }
+    if (i === 0) { hits.push([x, y, k, "f", f]); if (k === sel) bracket(x, y, 13); label(x, y, `${f.cs} ${f.kind}${f.task ? ": " + f.task : ""}`, css("--flight"), k === sel); }
   }
   // Outcasts
   if (L.friendly) for (const o of M.outcasts) {
@@ -748,8 +803,7 @@ function sidePanels() {
     const nx = (M.route || []).find(p => p.n === M.wp_next);
     if (nx) { const d = geo(nx); wp = `WP ${nx.n} · ${brg3(d.brg)} ${fmtD(d.m)}`; }
     setHTML($("ovac"), esc(short(me.ac)));
-    const posRows = gridFmt === "mgrs" ? (me.grid ? kv("Grid", esc(me.grid)) : "")
-      : kv("Lat", esc(llPart(me.lat, "N", "S", 2, gridFmt))) + kv("Long", esc(llPart(me.lon, "E", "W", 3, gridFmt)));
+    const posRows = posPairs(me).map(([k, v]) => kv(k, esc(v))).join("");
     setHTML($("ovw"), posRows + kv("Heading", String(Math.round(me.hdg)).padStart(3, "0") + "°") + kv("Altitude", `${me.alt_ft.toLocaleString()} ft`)
       + kv("Speed", `${me.kts} kt`) + kv("Next", wp) + kv("Map range", `${ZOOMS[zoom]} ${UNIT()} · ${trackUp ? "TU" : "N up"}`));
   } else {
@@ -801,8 +855,11 @@ function showPanel(p) {        // "kneeboard, contact 42" (from the picture), or
     setHTML(panelEl, `<div class="muted">Tap a marker on the map, or say “kneeboard, contact 42”.</div>`); return;
   }
   setHTML($("seltid"), esc(p.tid));
+  const prow = p.rows.concat([]);
+  const wi = prow.findIndex(r => r[0] === "Where");
+  prow.splice(wi < 0 ? prow.length : wi + 1, 0, ...posPairs(p.pos));
   setHTML(panelEl, `<span class="src">Track details · voice</span><h3>${esc(p.title)}</h3><table>`
-    + p.rows.map(r => {
+    + prow.map(r => {
       const v = String(r[1] ?? ""), c = r[0] === "Threat" ? "hostile-t" : r[0] === "Side" ? (AFF_T[v.split(" ")[0]] || [0, ""])[1] : "";
       return `<tr><td class="k">${esc(r[0])}</td><td${c ? ` class="${c}"` : ""}>${esc(v)}</td></tr>`;
     }).join("")
@@ -832,6 +889,7 @@ function tappedPanel(u, kind) {
   rows.push(["Side", a[0], a[1]]);
   rows.push(["Kind", kind === "a" ? "Aircraft" : u.cat ? esc(cap(u.cat.replace("_", " "))) : (u.ad ? "Air defence" : "Ground")]);
   if (d) rows.push(["From you", `${brg3(d.brg)} ${fmtD(d.m)}`]);
+  posPairs(u).forEach(([k, v]) => rows.push([k, esc(v)]));
   if (kind === "a") rows.push(["Altitude", `${u.alt_ft.toLocaleString()} ft`]);
   if (u.status) rows.push(["Status", esc(u.status.replace(/_/g, " ")) + (isOld(u) && u.age_s != null ? `, ${ago(u.age_s)} ago` : "")]);
   if (u.ring_m) {
@@ -892,7 +950,9 @@ function showStatus(s) {
     return `<tr><td><span class="dot" style="background:var(${c})"></span>${esc(l.name)}</td><td>${esc(l.detail || "")}</td></tr>`;
   }).join("");
   const times = (s.times || []).map(t => `<tr><td>${esc(t.name)}</td><td>${esc(t.value)}</td></tr>`).join("");
-  setHTML(statusEl, `<table>${rows}</table>` + (times ? `<h2>Last timings</h2><table>${times}</table>` : ""));
+  const tasks = (s.taskings || []).map(t => `<tr><td><span class="dot" style="background:var(${t.live ? "--flight" : "--unk"})"></span>${esc(t.text)}</td></tr>`).join("");
+  setHTML(statusEl, (tasks ? `<h2>Taskings</h2><table>${tasks}</table>` : "") + `<table>${rows}</table>`
+    + (times ? `<h2>Last timings</h2><table>${times}</table>` : ""));
   // top bar + DCS link panel + summary
   const links = s.links || [], tel = links[0];
   const up = links.filter(l => l.ok === true).length, down = links.filter(l => l.ok === false);
@@ -1113,10 +1173,119 @@ function instrSummary(d) {
   setHTML($("minstr"), h);
 }
 
+// ---------------------------------------------------------------- Settings tab (6 Nov, S3)
+// Fetched when the tab opens and after each change; nothing polls. Changes go to settings_local.json
+// (core/settings.py) through /settings with the per-start key; config.py is never written.
+const setsEl = $("sets"), setbarEl = $("setbar");
+let SET = null, setGroup = null, setMsg = {};
+try { setGroup = localStorage.getItem("kb.setgroup"); } catch (e) {}
+async function loadSettings() {
+  try {
+    const r = await fetch("/settings", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    SET = await r.json();
+  } catch (e) { SET = null; setHTML(setsEl, `<div class="empty">The program isn't answering (${esc(e.message)}).</div>`); setHTML(setbarEl, ""); return; }
+  drawSettings();
+}
+async function postSetting(path, body) {
+  try {
+    const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-KB-Key": SETTINGS_KEY },
+                                  body: JSON.stringify(body) });
+    return await r.json();
+  } catch (e) { return { ok: false, why: "the program isn't answering" }; }
+}
+const voiceName = p => { const b = String(p || "").split(/[\\/]/).pop().replace(/\.onnx$/i, "");
+  return (/[\\/]voices[\\/][^\\/]+$/i.test(String(p || "")) ? "voices / " : "") + b; };
+const samePath = (a, b) => String(a || "").replace(/\\/g, "/").toLowerCase() === String(b || "").replace(/\\/g, "/").toLowerCase();
+function fmtSet(r, v) {
+  if (r.kind === "bool") return v ? "ON" : "OFF";
+  if (r.kind === "int" || r.kind === "float") return Number(v).toLocaleString() + (r.unit ? " " + r.unit : "");
+  return String(v ?? "");
+}
+function setControl(r) {
+  const n = esc(r.name);
+  if (r.kind === "bool")
+    return `<button class="sbtn sw ${r.value ? "on" : ""}" data-n="${n}" data-act="toggle">${r.value ? "ON" : "OFF"}</button>`;
+  if (r.kind === "int" || r.kind === "float")
+    return `<button class="sbtn" data-n="${n}" data-act="step" data-by="-1" ${r.value <= r.lo ? "disabled" : ""}>−</button>`
+         + `<span class="sval">${esc(fmtSet(r, r.value))}</span>`
+         + `<button class="sbtn" data-n="${n}" data-act="step" data-by="1" ${r.value >= r.hi ? "disabled" : ""}>+</button>`;
+  if (r.kind === "choice")
+    return r.choices.map(c => `<button class="sbtn ${c === r.value ? "on" : ""}" data-n="${n}" data-act="pick" data-v="${esc(c)}">${esc(c.toUpperCase())}</button>`).join("");
+  if (r.kind === "text")
+    return `<input type="text" maxlength="16" value="${esc(r.value)}" data-n="${n}" aria-label="${esc(r.label)}">`
+         + `<button class="sbtn" data-n="${n}" data-act="text">Save</button>`;
+  if (r.kind === "voice") {
+    const base = p => String(p || "").split(/[\\/]/).pop().toLowerCase();
+    // the file in use: the same path, or (not saved here) the same file name - the program finds it in voices
+    const cur = (r.choices || []).find(c => samePath(c, r.value))
+             || (r.source !== "saved" ? (r.choices || []).find(c => base(c) === base(r.value)) : null);
+    const why = r.source === "config" ? " (config.py)" : r.source === "default" ? " (default)" : "";
+    let opts = cur ? "" : `<option value="" selected>${esc(r.value ? voiceName(r.value) + why + " - not found" : "none set")}</option>`;
+    opts += (r.choices || []).map(c => `<option value="${esc(c)}" ${c === cur ? "selected" : ""}>${esc(voiceName(c) + (c === cur ? why : ""))}</option>`).join("");
+    return `<select data-n="${n}" data-act="voice" aria-label="${esc(r.label)}">${opts}</select>`
+         + `<button class="sbtn" data-n="${n}" data-act="sample" title="Play a sample">▶</button>`;
+  }
+  return "";
+}
+function drawSettings() {
+  if (!SET) return;
+  const rows = SET.settings, groups = [...new Set(rows.map(r => r.group))];
+  if (!groups.includes(setGroup)) setGroup = groups[0];
+  const saved = rows.filter(r => r.source === "saved");
+  const waiting = SET.restart || [];
+  setHTML(setbarEl, `<span class="restart ${waiting.length ? "" : "none"}">${waiting.length
+      ? `${waiting.length} change${waiting.length === 1 ? " applies" : "s apply"} after a restart: ${esc(waiting.map(n => (rows.find(r => r.name === n) || {}).label || n).join(", "))}`
+      : "Live settings apply at once; ones tagged RESTART at the next start."}</span>`
+    + (saved.length ? `<span>${saved.length} saved</span><button class="sbtn" data-act="resetall">Reset all</button>` : `<span>Nothing saved: all from config.py</span>`));
+  let h = "";
+  for (const g of groups) {
+    const gr = rows.filter(r => r.group === g), open = g === setGroup, ns = gr.filter(r => r.source === "saved").length;
+    h += `<section class="sgroup"><button class="sg" data-act="group" data-g="${esc(g)}">${esc(g)}<span>${gr.length} setting${gr.length === 1 ? "" : "s"}${ns ? ` · ${ns} saved` : ""} ${open ? "▴" : "▾"}</span></button>`;
+    if (open) for (const r of gr) {
+      h += `<div class="srow"><div class="sl">${esc(r.label)}${r.source === "saved" ? `<span class="dot" title="Saved: overrides config.py"></span>` : ""}`
+         + `${r.live ? "" : `<span class="tag">RESTART</span>`}</div>`
+         + `<div class="sh">${esc(r.help || "")}${r.source === "saved" ? ` <button class="sbtn link" data-n="${esc(r.name)}" data-act="reset">Reset to config.py</button>` : ""}</div>`
+         + `<div class="sc">${setControl(r)}</div>`
+         + (setMsg[r.name] ? `<div class="msg">${esc(setMsg[r.name])}</div>` : "") + `</div>`;
+    }
+    h += `</section>`;
+  }
+  setHTML(setsEl, h);
+}
+async function changeSetting(name, value) {
+  const d = await postSetting("/settings", { name, value });
+  setMsg[name] = d.ok ? "" : (d.why || "not saved");
+  await loadSettings();
+}
+async function onSettingsClick(e) {
+  const b = e.target.closest("[data-act]"); if (!b || b.tagName === "SELECT") return;
+  const act = b.dataset.act, name = b.dataset.n, r = SET && SET.settings.find(x => x.name === name);
+  if (act === "group") { setGroup = setGroup === b.dataset.g ? null : b.dataset.g;
+    try { localStorage.setItem("kb.setgroup", setGroup || ""); } catch (er) {} drawSettings(); return; }
+  if (act === "resetall") { for (const x of SET.settings.filter(x => x.source === "saved")) await postSetting("/settings/reset", { name: x.name });
+    setMsg = {}; await loadSettings(); return; }
+  if (!r) return;
+  if (act === "toggle") return changeSetting(name, !r.value);
+  if (act === "step") { const v = Math.min(r.hi, Math.max(r.lo, Number(r.value) + Number(b.dataset.by) * (r.step || 1)));
+    return changeSetting(name, v); }
+  if (act === "pick") return changeSetting(name, b.dataset.v);
+  if (act === "text") { const inp = setsEl.querySelector(`input[data-n="${name}"]`); return changeSetting(name, inp ? inp.value : ""); }
+  if (act === "reset") { const d = await postSetting("/settings/reset", { name }); setMsg[name] = d.ok ? "" : d.why; return loadSettings(); }
+  if (act === "sample") { const sel = setsEl.querySelector(`select[data-n="${name}"]`);
+    const path = (sel && sel.value) || r.value;
+    if (!path) { setMsg[name] = "Pick a voice first."; return drawSettings(); }
+    const d = await postSetting("/settings/sample", { path }); setMsg[name] = d.ok ? "" : d.why; drawSettings(); }
+}
+setsEl.addEventListener("click", onSettingsClick);
+setbarEl.addEventListener("click", onSettingsClick);
+setsEl.addEventListener("change", e => { const s = e.target.closest("select[data-act=voice]"); if (s && s.value) changeSetting(s.dataset.n, s.value); });
+
 // ---------------------------------------------------------------- voice: "show the briefing", "scroll down"
 const PAGE_ID = { map: "pmap", briefing: "pbrief", checklist: "pcheck", comms: "pcomms", status: "pstatus", alerts: "palerts",
-                  instructor: "pinstr" };
-const SCROLLER = { pbrief: briefEl, pcheck: checkEl, pcomms: commsEl, pstatus: statusEl, palerts: alertsEl, pinstr: instrEl };
+                  instructor: "pinstr", settings: "pset" };
+const SCROLLER = { pbrief: briefEl, pcheck: checkEl, pcomms: commsEl, pstatus: statusEl, palerts: alertsEl, pinstr: instrEl,
+                   pset: setsEl };
 let uiSeq = null;
 function applyUi(u) {
   if (uiSeq === null || u.seq < uiSeq) { uiSeq = u.seq; return; }   // first message (or program restarted): nothing new

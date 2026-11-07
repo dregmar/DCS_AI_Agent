@@ -82,7 +82,7 @@ class Page(unittest.TestCase):
     def test_page_draws_grid_and_friends(self):
         with open(os.path.join(kb_server.STATIC, "index.html"), encoding="utf-8") as fh:
             src = fh.read()
-        for needle in ('id="mapgrid"', "showGrid(me)", "M.friends", '"fr:" + u.id', 'kv("Grid"', 'id="frrange"',
+        for needle in ('id="mapgrid"', "showGrid(me)", "M.friends", '"fr:" + u.id', '["Grid", o.grid]', 'id="frrange"',
                        "M.friends_m"):
             self.assertIn(needle, src)
 

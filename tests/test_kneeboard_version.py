@@ -46,10 +46,10 @@ class TestPageVersion(unittest.TestCase):
         self.assertIn('es.addEventListener("page"', src)
         self.assertIn("PAGE_VERSION.length === 12 && v !== PAGE_VERSION) location.reload()", src)
 
-    def test_seven_tabs_shrink_instead_of_overflowing(self):
+    def test_eight_tabs_shrink_instead_of_overflowing(self):        # Settings tab added 6 Nov (S3)
         with open(os.path.join(kb_server.STATIC, "index.html"), encoding="utf-8") as f:
             src = f.read()
-        self.assertEqual(len(re.findall(r'<button data-p="p', src)), 7)
+        self.assertEqual(len(re.findall(r'<button data-p="p', src)), 8)
         self.assertIn("#tabs button { flex: 1 1 0; min-width: 0;", src)
 
 

@@ -226,9 +226,11 @@ class OverlordFlights(unittest.TestCase):
         said = self.o.handle("Overlord, request CAS 5 km north of me")
         self.assertIn("Hog", said)
         self.assertTrue(self.wait(lambda: self.tasks.get("K1").state == "complete"))
-        refused = {(r, n) for r, n, _ in self.guard.recent()}
-        self.assertEqual(refused, {(OVERLORD, "setROE"), (OVERLORD, "attackUnit")})   # P2-6's change
-        self.assertTrue(any(n == "attackUnit" for n, _ in self.oly.sent))            # still sent today
+        # R5: with no Darkside on the net the record names Overlord as the CAS controller, so his own
+        # attack orders are no longer refusals (they were logged-only refusals before R5)
+        self.assertEqual(self.tasks.get("K1").controller, OVERLORD)
+        self.assertEqual(self.guard.count, 0, self.guard.recent())
+        self.assertTrue(any(n == "attackUnit" for n, _ in self.oly.sent))
 
     def test_cancel_records_aborted(self):
         self.world.kill_on_attack = False
